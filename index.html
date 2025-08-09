@@ -473,14 +473,18 @@
                 </div>
             </div>
 
-            <!-- תוכן הניהול (נעול) -->
+            <!-- תוכן הניהול -->
             <div id="adminContent" style="display: none;">
                 <div class="card">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <h2 style="margin: 0;">⚙️ ניהול מערכת</h2>
+                        <h2 style="margin: 0;">⚙️ ניהול עובדים</h2>
                         <button class="btn" onclick="lockAdmin()" style="background: #f44336; color: white; padding: 8px 12px; font-size: 14px;">
                             🔒 נעל
                         </button>
+                    </div>
+                    
+                    <div style="background: #e3f2fd; border-radius: 8px; padding: 10px; margin-bottom: 15px; text-align: center; font-size: 0.9em; color: #1976d2;">
+                        📡 העובדים מסונכרנים אוטומטית בין כל המכשירים
                     </div>
                     
                     <div class="form-group">
@@ -509,7 +513,7 @@
                 <div class="card">
                     <h2>🔄 סנכרון</h2>
                     <p style="text-align: center; color: #666; margin-bottom: 15px;">
-                        הנתונים נשמרים ומסונכרנים בזמן אמת
+                        עובדים ונתוני נוכחות מסונכרנים בזמן אמת
                     </p>
                     <button class="btn btn-admin" onclick="forcSync()" style="width: 100%;">
                         ⚡ סנכרון ידני
@@ -668,7 +672,7 @@
                 });
         }
 
-        // טעינת נתונים
+        // טעינת נתונים מהגיליון - עם סנכרון עובדים מלא
         function loadDataFromSheet() {
             if (!isInitialized) return;
             
@@ -722,12 +726,28 @@
                         }
                     }
                     
-                    // עדכן רשימת עובדים
-                    for (var e = 0; e < employees.length; e++) {
-                        uniqueEmployees.add(employees[e]);
+                    // סנכרון רשימת עובדים - החלף לחלוטין עם מה שבגיליון
+                    var cloudEmployees = Array.from(uniqueEmployees).sort();
+                    var hasEmployeeChanges = false;
+                    
+                    // בדוק אם יש שינויים ברשימת העובדים
+                    if (employees.length !== cloudEmployees.length) {
+                        hasEmployeeChanges = true;
+                    } else {
+                        for (var i = 0; i < employees.length; i++) {
+                            if (employees[i] !== cloudEmployees[i]) {
+                                hasEmployeeChanges = true;
+                                break;
+                            }
+                        }
                     }
                     
-                    employees = Array.from(uniqueEmployees).sort();
+                    // עדכן רשימת עובדים אם יש שינויים
+                    if (hasEmployeeChanges && cloudEmployees.length > 0) {
+                        employees = cloudEmployees;
+                        showAlert('רשימת עובדים עודכנה מהענן 👥', 'success');
+                    }
+                    
                     attendanceData = newAttendanceData;
                     currentStatus = newCurrentStatus;
                     
@@ -792,8 +812,6 @@
             attendanceData[employeeName][today].checkIn = timestamp;
             currentStatus[employeeName] = 'in';
             
-            saveLocalData();
-            updateAll();
             
             if (isInitialized) {
                 updateSyncStatus('🔄', 'רושם...', 'sync-syncing');
@@ -875,7 +893,7 @@
             }
         }
 
-        // ניהול עובדים
+        // ניהול עובדים - עם סנכרון מלא
         function addEmployee() {
             var name = document.getElementById('newEmployeeName').value.trim();
             if (!name) {
@@ -895,10 +913,28 @@
             saveLocalData();
             updateAll();
             document.getElementById('newEmployeeName').value = '';
-            showAlert('העובד ' + name + ' נוסף בהצלחה', 'success');
             
+            // סנכרן עובד לגיליון
             if (isInitialized) {
-                setTimeout(loadDataFromSheet, 1000);
+                updateSyncStatus('🔄', 'מסנכרן עובד...', 'sync-syncing');
+                var now = new Date();
+                var today = getCurrentDate();
+                var timestamp = now.toISOString();
+                var time = now.toLocaleTimeString('he-IL');
+                
+                recordToSheet(name, 'employee_added', timestamp, today, time)
+                    .then(function(success) {
+                        if (success) {
+                            updateSyncStatus('☁️', 'מסונכרן', 'sync-connected');
+                            showAlert('העובד ' + name + ' נוסף ויסונכרן לכל המכשירים! 🌐', 'success');
+                            setTimeout(loadDataFromSheet, 2000);
+                        } else {
+                            updateSyncStatus('📱', 'ממתין לסנכרון', 'sync-error');
+                            showAlert('העובד ' + name + ' נוסף מקומית', 'success');
+                        }
+                    });
+            } else {
+                showAlert('העובד ' + name + ' נוסף מקומית', 'success');
             }
         }
 
@@ -1342,11 +1378,12 @@
             setInterval(updateCurrentTime, 1000);
             setInterval(updateQuickStats, 30000);
             
+            // סנכרון אוטומטי כל 30 שניות (יותר תכוף לסנכרון עובדים)
             setInterval(function() {
                 if (isInitialized) {
                     loadDataFromSheet();
                 }
-            }, 60000);
+            }, 30000);
             
             testConnection();
             
