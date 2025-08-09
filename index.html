@@ -1,0 +1,1585 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>רפטינג בר - שעון נוכחות</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#667eea">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="רפטינג בר">
+    
+    <!-- Icons for different platforms -->
+    <link rel="icon" type="image/png" sizes="192x192" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iMjQiIGZpbGw9InVybCgjZ3JhZGllbnQwX2xpbmVhcikiLz4KPHN2ZyB4PSI0OCIgeT0iNDgiIHdpZHRoPSI5NiIgaGVpZ2h0PSI5NiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJ3aGl0ZSI+CjxwYXRoIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyem0wIDE4Yy00LjQxIDAtOC0zLjU5LTgtOHMzLjU5LTggOC04IDggMy41OSA4IDgtMy41OSA4LTggOHoiLz4KPHN2ZyB4PSIxMiIgeT0iNiIgd2lkdGg9IjEyIiBoZWlnaHQ9IjEyIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9IndoaXRlIj4KPHN2ZyB4PSI2IiB5PSIxMiIgd2lkdGg9IjEyIiBoZWlnaHQ9IjYiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPgo8ZGVmcz4KPGxpbmVhckdyYWRpZW50IGlkPSJncmFkaWVudDBfbGluZWFyIiB4MT0iMCIgeTE9IjAiIHgyPSIxOTIiIHkyPSIxOTIiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KPHN0b3Agc3RvcC1jb2xvcj0iIzY2N2VlYSIvPgo8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM3NjRiYTIiLz4KPC9saW5lYXJHcmFkaWVudD4KPC9kZWZzPgo8L3N2Zz4=">
+    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgdmlld0JveD0iMCAwIDE4MCAxODAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxODAiIGhlaWdodD0iMTgwIiByeD0iMjQiIGZpbGw9InVybCgjZ3JhZGllbnQwX2xpbmVhcikiLz4KPHN2ZyB4PSI0NSIgeT0iNDUiIHdpZHRoPSI5MCIgaGVpZ2h0PSI5MCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJ3aGl0ZSI+CjxwYXRoIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyem0wIDE4Yy00LjQxIDAtOC0zLjU5LTgtOHMzLjU5LTggOC04IDggMy41OSA4IDgtMy41OSA4LTggOHoiLz4KPC9zdmc+CjxkZWZzPgo8bGluZWFyR3JhZGllbnQgaWQ9ImdyYWRpZW50MF9saW5lYXIiIHgxPSIwIiB5MT0iMCIgeDI9IjE4MCIgeTI9IjE4MCIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPgo8c3RvcCBzdG9wLWNvbG9yPSIjNjY3ZWVhIi8+CjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzc2NGJhMiIvPgo8L2xpbmVhckdyYWRpZW50Pgo8L2RlZnM+Cjwvc3ZnPg==">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            direction: rtl;
+            overflow-x: hidden;
+            padding-bottom: 80px;
+        }
+
+        /* Install prompt styling */
+        .install-prompt {
+            position: fixed;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            z-index: 1001;
+            display: none;
+            animation: slideUp 0.3s ease-out;
+            font-weight: bold;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+        }
+
+        .install-prompt:hover {
+            transform: translateX(-50%) translateY(-2px);
+            box-shadow: 0 6px 25px rgba(0,0,0,0.4);
+        }
+
+        .install-prompt.show {
+            display: block;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateX(-50%) translateY(100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(-50%) translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .header {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px 15px 15px;
+            text-align: center;
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 1.8em;
+            margin-bottom: 8px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .current-time {
+            font-size: 1.1em;
+            opacity: 0.9;
+            margin-bottom: 8px;
+        }
+
+        .sync-status {
+            font-size: 0.9em;
+            padding: 6px 12px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 15px;
+            display: inline-block;
+            backdrop-filter: blur(5px);
+        }
+
+        .sync-connected { color: #4CAF50; }
+        .sync-error { color: #f44336; }
+        .sync-syncing { color: #ff9800; animation: pulse 1s infinite; }
+
+        .container {
+            padding: 15px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .card h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            text-align: center;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 8px;
+            font-size: 1.1em;
+        }
+
+        .form-group select,
+        .form-group input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            font-size: 16px;
+            background: white;
+            transition: all 0.3s;
+        }
+
+        .form-group select:focus,
+        .form-group input:focus {
+            border-color: #667eea;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-checkin {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-checkout {
+            background: linear-gradient(45deg, #f44336, #da190b);
+            color: white;
+            box-shadow: 0 4px 15px rgba(244, 67, 54, 0.3);
+        }
+
+        .btn-admin {
+            background: linear-gradient(45deg, #2196F3, #1976D2);
+            color: white;
+            box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+        }
+
+        .btn-install {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status-display {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 15px;
+            margin-top: 15px;
+            text-align: center;
+            border-left: 4px solid #667eea;
+        }
+
+        .status-badge {
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+            display: inline-block;
+            margin: 5px 0;
+        }
+
+        .status-in { background: #4CAF50; }
+        .status-out { background: #f44336; }
+
+        .employee-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .employee-card {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            border-left: 4px solid #ddd;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+
+        .employee-card.active {
+            border-left-color: #4CAF50;
+            background: linear-gradient(135deg, #e8f5e8, white);
+        }
+
+        .employee-card.inactive {
+            border-left-color: #f44336;
+            background: linear-gradient(135deg, #ffeaea, white);
+        }
+
+        .employee-name {
+            font-size: 1.1em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .employee-times {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            font-weight: bold;
+            text-align: center;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .navigation {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            z-index: 1000;
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            padding: 8px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            flex: 1;
+            max-width: 80px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .nav-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .nav-btn:hover:not(.active) {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .quick-action {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .quick-action:active {
+            transform: scale(0.98);
+        }
+
+        .quick-action-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .quick-action-label {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .setup-section {
+            display: none;
+            margin-bottom: 20px;
+        }
+
+        .setup-section.show {
+            display: block;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        /* Responsive improvements for better mobile experience */
+        @media (max-width: 480px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .card {
+                padding: 15px;
+                margin-bottom: 10px;
+            }
+            
+            .btn-group {
+                flex-direction: column;
+            }
+            
+            .btn {
+                margin-bottom: 10px;
+            }
+        }
+
+        /* Better touch targets for mobile */
+        @media (pointer: coarse) {
+            .btn {
+                min-height: 48px;
+            }
+            
+            .nav-btn {
+                min-height: 48px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Install prompt -->
+    <div class="install-prompt" id="installPrompt" onclick="installApp()">
+        📱 התקן אפליקציה
+    </div>
+
+    <div class="header">
+        <h1>🏄‍♂️ רפטינג בר</h1>
+        <div class="current-time" id="currentTime"></div>
+        <div class="sync-status" id="syncStatus">
+            <span id="syncIcon">🔄</span>
+            <span id="syncText">מתחבר...</span>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- הגדרות אתחול -->
+        <div class="card setup-section" id="setupSection">
+            <h2>🔧 הגדרת המערכת</h2>
+            
+            <div class="form-group">
+                <label>Google Sheets API Key:</label>
+                <input type="text" id="apiKey" placeholder="הכנס API Key">
+            </div>
+            
+            <div class="form-group">
+                <label>Google Sheet ID:</label>
+                <input type="text" id="sheetId" placeholder="הכנס Sheet ID">
+            </div>
+
+            <div class="form-group">
+                <label>Apps Script URL:</label>
+                <input type="text" id="scriptUrl" placeholder="הכנס Apps Script URL" value="https://script.google.com/macros/s/AKfycbx_UMxeN_-dYeiR4xQa4HzT9ogZPv8BeYkRuUg0BOeEobOQZJVvj7gZU-2U_5LrxEtK/exec">
+            </div>
+            
+            <button class="btn btn-admin" onclick="saveSettings()" style="width: 100%;">💾 שמור והתחבר</button>
+        </div>
+
+        <div id="alertContainer"></div>
+
+        <!-- עמוד ראשי -->
+        <div id="mainPage" class="page active">
+            <div class="card">
+                <h2>רישום נוכחות</h2>
+                
+                <!-- Install App Button -->
+                <button class="btn btn-install" id="installButton" onclick="installApp()" style="width: 100%; margin-bottom: 15px; display: none;">
+                    📱 התקן אפליקציה
+                </button>
+                
+                <div class="form-group">
+                    <label for="employeeSelect">בחר עובד:</label>
+                    <select id="employeeSelect">
+                        <option value="">-- בחר עובד --</option>
+                    </select>
+                </div>
+                
+                <div class="btn-group">
+                    <button class="btn btn-checkin" onclick="checkIn()" id="checkinBtn" disabled>
+                        🟢 כניסה
+                    </button>
+                    <button class="btn btn-checkout" onclick="checkOut()" id="checkoutBtn" disabled>
+                        🔴 יציאה
+                    </button>
+                </div>
+
+                <div class="status-display">
+                    <h3>מצב נוכחי</h3>
+                    <div id="employeeStatus">בחר עובד לצפייה במצב</div>
+                </div>
+
+                <div class="quick-actions">
+                    <div class="quick-action" onclick="showEmployeesStatus()">
+                        <div class="quick-action-value" id="activeCount">0</div>
+                        <div class="quick-action-label">עובדים פעילים</div>
+                    </div>
+                    <div class="quick-action" onclick="showPage('reports')">
+                        <div class="quick-action-value" id="todayHours">0</div>
+                        <div class="quick-action-label">שעות היום</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- עמוד עובדים -->
+        <div id="employeesPage" class="page">
+            <div class="card">
+                <h2>👥 סטטוס עובדים</h2>
+                <div class="employee-grid" id="employeeGrid"></div>
+            </div>
+        </div>
+
+        <!-- עמוד דוחות -->
+        <div id="reportsPage" class="page">
+            <div class="card">
+                <h2>📊 דוחות</h2>
+                <div class="btn-group" style="flex-direction: column;">
+                    <button class="btn btn-admin" onclick="exportToday()">📄 ייצא דוח יומי</button>
+                    <button class="btn btn-admin" onclick="exportDetailed()">📊 ייצא דוח מפורט</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- עמוד ניהול -->
+        <div id="adminPage" class="page">
+            <!-- מסך נעילה -->
+            <div id="adminLock" class="card" style="display: block;">
+                <h2>🔒 עמוד ניהול מוגן</h2>
+                <p style="text-align: center; color: #666; margin-bottom: 20px;">
+                    הזן קוד גישה לניהול המערכת
+                </p>
+                
+                <div class="form-group">
+                    <label>קוד גישה:</label>
+                    <input type="password" id="adminPassword" placeholder="הזן קוד גישה" maxlength="6">
+                </div>
+                
+                <button class="btn btn-admin" onclick="checkAdminPassword()" style="width: 100%;">
+                    🔓 פתח ניהול
+                </button>
+                
+                <div style="margin-top: 20px; padding: 15px; background: #e3f2fd; border-radius: 10px; font-size: 14px; color: #1976d2;">
+                    💡 <strong>טיפ:</strong> הקוד ברירת המחדל הוא: <strong>1234</strong><br>
+                    ניתן לשנות בהגדרות המערכת
+                </div>
+            </div>
+
+            <!-- תוכן הניהול (נעול) -->
+            <div id="adminContent" style="display: none;">
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h2 style="margin: 0;">⚙️ ניהול מערכת</h2>
+                        <button class="btn" onclick="lockAdmin()" style="background: #f44336; color: white; padding: 8px 12px; font-size: 14px;">
+                            🔒 נעל
+                        </button>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>הוסף עובד חדש:</label>
+                        <input type="text" id="newEmployeeName" placeholder="שם העובד החדש">
+                    </div>
+                    <button class="btn btn-admin" onclick="addEmployee()" style="width: 100%; margin-bottom: 15px;">
+                        ➕ הוסף עובד
+                    </button>
+                    
+                    <div class="form-group">
+                        <label>הסר עובד:</label>
+                        <select id="removeEmployeeSelect">
+                            <option value="">-- בחר עובד להסרה --</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-checkout" onclick="removeEmployee()" style="width: 100%; margin-bottom: 20px;">
+                        🗑️ הסר עובד
+                    </button>
+                    
+                    <button class="btn btn-checkout" onclick="clearAll()" style="width: 100%;">
+                        🔄 איפוס נתונים
+                    </button>
+                </div>
+
+                <div class="card">
+                    <h2>🔄 סנכרון</h2>
+                    <p style="text-align: center; color: #666; margin-bottom: 15px;">
+                        הנתונים נשמרים אוטומטית ומסונכרנים בענן
+                    </p>
+                    <button class="btn btn-admin" onclick="forcSync()" style="width: 100%; margin-bottom: 15px;">
+                        ⚡ סנכרון ידני
+                    </button>
+                    
+                    <button class="btn btn-admin" onclick="showSetup()" style="width: 100%; margin-bottom: 15px;">
+                        🛠️ הגדרות חיבור
+                    </button>
+                </div>
+
+                <div class="card">
+                    <h2>🔐 אבטחה</h2>
+                    <div class="form-group">
+                        <label>שנה קוד גישה:</label>
+                        <input type="password" id="newAdminPassword" placeholder="קוד חדש (4-6 ספרות)" maxlength="6">
+                    </div>
+                    <button class="btn btn-admin" onclick="changeAdminPassword()" style="width: 100%;">
+                        🔑 שנה קוד
+                    </button>
+                    
+                    <div style="margin-top: 15px; padding: 10px; background: #fff3cd; border-radius: 8px; font-size: 13px; color: #856404;">
+                        ⚠️ זכור את הקוד החדש! אין אפשרות לשחזר אותו
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ניווט תחתון -->
+    <div class="navigation">
+        <button class="nav-btn active" onclick="showPage('main')">
+            <div>🏠</div>
+            <div>בית</div>
+        </button>
+        <button class="nav-btn" onclick="showPage('employees')">
+            <div>👥</div>
+            <div>עובדים</div>
+        </button>
+        <button class="nav-btn" onclick="showPage('reports')">
+            <div>📊</div>
+            <div>דוחות</div>
+        </button>
+        <button class="nav-btn" onclick="showPage('admin')">
+            <div>⚙️</div>
+            <div>ניהול</div>
+        </button>
+    </div>
+
+    <script>
+        // PWA Variables
+        let deferredPrompt;
+        let isAppInstalled = false;
+
+        // App variables
+        var employees = [];
+        var attendanceData = {};
+        var currentStatus = {};
+        var adminPassword = '1234';
+        var isAdminUnlocked = false;
+        var apiKey = '';
+        var sheetId = '';
+        var scriptUrl = 'https://script.google.com/macros/s/AKfycbx_UMxeN_-dYeiR4xQa4HzT9ogZPv8BeYkRuUg0BOeEobOQZJVvj7gZU-2U_5LrxEtK/exec';
+        var isInitialized = false;
+        var pendingSync = [];
+
+        // PWA Functions
+        function checkInstallPrompt() {
+            // Check if app is already installed
+            if (window.matchMedia('(display-mode: standalone)').matches || 
+                window.navigator.standalone === true) {
+                isAppInstalled = true;
+                return;
+            }
+
+            // Show install prompt after a delay
+            setTimeout(() => {
+                if (deferredPrompt && !isAppInstalled) {
+                    document.getElementById('installPrompt').classList.add('show');
+                    document.getElementById('installButton').style.display = 'block';
+                }
+            }, 3000);
+        }
+
+        function installApp() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        showAlert('האפליקציה הותקנה בהצלחה! 🎉', 'success');
+                        document.getElementById('installPrompt').classList.remove('show');
+                        document.getElementById('installButton').style.display = 'none';
+                    }
+                    deferredPrompt = null;
+                });
+            } else {
+                // Fallback instructions
+                showAlert('להתקנה: לחץ על תפריט הדפדפן ← "הוסף למסך הבית"', 'success');
+            }
+        }
+
+        // Register Service Worker
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        console.log('Service Worker registered successfully:', registration.scope);
+                    })
+                    .catch((error) => {
+                        console.log('Service Worker registration failed:', error);
+                    });
+            }
+        }
+
+        // PWA Event Listeners
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            checkInstallPrompt();
+        });
+
+        window.addEventListener('appinstalled', (evt) => {
+            isAppInstalled = true;
+            document.getElementById('installPrompt').classList.remove('show');
+            document.getElementById('installButton').style.display = 'none';
+            showAlert('האפליקציה הותקנה בהצלחה! 🎉', 'success');
+        });
+
+        // Helper functions
+        function getCurrentDate() {
+            var today = new Date();
+            var year = today.getFullYear();
+            var month = String(today.getMonth() + 1).padStart(2, '0');
+            var day = String(today.getDate()).padStart(2, '0');
+            return year + '-' + month + '-' + day;
+        }
+
+        function formatTime(dateString) {
+            if (!dateString) return '-';
+            var date = new Date(dateString);
+            return String(date.getHours()).padStart(2, '0') + ':' + String(date.getMinutes()).padStart(2, '0');
+        }
+
+        function calculateHours(start, end) {
+            if (!start) return 0;
+            
+            var startDate = new Date(start);
+            var endDate = end ? new Date(end) : new Date();
+            
+            if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                return 0;
+            }
+            
+            if (endDate < startDate) {
+                return 0;
+            }
+            
+            var diff = endDate - startDate;
+            var hours = diff / (1000 * 60 * 60);
+            return Math.max(0, Math.round(hours * 100) / 100);
+        }
+
+        function updateCurrentTime() {
+            var now = new Date();
+            document.getElementById('currentTime').textContent = now.toLocaleTimeString('he-IL', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function showAlert(message, type) {
+            var container = document.getElementById('alertContainer');
+            var alert = document.createElement('div');
+            alert.className = 'alert alert-' + type;
+            alert.textContent = message;
+            container.appendChild(alert);
+            
+            setTimeout(function() {
+                if (alert.parentNode) {
+                    alert.parentNode.removeChild(alert);
+                }
+            }, 4000);
+        }
+
+        function updateSyncStatus(icon, text, className) {
+            document.getElementById('syncIcon').textContent = icon;
+            document.getElementById('syncText').textContent = text;
+            var statusEl = document.getElementById('syncStatus');
+            statusEl.className = 'sync-status ' + className;
+        }
+
+        // Settings functions
+        function showSetup() {
+            document.getElementById('setupSection').classList.add('show');
+            document.getElementById('apiKey').value = apiKey;
+            document.getElementById('sheetId').value = sheetId;
+            document.getElementById('scriptUrl').value = scriptUrl;
+        }
+
+        function saveSettings() {
+            apiKey = document.getElementById('apiKey').value.trim();
+            sheetId = document.getElementById('sheetId').value.trim();
+            scriptUrl = document.getElementById('scriptUrl').value.trim();
+            
+            if (!apiKey || !sheetId || !scriptUrl) {
+                showAlert('אנא מלא את כל השדות', 'error');
+                return;
+            }
+            
+            localStorage.setItem('raftingbar_api_key', apiKey);
+            localStorage.setItem('raftingbar_sheet_id', sheetId);
+            localStorage.setItem('raftingbar_script_url', scriptUrl);
+            
+            document.getElementById('setupSection').classList.remove('show');
+            showAlert('הגדרות נשמרו! מתחבר...', 'success');
+            
+            testConnection();
+        }
+
+        // Connection functions
+        function testConnection() {
+            if (!apiKey || !sheetId) {
+                updateSyncStatus('⚠️', 'נדרשת הגדרה', 'sync-error');
+                return;
+            }
+            
+            updateSyncStatus('🔍', 'בודק חיבור...', 'sync-syncing');
+            
+            var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + apiKey;
+            
+            fetch(url)
+                .then(function(response) {
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        throw new Error('HTTP ' + response.status);
+                    }
+                })
+                .then(function(data) {
+                    updateSyncStatus('☁️', 'מחובר לענן', 'sync-connected');
+                    isInitialized = true;
+                    enableUI();
+                    loadDataFromSheet();
+                    showAlert('חיבור הצליח!', 'success');
+                })
+                .catch(function(error) {
+                    updateSyncStatus('❌', 'שגיאה בחיבור', 'sync-error');
+                    showAlert('שגיאה בחיבור - בדוק הגדרות', 'error');
+                });
+        }
+
+        function enableUI() {
+            document.getElementById('checkinBtn').disabled = false;
+            document.getElementById('checkoutBtn').disabled = false;
+        }
+
+        // Data loading functions
+        function loadDataFromSheet() {
+            if (!isInitialized) return;
+            
+            var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '/values/A:F?key=' + apiKey;
+            
+            fetch(url)
+                .then(function(response) {
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        throw new Error('HTTP ' + response.status);
+                    }
+                })
+                .then(function(data) {
+                    var rows = data.values || [];
+                    
+                    var uniqueEmployees = new Set();
+                    var newAttendanceData = {};
+                    var newCurrentStatus = {};
+                    var currentDate = getCurrentDate();
+                    
+                    for (var e = 0; e < employees.length; e++) {
+                        uniqueEmployees.add(employees[e]);
+                    }
+                    
+                    for (var i = 1; i < rows.length; i++) {
+                        var row = rows[i];
+                        if (row && row[0]) {
+                            uniqueEmployees.add(row[0]);
+                            
+                            var employee = row[0];
+                            var action = row[1];
+                            var timestamp = row[2];
+                            var date = row[3];
+                            
+                            if (!newAttendanceData[employee]) {
+                                newAttendanceData[employee] = {};
+                            }
+                            if (!newAttendanceData[employee][date]) {
+                                newAttendanceData[employee][date] = {};
+                            }
+                            
+                            if (action === 'checkin') {
+                                newAttendanceData[employee][date].checkIn = timestamp;
+                                if (date === currentDate) {
+                                    newCurrentStatus[employee] = 'in';
+                                }
+                            } else if (action === 'checkout') {
+                                newAttendanceData[employee][date].checkOut = timestamp;
+                                if (date === currentDate) {
+                                    newCurrentStatus[employee] = 'out';
+                                }
+                            }
+                        }
+                    }
+                    
+                    employees = Array.from(uniqueEmployees);
+                    attendanceData = newAttendanceData;
+                    currentStatus = newCurrentStatus;
+                    
+                    saveLocalData();
+                    updateAll();
+                })
+                .catch(function(error) {
+                    console.log('שגיאה בטעינת נתונים:', error);
+                });
+        }
+
+        // Record to sheet function
+        function recordToSheet(employee, action, timestamp, date, time) {
+            if (!scriptUrl) return Promise.resolve(false);
+            
+            var rowData = [employee, action, timestamp, date, time, 'PWA'];
+            
+            return fetch(scriptUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    values: [rowData]
+                })
+            })
+            .then(function() {
+                return true;
+            })
+            .catch(function(error) {
+                console.log('שגיאה ברישום:', error);
+                return false;
+            });
+        }
+
+        // Attendance functions
+        function checkIn() {
+            var employeeName = document.getElementById('employeeSelect').value;
+            if (!employeeName) {
+                showAlert('אנא בחר עובד', 'error');
+                return;
+            }
+
+            if (currentStatus[employeeName] === 'in') {
+                showAlert('העובד כבר במשמרת', 'error');
+                return;
+            }
+
+            var now = new Date();
+            var today = getCurrentDate();
+            var timestamp = now.toISOString();
+            var time = now.toLocaleTimeString('he-IL');
+            
+            if (!attendanceData[employeeName]) {
+                attendanceData[employeeName] = {};
+            }
+            if (!attendanceData[employeeName][today]) {
+                attendanceData[employeeName][today] = {};
+            }
+
+            attendanceData[employeeName][today].checkIn = timestamp;
+            currentStatus[employeeName] = 'in';
+            
+            saveLocalData();
+            updateAll();
+            
+            if (isInitialized) {
+                updateSyncStatus('🔄', 'רושם...', 'sync-syncing');
+                recordToSheet(employeeName, 'checkin', timestamp, today, time)
+                    .then(function(success) {
+                        if (success) {
+                            updateSyncStatus('☁️', 'מסונכרן', 'sync-connected');
+                            showAlert(employeeName + ' נרשם לכניסה בהצלחה ✅', 'success');
+                        } else {
+                            pendingSync.push({
+                                employee: employeeName,
+                                action: 'checkin',
+                                timestamp: timestamp,
+                                date: today,
+                                time: time
+                            });
+                            updateSyncStatus('📱', 'ממתין לסנכרון', 'sync-error');
+                            showAlert(employeeName + ' נרשם מקומית - יסונכרן בהמשך', 'success');
+                        }
+                    });
+            } else {
+                showAlert(employeeName + ' נרשם מקומית', 'success');
+            }
+        }
+
+        function checkOut() {
+            var employeeName = document.getElementById('employeeSelect').value;
+            if (!employeeName) {
+                showAlert('אנא בחר עובד', 'error');
+                return;
+            }
+
+            if (currentStatus[employeeName] !== 'in') {
+                showAlert('העובד לא במשמרת', 'error');
+                return;
+            }
+
+            var now = new Date();
+            var today = getCurrentDate();
+            var timestamp = now.toISOString();
+            var time = now.toLocaleTimeString('he-IL');
+            
+            if (attendanceData[employeeName] && attendanceData[employeeName][today]) {
+                attendanceData[employeeName][today].checkOut = timestamp;
+                currentStatus[employeeName] = 'out';
+                
+                var workHours = calculateHours(
+                    attendanceData[employeeName][today].checkIn,
+                    attendanceData[employeeName][today].checkOut
+                );
+                
+                saveLocalData();
+                updateAll();
+                
+                if (isInitialized) {
+                    updateSyncStatus('🔄', 'רושם...', 'sync-syncing');
+                    recordToSheet(employeeName, 'checkout', timestamp, today, time)
+                        .then(function(success) {
+                            if (success) {
+                                updateSyncStatus('☁️', 'מסונכרן', 'sync-connected');
+                                showAlert(employeeName + ' נרשם ליציאה. עבד ' + workHours + ' שעות ✅', 'success');
+                            } else {
+                                pendingSync.push({
+                                    employee: employeeName,
+                                    action: 'checkout',
+                                    timestamp: timestamp,
+                                    date: today,
+                                    time: time
+                                });
+                                updateSyncStatus('📱', 'ממתין לסנכרון', 'sync-error');
+                                showAlert(employeeName + ' נרשם מקומית. עבד ' + workHours + ' שעות', 'success');
+                            }
+                        });
+                } else {
+                    showAlert(employeeName + ' נרשם מקומית. עבד ' + workHours + ' שעות', 'success');
+                }
+            }
+        }
+
+        // Employee management functions
+        function addEmployee() {
+            var name = document.getElementById('newEmployeeName').value.trim();
+            if (!name) {
+                showAlert('אנא הזן שם עובד', 'error');
+                return;
+            }
+            
+            for (var i = 0; i < employees.length; i++) {
+                if (employees[i] === name) {
+                    showAlert('עובד בשם זה כבר קיים', 'error');
+                    return;
+                }
+            }
+            
+            employees.push(name);
+            saveLocalData();
+            updateAll();
+            document.getElementById('newEmployeeName').value = '';
+            showAlert('העובד ' + name + ' נוסף בהצלחה', 'success');
+        }
+
+        function removeEmployee() {
+            var employeeName = document.getElementById('removeEmployeeSelect').value;
+            if (!employeeName) {
+                showAlert('אנא בחר עובד להסרה', 'error');
+                return;
+            }
+            
+            if (confirm('האם אתה בטוח שברצונך להסיר את ' + employeeName + '?')) {
+                for (var i = 0; i < employees.length; i++) {
+                    if (employees[i] === employeeName) {
+                        employees.splice(i, 1);
+                        break;
+                    }
+                }
+                
+                delete attendanceData[employeeName];
+                delete currentStatus[employeeName];
+                
+                saveLocalData();
+                updateAll();
+                showAlert('העובד ' + employeeName + ' הוסר בהצלחה', 'success');
+            }
+        }
+
+        function clearAll() {
+            if (confirm('האם אתה בטוח שברצונך למחוק את כל נתוני הנוכחות?')) {
+                attendanceData = {};
+                currentStatus = {};
+                saveLocalData();
+                updateAll();
+                showAlert('כל נתוני הנוכחות נמחקו', 'success');
+            }
+        }
+
+        // UI update functions
+        function updateEmployeeSelects() {
+            var mainSelect = document.getElementById('employeeSelect');
+            var removeSelect = document.getElementById('removeEmployeeSelect');
+            
+            if (mainSelect) {
+                var mainValue = mainSelect.value;
+                mainSelect.innerHTML = '<option value="">-- בחר עובד --</option>';
+                
+                for (var i = 0; i < employees.length; i++) {
+                    var option = document.createElement('option');
+                    option.value = employees[i];
+                    option.text = employees[i];
+                    mainSelect.appendChild(option);
+                }
+                
+                mainSelect.value = mainValue;
+            }
+            
+            if (removeSelect) {
+                var removeValue = removeSelect.value;
+                removeSelect.innerHTML = '<option value="">-- בחר עובד להסרה --</option>';
+                
+                for (var i = 0; i < employees.length; i++) {
+                    var option = document.createElement('option');
+                    option.value = employees[i];
+                    option.text = employees[i];
+                    removeSelect.appendChild(option);
+                }
+                
+                removeSelect.value = removeValue;
+            }
+        }
+
+        function updateEmployeeGrid() {
+            var grid = document.getElementById('employeeGrid');
+            if (!grid) return;
+            
+            grid.innerHTML = '';
+            
+            var today = getCurrentDate();
+            
+            for (var i = 0; i < employees.length; i++) {
+                var employee = employees[i];
+                var status = currentStatus[employee] || 'out';
+                var todayData = attendanceData[employee] && attendanceData[employee][today];
+                
+                var card = document.createElement('div');
+                card.className = 'employee-card ' + (status === 'in' ? 'active' : 'inactive');
+                
+                var checkInTime = todayData && todayData.checkIn ? formatTime(todayData.checkIn) : '--:--';
+                var checkOutTime = todayData && todayData.checkOut ? formatTime(todayData.checkOut) : '--:--';
+                
+                var workHours = 0;
+                if (todayData && todayData.checkIn) {
+                    if (status === 'in') {
+                        workHours = calculateHours(todayData.checkIn, null);
+                    } else {
+                        workHours = calculateHours(todayData.checkIn, todayData.checkOut);
+                    }
+                }
+                
+                card.innerHTML = 
+                    '<div class="employee-name">' + employee + '</div>' +
+                    '<div class="employee-times">כניסה: ' + checkInTime + ' | יציאה: ' + checkOutTime + '</div>' +
+                    '<div class="employee-times">שעות: ' + workHours + (status === 'in' ? ' (רץ)' : '') + '</div>' +
+                    '<span class="status-badge status-' + (status === 'in' ? 'in' : 'out') + '">' +
+                    (status === 'in' ? 'במשמרת' : 'לא במשמרת') + '</span>';
+                
+                grid.appendChild(card);
+            }
+        }
+
+        function updateEmployeeStatus() {
+            var selectedEmployee = document.getElementById('employeeSelect').value;
+            var statusDiv = document.getElementById('employeeStatus');
+            
+            if (!selectedEmployee) {
+                statusDiv.innerHTML = 'בחר עובד לצפייה במצב';
+                return;
+            }
+            
+            var status = currentStatus[selectedEmployee] || 'out';
+            var today = getCurrentDate();
+            var todayData = attendanceData[selectedEmployee] && attendanceData[selectedEmployee][today];
+            
+            if (status === 'in') {
+                var checkInTime = todayData ? formatTime(todayData.checkIn) : 'לא זמין';
+                var currentHours = todayData ? calculateHours(todayData.checkIn, null) : 0;
+                statusDiv.innerHTML = 
+                    '<strong>' + selectedEmployee + '</strong><br>' +
+                    '<span class="status-badge status-in">במשמרת</span><br>' +
+                    'כניסה: ' + checkInTime + '<br>' +
+                    'שעות נוכחיות: ' + currentHours;
+            } else {
+                var workHours = todayData ? calculateHours(todayData.checkIn, todayData.checkOut) : 0;
+                statusDiv.innerHTML = 
+                    '<strong>' + selectedEmployee + '</strong><br>' +
+                    '<span class="status-badge status-out">לא במשמרת</span><br>' +
+                    'שעות היום: ' + workHours;
+            }
+        }
+
+        function updateQuickStats() {
+            var activeCount = 0;
+            var totalTodayHours = 0;
+            var today = getCurrentDate();
+            
+            for (var i = 0; i < employees.length; i++) {
+                var employee = employees[i];
+                if (currentStatus[employee] === 'in') {
+                    activeCount++;
+                }
+                
+                var todayData = attendanceData[employee] && attendanceData[employee][today];
+                if (todayData && todayData.checkIn) {
+                    var endTime = todayData.checkOut || null;
+                    var hours = calculateHours(todayData.checkIn, endTime);
+                    totalTodayHours += hours;
+                }
+            }
+            
+            document.getElementById('activeCount').textContent = activeCount;
+            document.getElementById('todayHours').textContent = Math.round(totalTodayHours * 10) / 10;
+        }
+
+        function updateAll() {
+            updateEmployeeSelects();
+            updateEmployeeGrid();
+            updateEmployeeStatus();
+            updateQuickStats();
+        }
+
+        // Navigation functions
+        function showPage(pageName) {
+            document.querySelectorAll('.page').forEach(function(page) {
+                page.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-btn').forEach(function(btn) {
+                btn.classList.remove('active');
+            });
+            
+            document.getElementById(pageName + 'Page').classList.add('active');
+            
+            var navButtons = document.querySelectorAll('.nav-btn');
+            if (pageName === 'main') navButtons[0].classList.add('active');
+            else if (pageName === 'employees') navButtons[1].classList.add('active');
+            else if (pageName === 'reports') navButtons[2].classList.add('active');
+            else if (pageName === 'admin') navButtons[3].classList.add('active');
+            
+            if (pageName === 'admin') {
+                if (!isAdminUnlocked) {
+                    document.getElementById('adminLock').style.display = 'block';
+                    document.getElementById('adminContent').style.display = 'none';
+                    setTimeout(function() {
+                        document.getElementById('adminPassword').focus();
+                    }, 100);
+                } else {
+                    document.getElementById('adminLock').style.display = 'none';
+                    document.getElementById('adminContent').style.display = 'block';
+                    updateEmployeeSelects();
+                }
+            }
+        }
+
+        function showEmployeesStatus() {
+            showPage('employees');
+        }
+
+        // Admin functions
+        function checkAdminPassword() {
+            var enteredPassword = document.getElementById('adminPassword').value;
+            
+            if (enteredPassword === adminPassword) {
+                isAdminUnlocked = true;
+                document.getElementById('adminLock').style.display = 'none';
+                document.getElementById('adminContent').style.display = 'block';
+                document.getElementById('adminPassword').value = '';
+                updateEmployeeSelects();
+                showAlert('נכנסת לעמוד הניהול בהצלחה', 'success');
+            } else {
+                document.getElementById('adminPassword').value = '';
+                document.getElementById('adminPassword').focus();
+                showAlert('קוד שגוי! נסה שוב', 'error');
+                
+                var lockCard = document.getElementById('adminLock');
+                lockCard.style.animation = 'shake 0.5s';
+                setTimeout(function() {
+                    lockCard.style.animation = '';
+                }, 500);
+            }
+        }
+
+        function lockAdmin() {
+            isAdminUnlocked = false;
+            document.getElementById('adminLock').style.display = 'block';
+            document.getElementById('adminContent').style.display = 'none';
+            showAlert('עמוד הניהול ננעל', 'success');
+        }
+
+        function changeAdminPassword() {
+            var newPassword = document.getElementById('newAdminPassword').value.trim();
+            
+            if (!newPassword) {
+                showAlert('אנא הזן קוד חדש', 'error');
+                return;
+            }
+            
+            if (newPassword.length < 4 || newPassword.length > 6) {
+                showAlert('הקוד חייב להיות 4-6 ספרות', 'error');
+                return;
+            }
+            
+            if (!/^\d+$/.test(newPassword)) {
+                showAlert('הקוד חייב להכיל רק ספרות', 'error');
+                return;
+            }
+            
+            if (confirm('האם אתה בטוח שברצונך לשנות את קוד הגישה ל-' + newPassword + '?')) {
+                adminPassword = newPassword;
+                localStorage.setItem('raftingbar_admin_password', adminPassword);
+                document.getElementById('newAdminPassword').value = '';
+                showAlert('קוד הגישה שונה בהצלחה!', 'success');
+            }
+        }
+
+        // Sync functions
+        function forcSync() {
+            if (!isInitialized) {
+                showAlert('מערכת לא מחוברת - בודק חיבור', 'error');
+                testConnection();
+                return;
+            }
+            
+            updateSyncStatus('🔄', 'מסנכרן...', 'sync-syncing');
+            loadDataFromSheet();
+            showAlert('מבצע סנכרון ידני...', 'success');
+        }
+
+        // Report functions
+        function exportToday() {
+            var today = getCurrentDate();
+            var data = [];
+            
+            data.push(['עובד', 'כניסה', 'יציאה', 'שעות', 'סטטוס']);
+            
+            for (var i = 0; i < employees.length; i++) {
+                var employee = employees[i];
+                var todayData = attendanceData[employee] && attendanceData[employee][today];
+                var status = currentStatus[employee] || 'out';
+                
+                var checkInTime = todayData && todayData.checkIn ? formatTime(todayData.checkIn) : '-';
+                var checkOutTime = todayData && todayData.checkOut ? formatTime(todayData.checkOut) : '-';
+                var workHours = todayData ? calculateHours(todayData.checkIn, todayData.checkOut) : 0;
+                var statusText = status === 'in' ? 'במשמרת' : 'לא במשמרת';
+                var hoursText = workHours > 0 ? workHours + ' שעות' : '-';
+                
+                data.push([employee, checkInTime, checkOutTime, hoursText, statusText]);
+            }
+            
+            downloadCSV(data, 'דוח_יומי_רפטינג_בר_' + today + '.csv');
+        }
+
+        function exportDetailed() {
+            var data = [];
+            var today = new Date();
+            
+            var dates = [];
+            var dateStrings = [];
+            for (var i = 6; i >= 0; i--) {
+                var date = new Date(today);
+                date.setDate(today.getDate() - i);
+                dates.push(date);
+                var year = date.getFullYear();
+                var month = String(date.getMonth() + 1).padStart(2, '0');
+                var day = String(date.getDate()).padStart(2, '0');
+                var dateKey = year + '-' + month + '-' + day;
+                dateStrings.push(dateKey);
+            }
+            
+            var headers = ['עובד'];
+            var dayNames = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+            for (var d = 0; d < dates.length; d++) {
+                var dayName = dayNames[dates[d].getDay()];
+                var dateStr = dates[d].getDate() + '/' + (dates[d].getMonth() + 1);
+                headers.push(dayName + ' ' + dateStr);
+            }
+            headers.push('סה"כ ימי עבודה');
+            headers.push('סה"כ שעות');
+            headers.push('ממוצע יומי');
+            
+            data.push(headers);
+            
+            for (var i = 0; i < employees.length; i++) {
+                var employee = employees[i];
+                var row = [employee];
+                var totalHours = 0;
+                var workDays = 0;
+                
+                for (var d = 0; d < dateStrings.length; d++) {
+                    var dateKey = dateStrings[d];
+                    var dayData = attendanceData[employee] && attendanceData[employee][dateKey];
+                    
+                    if (dayData && dayData.checkIn && dayData.checkOut) {
+                        var hours = calculateHours(dayData.checkIn, dayData.checkOut);
+                        row.push(hours + ' שעות');
+                        totalHours += hours;
+                        workDays++;
+                    } else if (dayData && dayData.checkIn && !dayData.checkOut) {
+                        row.push('לא נסגר');
+                    } else {
+                        row.push('-');
+                    }
+                }
+                
+                row.push(workDays + ' ימים');
+                row.push(Math.round(totalHours * 100) / 100 + ' שעות');
+                var avgHours = workDays > 0 ? Math.round((totalHours / workDays) * 100) / 100 : 0;
+                row.push(avgHours > 0 ? avgHours + ' שעות' : '-');
+                
+                data.push(row);
+            }
+            
+            var todayStr = today.getFullYear() + '_' + (today.getMonth() + 1) + '_' + today.getDate();
+            downloadCSV(data, 'דוח_מפורט_רפטינג_בר_' + todayStr + '.csv');
+        }
+
+        function downloadCSV(data, filename) {
+            var csvContent = '\uFEFF';
+            for (var row = 0; row < data.length; row++) {
+                var rowData = [];
+                for (var col = 0; col < data[row].length; col++) {
+                    rowData.push('"' + data[row][col] + '"');
+                }
+                csvContent += rowData.join(',') + '\r\n';
+            }
+            
+            var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            var link = document.createElement('a');
+            var url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showAlert('הדוח יוצא בהצלחה!', 'success');
+        }
+
+        // Storage functions
+        function loadLocalData() {
+            try {
+                var savedEmployees = localStorage.getItem('raftingbar_employees');
+                if (savedEmployees) {
+                    employees = JSON.parse(savedEmployees);
+                }
+                
+                var savedAttendance = localStorage.getItem('raftingbar_attendance');
+                if (savedAttendance) {
+                    attendanceData = JSON.parse(savedAttendance);
+                }
+                
+                var savedStatus = localStorage.getItem('raftingbar_status');
+                if (savedStatus) {
+                    currentStatus = JSON.parse(savedStatus);
+                }
+                
+                var savedAdminPassword = localStorage.getItem('raftingbar_admin_password');
+                if (savedAdminPassword) {
+                    adminPassword = savedAdminPassword;
+                }
+
+                apiKey = localStorage.getItem('raftingbar_api_key') || '';
+                sheetId = localStorage.getItem('raftingbar_sheet_id') || '';
+                scriptUrl = localStorage.getItem('raftingbar_script_url') || 'https://script.google.com/macros/s/AKfycbx_UMxeN_-dYeiR4xQa4HzT9ogZPv8BeYkRuUg0BOeEobOQZJVvj7gZU-2U_5LrxEtK/exec';
+                
+                var savedPending = localStorage.getItem('raftingbar_pending');
+                if (savedPending) {
+                    pendingSync = JSON.parse(savedPending);
+                }
+            } catch (e) {
+                console.log('שגיאה בטעינת נתונים מקומיים:', e);
+            }
+        }
+
+        function saveLocalData() {
+            try {
+                localStorage.setItem('raftingbar_employees', JSON.stringify(employees));
+                localStorage.setItem('raftingbar_attendance', JSON.stringify(attendanceData));
+                localStorage.setItem('raftingbar_status', JSON.stringify(currentStatus));
+                localStorage.setItem('raftingbar_pending', JSON.stringify(pendingSync));
+            } catch (e) {
+                console.log('שגיאה בשמירת נתונים מקומיים:', e);
+            }
+        }
+
+        // Initialize app
+        function initApp() {
+            // Register service worker for PWA functionality
+            registerServiceWorker();
+            
+            // Load local data
+            loadLocalData();
+            
+            // Update UI
+            updateEmployeeSelects();
+            updateEmployeeGrid();
+            updateEmployeeStatus();
+            updateQuickStats();
+            updateCurrentTime();
+            
+            // Set up intervals
+            setInterval(updateCurrentTime, 1000);
+            setInterval(updateQuickStats, 30000);
+            setInterval(function() {
+                if (isInitialized) {
+                    loadDataFromSheet();
+                }
+            }, 60000);
+            
+            // Check if setup is needed
+            if (!apiKey || !sheetId || !scriptUrl) {
+                showSetup();
+            } else {
+                testConnection();
+            }
+            
+            // Setup event listeners
+            var employeeSelect = document.getElementById('employeeSelect');
+            if (employeeSelect) {
+                employeeSelect.addEventListener('change', updateEmployeeStatus);
+            }
+            
+            // Keyboard event listeners
+            document.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    var activeElement = document.activeElement;
+                    if (activeElement && activeElement.id === 'adminPassword') {
+                        checkAdminPassword();
+                    } else if (activeElement && activeElement.id === 'newAdminPassword') {
+                        changeAdminPassword();
+                    } else if (activeElement && activeElement.id === 'newEmployeeName') {
+                        addEmployee();
+                    }
+                }
+            });
+
+            // Check for install prompt
+            checkInstallPrompt();
+        }
+
+        // Start the app when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
+    </script>
+</body>
+</html>
