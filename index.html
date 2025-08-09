@@ -3,7 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>רפטינג בר - עמוד דוחות מלא</title>
+    <title>רפטינג בר - שעון נוכחות</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#667eea">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="רפטינג בר">
+    
     <style>
         * {
             margin: 0;
@@ -18,12 +25,7 @@
             min-height: 100vh;
             direction: rtl;
             overflow-x: hidden;
-        }
-
-        .container {
-            padding: 15px;
-            max-width: 1200px;
-            margin: 0 auto;
+            padding-bottom: 80px;
         }
 
         .header {
@@ -32,14 +34,38 @@
             padding: 20px 15px 15px;
             text-align: center;
             color: white;
-            border-radius: 20px;
-            margin-bottom: 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
 
         .header h1 {
             font-size: 1.8em;
             margin-bottom: 8px;
             text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .current-time {
+            font-size: 1.1em;
+            opacity: 0.9;
+            margin-bottom: 8px;
+        }
+
+        .sync-status {
+            font-size: 0.9em;
+            padding: 6px 12px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 15px;
+            display: inline-block;
+            backdrop-filter: blur(5px);
+        }
+
+        .sync-connected { color: #4CAF50; }
+        .sync-error { color: #f44336; }
+        .sync-syncing { color: #ff9800; animation: pulse 1s infinite; }
+
+        .container {
+            padding: 15px;
         }
 
         .card {
@@ -58,62 +84,6 @@
             text-align: center;
             border-bottom: 2px solid #667eea;
             padding-bottom: 8px;
-        }
-
-        .reports-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .report-card {
-            background: white;
-            border-radius: 15px;
-            padding: 20px;
-            text-align: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            cursor: pointer;
-            transition: all 0.3s;
-            border: 2px solid transparent;
-        }
-
-        .report-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-            border-color: #667eea;
-        }
-
-        .report-icon {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
-
-        .report-title {
-            font-size: 1.1em;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 8px;
-        }
-
-        .report-desc {
-            font-size: 0.9em;
-            color: #666;
-            line-height: 1.4;
-        }
-
-        .filters-section {
-            background: #f8f9fa;
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-
-        .filters-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 15px;
         }
 
         .form-group {
@@ -146,7 +116,14 @@
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
         .btn {
+            flex: 1;
             padding: 16px;
             border: none;
             border-radius: 12px;
@@ -154,35 +131,28 @@
             font-weight: bold;
             cursor: pointer;
             transition: all 0.3s;
-            margin: 5px;
         }
 
         .btn:active {
             transform: scale(0.98);
         }
 
-        .btn-primary {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-        }
-
-        .btn-success {
+        .btn-checkin {
             background: linear-gradient(45deg, #4CAF50, #45a049);
             color: white;
             box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
         }
 
-        .btn-info {
+        .btn-checkout {
+            background: linear-gradient(45deg, #f44336, #da190b);
+            color: white;
+            box-shadow: 0 4px 15px rgba(244, 67, 54, 0.3);
+        }
+
+        .btn-admin {
             background: linear-gradient(45deg, #2196F3, #1976D2);
             color: white;
             box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
-        }
-
-        .btn-warning {
-            background: linear-gradient(45deg, #ff9800, #f57c00);
-            color: white;
-            box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
         }
 
         .btn:hover:not(:disabled) {
@@ -190,102 +160,70 @@
             box-shadow: 0 6px 20px rgba(0,0,0,0.15);
         }
 
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin: 20px 0;
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
         }
 
-        .stat-card {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            padding: 20px;
-            border-radius: 15px;
+        .status-display {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 15px;
+            margin-top: 15px;
             text-align: center;
+            border-left: 4px solid #667eea;
         }
 
-        .stat-value {
-            font-size: 2em;
+        .status-badge {
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+            display: inline-block;
+            margin: 5px 0;
+        }
+
+        .status-in { background: #4CAF50; }
+        .status-out { background: #f44336; }
+
+        .employee-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .employee-card {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            border-left: 4px solid #ddd;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+
+        .employee-card.active {
+            border-left-color: #4CAF50;
+            background: linear-gradient(135deg, #e8f5e8, white);
+        }
+
+        .employee-card.inactive {
+            border-left-color: #f44336;
+            background: linear-gradient(135deg, #ffeaea, white);
+        }
+
+        .employee-name {
+            font-size: 1.1em;
             font-weight: bold;
             margin-bottom: 5px;
         }
 
-        .stat-label {
+        .employee-times {
             font-size: 0.9em;
-            opacity: 0.9;
-        }
-
-        .table-container {
-            overflow-x: auto;
-            margin-top: 20px;
-        }
-
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-
-        .data-table th {
-            background: #667eea;
-            color: white;
-            padding: 15px 10px;
-            text-align: center;
-            font-weight: bold;
-        }
-
-        .data-table td {
-            padding: 12px 10px;
-            text-align: center;
-            border-bottom: 1px solid #eee;
-        }
-
-        .data-table tr:hover {
-            background: #f5f5f5;
-        }
-
-        .overtime-cell {
-            background: #fff3cd !important;
-            color: #856404;
-            font-weight: bold;
-        }
-
-        .absent-cell {
-            background: #f8d7da !important;
-            color: #721c24;
-        }
-
-        .late-cell {
-            background: #d1ecf1 !important;
-            color: #0c5460;
-        }
-
-        .quick-date-btns {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-top: 10px;
-        }
-
-        .quick-date-btn {
-            padding: 6px 12px;
-            background: #e3f2fd;
-            color: #1976d2;
-            border: 1px solid #bbdefb;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 12px;
-            transition: all 0.3s;
-        }
-
-        .quick-date-btn:hover,
-        .quick-date-btn.active {
-            background: #1976d2;
-            color: white;
+            color: #666;
+            margin-bottom: 8px;
         }
 
         .alert {
@@ -309,45 +247,82 @@
             border: 1px solid #f5c6cb;
         }
 
-        .alert-info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
+        .navigation {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            z-index: 1000;
         }
 
-        .chart-container {
-            background: white;
-            border-radius: 15px;
-            padding: 20px;
-            margin: 20px 0;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-
-        .payroll-section {
-            background: linear-gradient(135deg, #4CAF50, #45a049);
-            color: white;
-            border-radius: 15px;
-            padding: 20px;
-            margin: 20px 0;
-            text-align: center;
-        }
-
-        .payroll-section h3 {
-            margin-bottom: 15px;
-        }
-
-        .payroll-info {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin: 15px 0;
-        }
-
-        .payroll-item {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 15px;
+        .nav-btn {
+            background: none;
+            border: none;
+            padding: 8px;
             border-radius: 10px;
-            backdrop-filter: blur(5px);
+            cursor: pointer;
+            transition: all 0.3s;
+            flex: 1;
+            max-width: 80px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .nav-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .nav-btn:hover:not(.active) {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .quick-action {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .quick-action:active {
+            transform: scale(0.98);
+        }
+
+        .quick-action-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .quick-action-label {
+            font-size: 0.9em;
+            color: #666;
         }
 
         @keyframes slideDown {
@@ -361,216 +336,247 @@
             }
         }
 
-        @media (max-width: 768px) {
-            .filters-grid {
-                grid-template-columns: 1fr;
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 10px;
             }
             
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
+            .card {
+                padding: 15px;
+                margin-bottom: 10px;
+            }
+            
+            .btn-group {
+                flex-direction: column;
+            }
+            
+            .btn {
+                margin-bottom: 10px;
+            }
+        }
+
+        @media (pointer: coarse) {
+            .btn {
+                min-height: 48px;
+            }
+            
+            .nav-btn {
+                min-height: 48px;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>📊 דוחות ותובנות - רפטינג בר</h1>
-            <p>ניתוח מתקדם של נתוני נוכחות ושעות עבודה</p>
+    <div class="header">
+        <h1>🏄‍♂️ רפטינג בר</h1>
+        <div class="current-time" id="currentTime"></div>
+        <div class="sync-status" id="syncStatus">
+            <span id="syncIcon">🔄</span>
+            <span id="syncText">מתחבר...</span>
         </div>
+    </div>
 
+    <div class="container">
         <div id="alertContainer"></div>
 
-        <!-- כרטיסי דוחות מהירים -->
-        <div class="card">
-            <h2>🚀 דוחות מהירים</h2>
-            <div class="reports-grid">
-                <div class="report-card" onclick="generateDailyReport()">
-                    <div class="report-icon">📅</div>
-                    <div class="report-title">דוח יומי</div>
-                    <div class="report-desc">סיכום נוכחות ושעות עבודה להיום</div>
+        <!-- עמוד ראשי -->
+        <div id="mainPage" class="page active">
+            <div class="card">
+                <h2>רישום נוכחות</h2>
+                
+                <div class="form-group">
+                    <label for="employeeSelect">בחר עובד:</label>
+                    <select id="employeeSelect">
+                        <option value="">-- בחר עובד --</option>
+                    </select>
                 </div>
                 
-                <div class="report-card" onclick="generateWeeklyReport()">
-                    <div class="report-icon">📈</div>
-                    <div class="report-title">דוח שבועי</div>
-                    <div class="report-desc">ניתוח שבוע אחרון עם מגמות</div>
+                <div class="btn-group">
+                    <button class="btn btn-checkin" onclick="checkIn()" id="checkinBtn">
+                        🟢 כניסה
+                    </button>
+                    <button class="btn btn-checkout" onclick="checkOut()" id="checkoutBtn">
+                        🔴 יציאה
+                    </button>
                 </div>
-                
-                <div class="report-card" onclick="generateMonthlyReport()">
-                    <div class="report-icon">📊</div>
-                    <div class="report-title">דוח חודשי</div>
-                    <div class="report-desc">סיכום מפורט לחודש הנוכחי</div>
+
+                <div class="status-display">
+                    <h3>מצב נוכחי</h3>
+                    <div id="employeeStatus">בחר עובד לצפייה במצב</div>
                 </div>
-                
-                <div class="report-card" onclick="generateWorkDaysReport()">
-                    <div class="report-icon">🗓️</div>
-                    <div class="report-title">דוח ימי עבודה</div>
-                    <div class="report-desc">ספירת ימי עבודה לפי תקופה</div>
-                </div>
-                
-                <div class="report-card" onclick="generateOvertimeReport()">
-                    <div class="report-icon">🌙</div>
-                    <div class="report-title">דוח שעות נוספות</div>
-                    <div class="report-desc">מעקב שעות מעל 9 ביום</div>
-                </div>
-                
-                <div class="report-card" onclick="generatePayrollReport()">
-                    <div class="report-icon">💰</div>
-                    <div class="report-title">דוח שכר</div>
-                    <div class="report-desc">נתונים למחלקת שכר</div>
+
+                <div class="quick-actions">
+                    <div class="quick-action" onclick="showEmployeesStatus()">
+                        <div class="quick-action-value" id="activeCount">0</div>
+                        <div class="quick-action-label">עובדים פעילים</div>
+                    </div>
+                    <div class="quick-action" onclick="showPage('reports')">
+                        <div class="quick-action-value" id="todayHours">0</div>
+                        <div class="quick-action-label">שעות היום</div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- מסנני דוחות -->
-        <div class="card">
-            <h2>🔍 דוחות מותאמים אישית</h2>
-            <div class="filters-section">
-                <div class="filters-grid">
+        <!-- עמוד עובדים -->
+        <div id="employeesPage" class="page">
+            <div class="card">
+                <h2>👥 סטטוס עובדים</h2>
+                <div class="employee-grid" id="employeeGrid"></div>
+            </div>
+        </div>
+
+        <!-- עמוד דוחות -->
+        <div id="reportsPage" class="page">
+            <div class="card">
+                <h2>📊 דוחות</h2>
+                <div class="btn-group" style="flex-direction: column;">
+                    <button class="btn btn-admin" onclick="exportToday()">📄 ייצא דוח יומי</button>
+                    <button class="btn btn-admin" onclick="exportDetailed()">📊 ייצא דוח מפורט</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- עמוד ניהול -->
+        <div id="adminPage" class="page">
+            <!-- מסך נעילה -->
+            <div id="adminLock" class="card" style="display: block;">
+                <h2>🔒 עמוד ניהול מוגן</h2>
+                <p style="text-align: center; color: #666; margin-bottom: 20px;">
+                    הזן קוד גישה לניהול המערכת
+                </p>
+                
+                <div class="form-group">
+                    <label>קוד גישה:</label>
+                    <input type="password" id="adminPassword" placeholder="הזן קוד גישה" maxlength="6">
+                </div>
+                
+                <button class="btn btn-admin" onclick="checkAdminPassword()" style="width: 100%;">
+                    🔓 פתח ניהול
+                </button>
+                
+                <div style="margin-top: 20px; padding: 15px; background: #e3f2fd; border-radius: 10px; font-size: 14px; color: #1976d2;">
+                    💡 <strong>טיפ:</strong> הקוד ברירת המחדל הוא: <strong>1234</strong><br>
+                    ניתן לשנות בהגדרות המערכת
+                </div>
+            </div>
+
+            <!-- תוכן הניהול -->
+            <div id="adminContent" style="display: none;">
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h2 style="margin: 0;">⚙️ ניהול עובדים</h2>
+                        <button class="btn" onclick="lockAdmin()" style="background: #f44336; color: white; padding: 8px 12px; font-size: 14px;">
+                            🔒 נעל
+                        </button>
+                    </div>
+                    
+                    <div style="background: #e3f2fd; border-radius: 8px; padding: 10px; margin-bottom: 15px; text-align: center; font-size: 0.9em; color: #1976d2;">
+                        📡 העובדים מסונכרנים אוטומטית בין כל המכשירים
+                    </div>
+                    
                     <div class="form-group">
-                        <label>בחר עובד:</label>
-                        <select id="employeeFilter">
-                            <option value="all">כל העובדים</option>
+                        <label>הוסף עובד חדש:</label>
+                        <input type="text" id="newEmployeeName" placeholder="שם העובד החדש">
+                    </div>
+                    <button class="btn btn-admin" onclick="addEmployee()" style="width: 100%; margin-bottom: 15px;">
+                        ➕ הוסף עובד
+                    </button>
+                    
+                    <div class="form-group">
+                        <label>הסר עובד:</label>
+                        <select id="removeEmployeeSelect">
+                            <option value="">-- בחר עובד להסרה --</option>
                         </select>
                     </div>
+                    <button class="btn btn-checkout" onclick="removeEmployee()" style="width: 100%; margin-bottom: 20px;">
+                        🗑️ הסר עובד
+                    </button>
                     
+                    <button class="btn btn-checkout" onclick="clearAll()" style="width: 100%;">
+                        🔄 איפוס נתונים
+                    </button>
+                </div>
+
+                <div class="card">
+                    <h2>🔄 סנכרון</h2>
+                    <p style="text-align: center; color: #666; margin-bottom: 15px;">
+                        עובדים ונתוני נוכחות מסונכרנים בזמן אמת
+                    </p>
+                    <button class="btn btn-admin" onclick="forcSync()" style="width: 100%;">
+                        ⚡ סנכרון ידני
+                    </button>
+                </div>
+
+                <div class="card">
+                    <h2>🔐 אבטחה</h2>
                     <div class="form-group">
-                        <label>מתאריך:</label>
-                        <input type="date" id="startDate">
+                        <label>שנה קוד גישה:</label>
+                        <input type="password" id="newAdminPassword" placeholder="קוד חדש (4-6 ספרות)" maxlength="6">
                     </div>
+                    <button class="btn btn-admin" onclick="changeAdminPassword()" style="width: 100%;">
+                        🔑 שנה קוד
+                    </button>
                     
-                    <div class="form-group">
-                        <label>עד תאריך:</label>
-                        <input type="date" id="endDate">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>סוג דוח:</label>
-                        <select id="reportType">
-                            <option value="summary">סיכום כללי</option>
-                            <option value="detailed">מפורט</option>
-                            <option value="hours">שעות בלבד</option>
-                            <option value="attendance">נוכחות בלבד</option>
-                            <option value="overtime">שעות נוספות</option>
-                            <option value="workdays">ימי עבודה</option>
-                        </select>
+                    <div style="margin-top: 15px; padding: 10px; background: #fff3cd; border-radius: 8px; font-size: 13px; color: #856404;">
+                        ⚠️ זכור את הקוד החדש! אין אפשרות לשחזר אותו
                     </div>
                 </div>
-                
-                <div class="quick-date-btns">
-                    <div class="quick-date-btn" onclick="setDateRange('today')">היום</div>
-                    <div class="quick-date-btn" onclick="setDateRange('yesterday')">אתמול</div>
-                    <div class="quick-date-btn" onclick="setDateRange('week')">השבוע</div>
-                    <div class="quick-date-btn" onclick="setDateRange('lastweek')">שבוע שעבר</div>
-                    <div class="quick-date-btn" onclick="setDateRange('month')">החודש</div>
-                    <div class="quick-date-btn" onclick="setDateRange('lastmonth')">חודש שעבר</div>
-                </div>
-                
-                <div style="text-align: center; margin-top: 15px;">
-                    <button class="btn btn-primary" onclick="generateCustomReport()">📋 צור דוח מותאם</button>
-                    <button class="btn btn-success" onclick="exportToExcel()">📤 ייצא לאקסל</button>
-                    <button class="btn btn-info" onclick="emailReport()">📧 שלח במייל</button>
-                    <button class="btn btn-warning" onclick="sendToPayroll()">💰 שלח לשכר</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- סטטיסטיקות מהירות -->
-        <div class="card">
-            <h2>📈 סטטיסטיקות מהירות</h2>
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-value" id="todayHours">0</div>
-                    <div class="stat-label">שעות היום</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="activeEmployees">0</div>
-                    <div class="stat-label">עובדים פעילים</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="weeklyHours">0</div>
-                    <div class="stat-label">שעות השבוע</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="overtimeHours">0</div>
-                    <div class="stat-label">שעות נוספות</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="workDaysCount">0</div>
-                    <div class="stat-label">ימי עבודה החודש</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="avgDaily">0</div>
-                    <div class="stat-label">ממוצע יומי</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- תוצאות דוח -->
-        <div class="card" id="reportResults" style="display: none;">
-            <h2>📊 תוצאות הדוח</h2>
-            <div id="reportContent"></div>
-        </div>
-
-        <!-- סעיף שכר -->
-        <div class="payroll-section" id="payrollSection" style="display: none;">
-            <h3>💰 נתונים למחלקת שכר</h3>
-            <div class="payroll-info" id="payrollInfo"></div>
-            <div style="margin-top: 20px;">
-                <button class="btn btn-success" onclick="exportPayrollData()" style="background: rgba(255,255,255,0.2); border: 2px solid white;">
-                    📤 ייצא נתוני שכר
-                </button>
-                <button class="btn btn-info" onclick="emailPayrollData()" style="background: rgba(255,255,255,0.2); border: 2px solid white;">
-                    📧 שלח למחלקת שכר
-                </button>
             </div>
         </div>
     </div>
 
+    <!-- ניווט תחתון -->
+    <div class="navigation">
+        <button class="nav-btn active" onclick="showPage('main')">
+            <div>🏠</div>
+            <div>בית</div>
+        </button>
+        <button class="nav-btn" onclick="showPage('employees')">
+            <div>👥</div>
+            <div>עובדים</div>
+        </button>
+        <button class="nav-btn" onclick="showPage('reports')">
+            <div>📊</div>
+            <div>דוחות</div>
+        </button>
+        <button class="nav-btn" onclick="showPage('admin')">
+            <div>⚙️</div>
+            <div>ניהול</div>
+        </button>
+    </div>
+
     <script>
-        // משתנים גלובליים
+        // הגדרות קבועות
+        const EMBEDDED_SETTINGS = {
+            apiKey: 'AIzaSyB8MgwEZ7hqS_hiZqTcwzODheuwdBA55j4',
+            sheetId: '1SNSdRdJy-vP--spyKmVwDbnaz808KEwTYSKiLreFn0w', 
+            scriptUrl: 'https://script.google.com/macros/s/AKfycbx_UMxeN_-dYeiR4xQa4HzT9ogZPv8BeYkRuUg0BOeEobOQZJVvj7gZU-2U_5LrxEtK/exec'
+        };
+
+        // משתני האפליקציה
         var employees = [];
         var attendanceData = {};
         var currentStatus = {};
-
-        // טעינת נתונים מ-localStorage
-        function loadData() {
-            try {
-                var savedEmployees = localStorage.getItem('raftingbar_employees');
-                if (savedEmployees) {
-                    employees = JSON.parse(savedEmployees);
-                    updateEmployeeFilter();
-                }
-                
-                var savedAttendance = localStorage.getItem('raftingbar_attendance');
-                if (savedAttendance) {
-                    attendanceData = JSON.parse(savedAttendance);
-                }
-                
-                var savedStatus = localStorage.getItem('raftingbar_status');
-                if (savedStatus) {
-                    currentStatus = JSON.parse(savedStatus);
-                }
-                
-                updateStatistics();
-            } catch (e) {
-                console.log('שגיאה בטעינת נתונים:', e);
-            }
-        }
-
-        // עדכון רשימת עובדים במסנן
-        function updateEmployeeFilter() {
-            var select = document.getElementById('employeeFilter');
-            select.innerHTML = '<option value="all">כל העובדים</option>';
-            
-            for (var i = 0; i < employees.length; i++) {
-                var option = document.createElement('option');
-                option.value = employees[i];
-                option.text = employees[i];
-                select.appendChild(option);
-            }
-        }
+        var adminPassword = '1234';
+        var isAdminUnlocked = false;
+        var apiKey = EMBEDDED_SETTINGS.apiKey;
+        var sheetId = EMBEDDED_SETTINGS.sheetId;
+        var scriptUrl = EMBEDDED_SETTINGS.scriptUrl;
+        var isInitialized = false;
+        var pendingSync = [];
 
         // פונקציות עזר
         function getCurrentDate() {
@@ -606,8 +612,12 @@
             return Math.max(0, Math.round(hours * 100) / 100);
         }
 
-        function isOvertime(hours) {
-            return hours > 9;
+        function updateCurrentTime() {
+            var now = new Date();
+            document.getElementById('currentTime').textContent = now.toLocaleTimeString('he-IL', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
         }
 
         function showAlert(message, type) {
@@ -624,249 +634,589 @@
             }, 4000);
         }
 
-        // הגדרת תאריכים ברירת מחדל
-        function setDefaultDates() {
-            var today = new Date();
-            var weekAgo = new Date(today);
-            weekAgo.setDate(today.getDate() - 7);
-            
-            document.getElementById('startDate').value = weekAgo.toISOString().split('T')[0];
-            document.getElementById('endDate').value = today.toISOString().split('T')[0];
+        function updateSyncStatus(icon, text, className) {
+            document.getElementById('syncIcon').textContent = icon;
+            document.getElementById('syncText').textContent = text;
+            var statusEl = document.getElementById('syncStatus');
+            statusEl.className = 'sync-status ' + className;
         }
 
-        // הגדרת טווח תאריכים מהיר
-        function setDateRange(range) {
-            var today = new Date();
-            var startDate = document.getElementById('startDate');
-            var endDate = document.getElementById('endDate');
+        // פונקציות חיבור
+        function testConnection() {
+            if (!apiKey || !sheetId) {
+                updateSyncStatus('⚠️', 'נדרשת הגדרה', 'sync-error');
+                return;
+            }
             
-            document.querySelectorAll('.quick-date-btn').forEach(function(btn) {
-                btn.classList.remove('active');
+            updateSyncStatus('🔍', 'בודק חיבור...', 'sync-syncing');
+            
+            var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + apiKey;
+            
+            fetch(url)
+                .then(function(response) {
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        throw new Error('HTTP ' + response.status);
+                    }
+                })
+                .then(function(data) {
+                    updateSyncStatus('☁️', 'מחובר לענן', 'sync-connected');
+                    isInitialized = true;
+                    loadDataFromSheet();
+                    showAlert('מחובר לענן ומסנכרן! 🌐', 'success');
+                })
+                .catch(function(error) {
+                    updateSyncStatus('📱', 'עבודה מקומית', 'sync-error');
+                    showAlert('עובד במצב מקומי', 'success');
+                });
+        }
+
+        // טעינת נתונים מהגיליון - עם סנכרון עובדים מלא
+        function loadDataFromSheet() {
+            if (!isInitialized) return;
+            
+            var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '/values/A:F?key=' + apiKey;
+            
+            fetch(url)
+                .then(function(response) {
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        throw new Error('HTTP ' + response.status);
+                    }
+                })
+                .then(function(data) {
+                    var rows = data.values || [];
+                    
+                    var uniqueEmployees = new Set();
+                    var newAttendanceData = {};
+                    var newCurrentStatus = {};
+                    var currentDate = getCurrentDate();
+                    
+                    // טען עובדים מהגיליון
+                    for (var i = 1; i < rows.length; i++) {
+                        var row = rows[i];
+                        if (row && row[0]) {
+                            uniqueEmployees.add(row[0]);
+                            
+                            var employee = row[0];
+                            var action = row[1];
+                            var timestamp = row[2];
+                            var date = row[3];
+                            
+                            if (!newAttendanceData[employee]) {
+                                newAttendanceData[employee] = {};
+                            }
+                            if (!newAttendanceData[employee][date]) {
+                                newAttendanceData[employee][date] = {};
+                            }
+                            
+                            if (action === 'checkin') {
+                                newAttendanceData[employee][date].checkIn = timestamp;
+                                if (date === currentDate) {
+                                    newCurrentStatus[employee] = 'in';
+                                }
+                            } else if (action === 'checkout') {
+                                newAttendanceData[employee][date].checkOut = timestamp;
+                                if (date === currentDate) {
+                                    newCurrentStatus[employee] = 'out';
+                                }
+                            }
+                        }
+                    }
+                    
+                    // סנכרון רשימת עובדים - החלף לחלוטין עם מה שבגיליון
+                    var cloudEmployees = Array.from(uniqueEmployees).sort();
+                    var hasEmployeeChanges = false;
+                    
+                    // בדוק אם יש שינויים ברשימת העובדים
+                    if (employees.length !== cloudEmployees.length) {
+                        hasEmployeeChanges = true;
+                    } else {
+                        for (var i = 0; i < employees.length; i++) {
+                            if (employees[i] !== cloudEmployees[i]) {
+                                hasEmployeeChanges = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // עדכן רשימת עובדים אם יש שינויים
+                    if (hasEmployeeChanges && cloudEmployees.length > 0) {
+                        employees = cloudEmployees;
+                        showAlert('רשימת עובדים עודכנה מהענן 👥', 'success');
+                    }
+                    
+                    attendanceData = newAttendanceData;
+                    currentStatus = newCurrentStatus;
+                    
+                    saveLocalData();
+                    updateAll();
+                })
+                .catch(function(error) {
+                    console.log('שגיאה בטעינת נתונים:', error);
+                });
+        }
+
+        // שליחה לגיליון
+        function recordToSheet(employee, action, timestamp, date, time) {
+            if (!scriptUrl) return Promise.resolve(false);
+            
+            var rowData = [employee, action, timestamp, date, time, 'PWA'];
+            
+            return fetch(scriptUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    values: [rowData]
+                })
+            })
+            .then(function() {
+                return true;
+            })
+            .catch(function(error) {
+                console.log('שגיאה ברישום:', error);
+                return false;
             });
-            event.target.classList.add('active');
+        }
+
+        // פונקציות נוכחות
+        function checkIn() {
+            var employeeName = document.getElementById('employeeSelect').value;
+            if (!employeeName) {
+                showAlert('אנא בחר עובד', 'error');
+                return;
+            }
+
+            if (currentStatus[employeeName] === 'in') {
+                showAlert('העובד כבר במשמרת', 'error');
+                return;
+            }
+
+            var now = new Date();
+            var today = getCurrentDate();
+            var timestamp = now.toISOString();
+            var time = now.toLocaleTimeString('he-IL');
             
-            switch(range) {
-                case 'today':
-                    startDate.value = today.toISOString().split('T')[0];
-                    endDate.value = today.toISOString().split('T')[0];
-                    break;
-                case 'yesterday':
-                    var yesterday = new Date(today);
-                    yesterday.setDate(today.getDate() - 1);
-                    startDate.value = yesterday.toISOString().split('T')[0];
-                    endDate.value = yesterday.toISOString().split('T')[0];
-                    break;
-                case 'week':
-                    var weekStart = new Date(today);
-                    weekStart.setDate(today.getDate() - today.getDay());
-                    startDate.value = weekStart.toISOString().split('T')[0];
-                    endDate.value = today.toISOString().split('T')[0];
-                    break;
-                case 'lastweek':
-                    var lastWeekEnd = new Date(today);
-                    lastWeekEnd.setDate(today.getDate() - today.getDay() - 1);
-                    var lastWeekStart = new Date(lastWeekEnd);
-                    lastWeekStart.setDate(lastWeekEnd.getDate() - 6);
-                    startDate.value = lastWeekStart.toISOString().split('T')[0];
-                    endDate.value = lastWeekEnd.toISOString().split('T')[0];
-                    break;
-                case 'month':
-                    var monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-                    startDate.value = monthStart.toISOString().split('T')[0];
-                    endDate.value = today.toISOString().split('T')[0];
-                    break;
-                case 'lastmonth':
-                    var lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-                    var lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
-                    startDate.value = lastMonthStart.toISOString().split('T')[0];
-                    endDate.value = lastMonthEnd.toISOString().split('T')[0];
-                    break;
+            if (!attendanceData[employeeName]) {
+                attendanceData[employeeName] = {};
+            }
+            if (!attendanceData[employeeName][today]) {
+                attendanceData[employeeName][today] = {};
+            }
+
+            attendanceData[employeeName][today].checkIn = timestamp;
+            currentStatus[employeeName] = 'in';
+            
+            
+            if (isInitialized) {
+                updateSyncStatus('🔄', 'רושם...', 'sync-syncing');
+                recordToSheet(employeeName, 'checkin', timestamp, today, time)
+                    .then(function(success) {
+                        if (success) {
+                            updateSyncStatus('☁️', 'מסונכרן', 'sync-connected');
+                            showAlert(employeeName + ' נרשם לכניסה ✅', 'success');
+                            setTimeout(loadDataFromSheet, 2000);
+                        } else {
+                            pendingSync.push({
+                                employee: employeeName,
+                                action: 'checkin',
+                                timestamp: timestamp,
+                                date: today,
+                                time: time
+                            });
+                            updateSyncStatus('📱', 'ממתין לסנכרון', 'sync-error');
+                            showAlert(employeeName + ' נרשם מקומית', 'success');
+                        }
+                    });
+            } else {
+                showAlert(employeeName + ' נרשם מקומית', 'success');
             }
         }
 
-        // עדכון סטטיסטיקות
-        function updateStatistics() {
-            var activeCount = 0;
-            var totalTodayHours = 0;
-            var totalWeeklyHours = 0;
-            var totalOvertimeHours = 0;
-            var workDaysThisMonth = 0;
-            var today = getCurrentDate();
-            
-            // חישוב שבוע נוכחי
-            var weekStart = new Date();
-            weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-            var weekDates = [];
-            for (var i = 0; i < 7; i++) {
-                var date = new Date(weekStart);
-                date.setDate(weekStart.getDate() + i);
-                var dateStr = date.getFullYear() + '-' + 
-                    String(date.getMonth() + 1).padStart(2, '0') + '-' + 
-                    String(date.getDate()).padStart(2, '0');
-                weekDates.push(dateStr);
+        function checkOut() {
+            var employeeName = document.getElementById('employeeSelect').value;
+            if (!employeeName) {
+                showAlert('אנא בחר עובד', 'error');
+                return;
             }
+
+            if (currentStatus[employeeName] !== 'in') {
+                showAlert('העובד לא במשמרת', 'error');
+                return;
+            }
+
+            var now = new Date();
+            var today = getCurrentDate();
+            var timestamp = now.toISOString();
+            var time = now.toLocaleTimeString('he-IL');
             
-            // חישוב חודש נוכחי
-            var monthStart = new Date();
-            monthStart.setDate(1);
-            var monthDates = [];
-            var currentMonth = new Date();
-            for (var d = new Date(monthStart); d <= currentMonth; d.setDate(d.getDate() + 1)) {
-                var dateStr = d.getFullYear() + '-' + 
-                    String(d.getMonth() + 1).padStart(2, '0') + '-' + 
-                    String(d.getDate()).padStart(2, '0');
-                monthDates.push(dateStr);
+            if (attendanceData[employeeName] && attendanceData[employeeName][today]) {
+                attendanceData[employeeName][today].checkOut = timestamp;
+                currentStatus[employeeName] = 'out';
+                
+                var workHours = calculateHours(
+                    attendanceData[employeeName][today].checkIn,
+                    attendanceData[employeeName][today].checkOut
+                );
+                
+                saveLocalData();
+                updateAll();
+                
+                if (isInitialized) {
+                    updateSyncStatus('🔄', 'רושם...', 'sync-syncing');
+                    recordToSheet(employeeName, 'checkout', timestamp, today, time)
+                        .then(function(success) {
+                            if (success) {
+                                updateSyncStatus('☁️', 'מסונכרן', 'sync-connected');
+                                showAlert(employeeName + ' נרשם ליציאה. עבד ' + workHours + ' שעות ✅', 'success');
+                                setTimeout(loadDataFromSheet, 2000);
+                            } else {
+                                pendingSync.push({
+                                    employee: employeeName,
+                                    action: 'checkout',
+                                    timestamp: timestamp,
+                                    date: today,
+                                    time: time
+                                });
+                                updateSyncStatus('📱', 'ממתין לסנכרון', 'sync-error');
+                                showAlert(employeeName + ' נרשם מקומית. עבד ' + workHours + ' שעות', 'success');
+                            }
+                        });
+                } else {
+                    showAlert(employeeName + ' נרשם מקומית. עבד ' + workHours + ' שעות', 'success');
+                }
+            }
+        }
+
+        // ניהול עובדים - עם סנכרון מלא
+        function addEmployee() {
+            var name = document.getElementById('newEmployeeName').value.trim();
+            if (!name) {
+                showAlert('אנא הזן שם עובד', 'error');
+                return;
             }
             
             for (var i = 0; i < employees.length; i++) {
-                var employee = employees[i];
+                if (employees[i] === name) {
+                    showAlert('עובד בשם זה כבר קיים', 'error');
+                    return;
+                }
+            }
+            
+            employees.push(name);
+            employees.sort();
+            saveLocalData();
+            updateAll();
+            document.getElementById('newEmployeeName').value = '';
+            
+            // סנכרן עובד לגיליון
+            if (isInitialized) {
+                updateSyncStatus('🔄', 'מסנכרן עובד...', 'sync-syncing');
+                var now = new Date();
+                var today = getCurrentDate();
+                var timestamp = now.toISOString();
+                var time = now.toLocaleTimeString('he-IL');
                 
-                // עובדים פעילים
+                recordToSheet(name, 'employee_added', timestamp, today, time)
+                    .then(function(success) {
+                        if (success) {
+                            updateSyncStatus('☁️', 'מסונכרן', 'sync-connected');
+                            showAlert('העובד ' + name + ' נוסף ויסונכרן לכל המכשירים! 🌐', 'success');
+                            setTimeout(loadDataFromSheet, 2000);
+                        } else {
+                            updateSyncStatus('📱', 'ממתין לסנכרון', 'sync-error');
+                            showAlert('העובד ' + name + ' נוסף מקומית', 'success');
+                        }
+                    });
+            } else {
+                showAlert('העובד ' + name + ' נוסף מקומית', 'success');
+            }
+        }
+
+        function removeEmployee() {
+            var employeeName = document.getElementById('removeEmployeeSelect').value;
+            if (!employeeName) {
+                showAlert('אנא בחר עובד להסרה', 'error');
+                return;
+            }
+            
+            if (confirm('האם אתה בטוח שברצונך להסיר את ' + employeeName + '?')) {
+                for (var i = 0; i < employees.length; i++) {
+                    if (employees[i] === employeeName) {
+                        employees.splice(i, 1);
+                        break;
+                    }
+                }
+                
+                delete attendanceData[employeeName];
+                delete currentStatus[employeeName];
+                
+                saveLocalData();
+                updateAll();
+                showAlert('העובד ' + employeeName + ' הוסר בהצלחה', 'success');
+            }
+        }
+
+        function clearAll() {
+            if (confirm('האם אתה בטוח שברצונך למחוק את כל נתוני הנוכחות?')) {
+                attendanceData = {};
+                currentStatus = {};
+                saveLocalData();
+                updateAll();
+                showAlert('כל נתוני הנוכחות נמחקו', 'success');
+            }
+        }
+
+        // עדכון ממשק
+        function updateEmployeeSelects() {
+            var mainSelect = document.getElementById('employeeSelect');
+            var removeSelect = document.getElementById('removeEmployeeSelect');
+            
+            if (mainSelect) {
+                var mainValue = mainSelect.value;
+                mainSelect.innerHTML = '<option value="">-- בחר עובד --</option>';
+                
+                for (var i = 0; i < employees.length; i++) {
+                    var option = document.createElement('option');
+                    option.value = employees[i];
+                    option.text = employees[i];
+                    mainSelect.appendChild(option);
+                }
+                
+                mainSelect.value = mainValue;
+            }
+            
+            if (removeSelect) {
+                var removeValue = removeSelect.value;
+                removeSelect.innerHTML = '<option value="">-- בחר עובד להסרה --</option>';
+                
+                for (var i = 0; i < employees.length; i++) {
+                    var option = document.createElement('option');
+                    option.value = employees[i];
+                    option.text = employees[i];
+                    removeSelect.appendChild(option);
+                }
+                
+                removeSelect.value = removeValue;
+            }
+        }
+
+        function updateEmployeeGrid() {
+            var grid = document.getElementById('employeeGrid');
+            if (!grid) return;
+            
+            grid.innerHTML = '';
+            
+            var today = getCurrentDate();
+            
+            for (var i = 0; i < employees.length; i++) {
+                var employee = employees[i];
+                var status = currentStatus[employee] || 'out';
+                var todayData = attendanceData[employee] && attendanceData[employee][today];
+                
+                var card = document.createElement('div');
+                card.className = 'employee-card ' + (status === 'in' ? 'active' : 'inactive');
+                
+                var checkInTime = todayData && todayData.checkIn ? formatTime(todayData.checkIn) : '--:--';
+                var checkOutTime = todayData && todayData.checkOut ? formatTime(todayData.checkOut) : '--:--';
+                
+                var workHours = 0;
+                if (todayData && todayData.checkIn) {
+                    if (status === 'in') {
+                        workHours = calculateHours(todayData.checkIn, null);
+                    } else {
+                        workHours = calculateHours(todayData.checkIn, todayData.checkOut);
+                    }
+                }
+                
+                card.innerHTML = 
+                    '<div class="employee-name">' + employee + '</div>' +
+                    '<div class="employee-times">כניסה: ' + checkInTime + ' | יציאה: ' + checkOutTime + '</div>' +
+                    '<div class="employee-times">שעות: ' + workHours + (status === 'in' ? ' (רץ)' : '') + '</div>' +
+                    '<span class="status-badge status-' + (status === 'in' ? 'in' : 'out') + '">' +
+                    (status === 'in' ? 'במשמרת' : 'לא במשמרת') + '</span>';
+                
+                grid.appendChild(card);
+            }
+        }
+
+        function updateEmployeeStatus() {
+            var selectedEmployee = document.getElementById('employeeSelect').value;
+            var statusDiv = document.getElementById('employeeStatus');
+            
+            if (!selectedEmployee) {
+                statusDiv.innerHTML = 'בחר עובד לצפייה במצב';
+                return;
+            }
+            
+            var status = currentStatus[selectedEmployee] || 'out';
+            var today = getCurrentDate();
+            var todayData = attendanceData[selectedEmployee] && attendanceData[selectedEmployee][today];
+            
+            if (status === 'in') {
+                var checkInTime = todayData ? formatTime(todayData.checkIn) : 'לא זמין';
+                var currentHours = todayData ? calculateHours(todayData.checkIn, null) : 0;
+                statusDiv.innerHTML = 
+                    '<strong>' + selectedEmployee + '</strong><br>' +
+                    '<span class="status-badge status-in">במשמרת</span><br>' +
+                    'כניסה: ' + checkInTime + '<br>' +
+                    'שעות נוכחיות: ' + currentHours;
+            } else {
+                var workHours = todayData ? calculateHours(todayData.checkIn, todayData.checkOut) : 0;
+                statusDiv.innerHTML = 
+                    '<strong>' + selectedEmployee + '</strong><br>' +
+                    '<span class="status-badge status-out">לא במשמרת</span><br>' +
+                    'שעות היום: ' + workHours;
+            }
+        }
+
+        function updateQuickStats() {
+            var activeCount = 0;
+            var totalTodayHours = 0;
+            var today = getCurrentDate();
+            
+            for (var i = 0; i < employees.length; i++) {
+                var employee = employees[i];
                 if (currentStatus[employee] === 'in') {
                     activeCount++;
                 }
                 
-                // שעות היום
                 var todayData = attendanceData[employee] && attendanceData[employee][today];
                 if (todayData && todayData.checkIn) {
                     var endTime = todayData.checkOut || null;
                     var hours = calculateHours(todayData.checkIn, endTime);
                     totalTodayHours += hours;
-                    
-                    if (isOvertime(hours)) {
-                        totalOvertimeHours += (hours - 9);
-                    }
-                }
-                
-                // שעות השבוע
-                for (var w = 0; w < weekDates.length; w++) {
-                    var weekData = attendanceData[employee] && attendanceData[employee][weekDates[w]];
-                    if (weekData && weekData.checkIn) {
-                        var weekHours = calculateHours(weekData.checkIn, weekData.checkOut);
-                        totalWeeklyHours += weekHours;
-                        
-                        if (isOvertime(weekHours)) {
-                            totalOvertimeHours += (weekHours - 9);
-                        }
-                    }
-                }
-                
-                // ימי עבודה החודש
-                for (var m = 0; m < monthDates.length; m++) {
-                    var monthData = attendanceData[employee] && attendanceData[employee][monthDates[m]];
-                    if (monthData && monthData.checkIn) {
-                        workDaysThisMonth++;
-                    }
                 }
             }
             
-            // עדכון UI
+            document.getElementById('activeCount').textContent = activeCount;
             document.getElementById('todayHours').textContent = Math.round(totalTodayHours * 10) / 10;
-            document.getElementById('activeEmployees').textContent = activeCount;
-            document.getElementById('weeklyHours').textContent = Math.round(totalWeeklyHours * 10) / 10;
-            document.getElementById('overtimeHours').textContent = Math.round(totalOvertimeHours * 10) / 10;
-            document.getElementById('workDaysCount').textContent = workDaysThisMonth;
+        }
+
+        function updateAll() {
+            updateEmployeeSelects();
+            updateEmployeeGrid();
+            updateEmployeeStatus();
+            updateQuickStats();
+        }
+
+        // ניווט
+        function showPage(pageName) {
+            document.querySelectorAll('.page').forEach(function(page) {
+                page.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-btn').forEach(function(btn) {
+                btn.classList.remove('active');
+            });
             
-            var avgDaily = workDaysThisMonth > 0 ? totalWeeklyHours / 7 : 0;
-            document.getElementById('avgDaily').textContent = Math.round(avgDaily * 10) / 10;
-        }
-
-        // פונקציות דוחות
-        function generateDailyReport() {
-            showAlert('מכין דוח יומי...', 'info');
-            setTimeout(function() {
-                var content = createDailyReportTable();
-                showReportResults('דוח יומי - ' + getCurrentDate(), content);
-                showAlert('דוח יומי הוכן בהצלחה!', 'success');
-            }, 1000);
-        }
-
-        function generateWeeklyReport() {
-            showAlert('מכין דוח שבועי...', 'info');
-            setTimeout(function() {
-                var content = createWeeklyReportTable();
-                showReportResults('דוח שבועי - השבוע האחרון', content);
-                showAlert('דוח שבועי הוכן בהצלחה!', 'success');
-            }, 1000);
-        }
-
-        function generateMonthlyReport() {
-            showAlert('מכין דוח חודשי...', 'info');
-            setTimeout(function() {
-                var content = createMonthlyReportTable();
-                showReportResults('דוח חודשי - החודש הנוכחי', content);
-                showAlert('דוח חודשי הוכן בהצלחה!', 'success');
-            }, 1000);
-        }
-
-        function generateWorkDaysReport() {
-            showAlert('מכין דוח ימי עבודה...', 'info');
-            setTimeout(function() {
-                var content = createWorkDaysReportTable();
-                showReportResults('דוח ימי עבודה', content);
-                showAlert('דוח ימי עבודה הוכן בהצלחה!', 'success');
-            }, 1000);
-        }
-
-        function generateOvertimeReport() {
-            showAlert('מכין דוח שעות נוספות...', 'info');
-            setTimeout(function() {
-                var content = createOvertimeReportTable();
-                showReportResults('דוח שעות נוספות (מעל 9 שעות ביום)', content);
-                showAlert('דוח שעות נוספות הוכן בהצלחה!', 'success');
-            }, 1000);
-        }
-
-        function generatePayrollReport() {
-            showAlert('מכין דוח שכר...', 'info');
-            setTimeout(function() {
-                var content = createPayrollReportTable();
-                showReportResults('דוח נתונים למחלקת שכר', content);
-                document.getElementById('payrollSection').style.display = 'block';
-                updatePayrollSection();
-                showAlert('דוח שכר הוכן בהצלחה!', 'success');
-            }, 1000);
-        }
-
-        function generateCustomReport() {
-            var employee = document.getElementById('employeeFilter').value;
-            var startDate = document.getElementById('startDate').value;
-            var endDate = document.getElementById('endDate').value;
-            var reportType = document.getElementById('reportType').value;
+            document.getElementById(pageName + 'Page').classList.add('active');
             
-            if (!startDate || !endDate) {
-                showAlert('אנא בחר תאריכי התחלה וסיום', 'error');
+            var navButtons = document.querySelectorAll('.nav-btn');
+            if (pageName === 'main') navButtons[0].classList.add('active');
+            else if (pageName === 'employees') navButtons[1].classList.add('active');
+            else if (pageName === 'reports') navButtons[2].classList.add('active');
+            else if (pageName === 'admin') navButtons[3].classList.add('active');
+            
+            if (pageName === 'admin') {
+                if (!isAdminUnlocked) {
+                    document.getElementById('adminLock').style.display = 'block';
+                    document.getElementById('adminContent').style.display = 'none';
+                    setTimeout(function() {
+                        document.getElementById('adminPassword').focus();
+                    }, 100);
+                } else {
+                    document.getElementById('adminLock').style.display = 'none';
+                    document.getElementById('adminContent').style.display = 'block';
+                    updateEmployeeSelects();
+                }
+            }
+        }
+
+        function showEmployeesStatus() {
+            showPage('employees');
+        }
+
+        // ניהול
+        function checkAdminPassword() {
+            var enteredPassword = document.getElementById('adminPassword').value;
+            
+            if (enteredPassword === adminPassword) {
+                isAdminUnlocked = true;
+                document.getElementById('adminLock').style.display = 'none';
+                document.getElementById('adminContent').style.display = 'block';
+                document.getElementById('adminPassword').value = '';
+                updateEmployeeSelects();
+                showAlert('נכנסת לעמוד הניהול בהצלחה', 'success');
+            } else {
+                document.getElementById('adminPassword').value = '';
+                document.getElementById('adminPassword').focus();
+                showAlert('קוד שגוי! נסה שוב', 'error');
+                
+                var lockCard = document.getElementById('adminLock');
+                lockCard.style.animation = 'shake 0.5s';
+                setTimeout(function() {
+                    lockCard.style.animation = '';
+                }, 500);
+            }
+        }
+
+        function lockAdmin() {
+            isAdminUnlocked = false;
+            document.getElementById('adminLock').style.display = 'block';
+            document.getElementById('adminContent').style.display = 'none';
+            showAlert('עמוד הניהול ננעל', 'success');
+        }
+
+        function changeAdminPassword() {
+            var newPassword = document.getElementById('newAdminPassword').value.trim();
+            
+            if (!newPassword) {
+                showAlert('אנא הזן קוד חדש', 'error');
                 return;
             }
             
-            showAlert('מכין דוח מותאם אישית...', 'info');
-            setTimeout(function() {
-                var content;
-                var title = 'דוח מותאם - ' + startDate + ' עד ' + endDate;
-                
-                switch(reportType) {
-                    case 'workdays':
-                        content = createCustomWorkDaysReport(employee, startDate, endDate);
-                        break;
-                    case 'overtime':
-                        content = createCustomOvertimeReport(employee, startDate, endDate);
-                        break;
-                    default:
-                        content = createCustomReportTable(employee, startDate, endDate, reportType);
-                }
-                
-                showReportResults(title, content);
-                showAlert('דוח מותאם אישית הוכן בהצלחה!', 'success');
-            }, 1000);
+            if (newPassword.length < 4 || newPassword.length > 6) {
+                showAlert('הקוד חייב להיות 4-6 ספרות', 'error');
+                return;
+            }
+            
+            if (!/^\d+$/.test(newPassword)) {
+                showAlert('הקוד חייב להכיל רק ספרות', 'error');
+                return;
+            }
+            
+            if (confirm('האם אתה בטוח שברצונך לשנות את קוד הגישה ל-' + newPassword + '?')) {
+                adminPassword = newPassword;
+                localStorage.setItem('raftingbar_admin_password', adminPassword);
+                document.getElementById('newAdminPassword').value = '';
+                showAlert('קוד הגישה שונה בהצלחה!', 'success');
+            }
         }
 
-        // יצירת טבלאות דוחות
-        function createDailyReportTable() {
+        // סנכרון
+        function forcSync() {
+            if (!isInitialized) {
+                showAlert('מנסה להתחבר לענן...', 'success');
+                testConnection();
+                return;
+            }
+            
+            updateSyncStatus('🔄', 'מסנכרן...', 'sync-syncing');
+            loadDataFromSheet();
+            showAlert('מבצע סנכרון ידני...', 'success');
+        }
+
+        // דוחות
+        function exportToday() {
             var today = getCurrentDate();
-            var html = '<div class="table-container"><table class="data-table">';
-            html += '<thead><tr>';
-            html += '<th>עובד</th><th>כניסה</th><th>יציאה</th><th>שעות עבודה</th><th>שעות נוספות</th><th>סטטוס</th>';
-            html += '</tr></thead><tbody>';
+            var data = [];
+            
+            data.push(['עובד', 'כניסה', 'יציאה', 'שעות', 'סטטוס']);
             
             for (var i = 0; i < employees.length; i++) {
                 var employee = employees[i];
@@ -874,709 +1224,193 @@
                 var status = currentStatus[employee] || 'out';
                 
                 var checkInTime = todayData && todayData.checkIn ? formatTime(todayData.checkIn) : '-';
-                var checkOutTime = todayData && todayData.checkOut ? formatTime(todayData.checkOut) : (status === 'in' ? 'פעיל' : '-');
+                var checkOutTime = todayData && todayData.checkOut ? formatTime(todayData.checkOut) : '-';
+                var workHours = todayData ? calculateHours(todayData.checkIn, todayData.checkOut) : 0;
+                var statusText = status === 'in' ? 'במשמרת' : 'לא במשמרת';
+                var hoursText = workHours > 0 ? workHours + ' שעות' : '-';
                 
-                var workHours = 0;
-                var overtimeHours = 0;
-                
-                if (todayData && todayData.checkIn) {
-                    workHours = calculateHours(todayData.checkIn, todayData.checkOut);
-                    if (isOvertime(workHours)) {
-                        overtimeHours = workHours - 9;
-                    }
-                }
-                
-                var statusText = status === 'in' ? '🟢 במשמרת' : '🔴 לא במשמרת';
-                var overtimeClass = overtimeHours > 0 ? ' class="overtime-cell"' : '';
-                
-                html += '<tr>';
-                html += '<td><strong>' + employee + '</strong></td>';
-                html += '<td>' + checkInTime + '</td>';
-                html += '<td>' + checkOutTime + '</td>';
-                html += '<td' + overtimeClass + '>' + workHours.toFixed(1) + '</td>';
-                html += '<td' + overtimeClass + '>' + (overtimeHours > 0 ? overtimeHours.toFixed(1) : '-') + '</td>';
-                html += '<td>' + statusText + '</td>';
-                html += '</tr>';
+                data.push([employee, checkInTime, checkOutTime, hoursText, statusText]);
             }
             
-            html += '</tbody></table></div>';
-            html += '<div style="margin-top: 20px; text-align: center;">';
-            html += '<button class="btn btn-success" onclick="exportReport(\'daily\')">📤 ייצא דוח יומי</button>';
-            html += '</div>';
-            
-            return html;
+            downloadCSV(data, 'דוח_יומי_רפטינג_בר_' + today + '.csv');
         }
 
-        function createWeeklyReportTable() {
-            var html = '<div class="stats-grid" style="margin-bottom: 20px;">';
-            html += '<div style="background: #e3f2fd; color: #1976d2; padding: 15px; border-radius: 10px; text-align: center;">';
-            html += '<strong>' + document.getElementById('weeklyHours').textContent + '</strong><br>שעות השבוע</div>';
-            html += '<div style="background: #fff3e0; color: #f57c00; padding: 15px; border-radius: 10px; text-align: center;">';
-            html += '<strong>' + document.getElementById('overtimeHours').textContent + '</strong><br>שעות נוספות</div>';
-            html += '</div>';
-            
-            html += '<div class="table-container"><table class="data-table">';
-            html += '<thead><tr>';
-            html += '<th>עובד</th><th>ראשון</th><th>שני</th><th>שלישי</th><th>רביעי</th><th>חמישי</th><th>שישי</th><th>שבת</th><th>סה"כ</th><th>נוספות</th>';
-            html += '</tr></thead><tbody>';
-            
-            // חישוב תאריכי השבוע
-            var weekStart = new Date();
-            weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-            var weekDates = [];
-            for (var i = 0; i < 7; i++) {
-                var date = new Date(weekStart);
-                date.setDate(weekStart.getDate() + i);
-                var dateStr = date.getFullYear() + '-' + 
-                    String(date.getMonth() + 1).padStart(2, '0') + '-' + 
-                    String(date.getDate()).padStart(2, '0');
-                weekDates.push(dateStr);
-            }
-            
-            for (var e = 0; e < employees.length; e++) {
-                var employee = employees[e];
-                var weekTotal = 0;
-                var weekOvertime = 0;
-                
-                html += '<tr><td><strong>' + employee + '</strong></td>';
-                
-                for (var d = 0; d < 7; d++) {
-                    var dayData = attendanceData[employee] && attendanceData[employee][weekDates[d]];
-                    var dayHours = 0;
-                    
-                    if (dayData && dayData.checkIn) {
-                        dayHours = calculateHours(dayData.checkIn, dayData.checkOut);
-                        weekTotal += dayHours;
-                        
-                        if (isOvertime(dayHours)) {
-                            weekOvertime += (dayHours - 9);
-                        }
-                    }
-                    
-                    var cellClass = isOvertime(dayHours) ? ' class="overtime-cell"' : '';
-                    html += '<td' + cellClass + '>' + (dayHours > 0 ? dayHours.toFixed(1) : '-') + '</td>';
-                }
-                
-                var totalClass = weekOvertime > 0 ? ' class="overtime-cell"' : '';
-                html += '<td' + totalClass + '><strong>' + weekTotal.toFixed(1) + '</strong></td>';
-                html += '<td' + (weekOvertime > 0 ? ' class="overtime-cell"' : '') + '>' + 
-                    (weekOvertime > 0 ? weekOvertime.toFixed(1) : '-') + '</td>';
-                html += '</tr>';
-            }
-            
-            html += '</tbody></table></div>';
-            html += '<div style="margin-top: 20px; text-align: center;">';
-            html += '<button class="btn btn-success" onclick="exportReport(\'weekly\')">📤 ייצא דוח שבועי</button>';
-            html += '</div>';
-            
-            return html;
-        }
-
-        function createMonthlyReportTable() {
-            var html = '<div class="stats-grid" style="margin-bottom: 20px;">';
-            html += '<div style="background: #e3f2fd; color: #1976d2; padding: 15px; border-radius: 10px; text-align: center;">';
-            html += '<strong>' + document.getElementById('workDaysCount').textContent + '</strong><br>ימי עבודה</div>';
-            html += '<div style="background: #fff3e0; color: #f57c00; padding: 15px; border-radius: 10px; text-align: center;">';
-            html += '<strong>' + document.getElementById('overtimeHours').textContent + '</strong><br>שעות נוספות</div>';
-            html += '</div>';
-            
-            html += '<div class="table-container"><table class="data-table">';
-            html += '<thead><tr>';
-            html += '<th>עובד</th><th>ימי עבודה</th><th>סה"כ שעות</th><th>שעות נוספות</th><th>ממוצע יומי</th><th>ציון</th>';
-            html += '</tr></thead><tbody>';
-            
-            // חישוב נתוני החודש
-            var monthStart = new Date();
-            monthStart.setDate(1);
-            var monthDates = [];
-            var currentMonth = new Date();
-            for (var d = new Date(monthStart); d <= currentMonth; d.setDate(d.getDate() + 1)) {
-                var dateStr = d.getFullYear() + '-' + 
-                    String(d.getMonth() + 1).padStart(2, '0') + '-' + 
-                    String(d.getDate()).padStart(2, '0');
-                monthDates.push(dateStr);
-            }
-            
-            for (var e = 0; e < employees.length; e++) {
-                var employee = employees[e];
-                var workDays = 0;
-                var totalHours = 0;
-                var totalOvertime = 0;
-                
-                for (var m = 0; m < monthDates.length; m++) {
-                    var dayData = attendanceData[employee] && attendanceData[employee][monthDates[m]];
-                    if (dayData && dayData.checkIn) {
-                        workDays++;
-                        var dayHours = calculateHours(dayData.checkIn, dayData.checkOut);
-                        totalHours += dayHours;
-                        
-                        if (isOvertime(dayHours)) {
-                            totalOvertime += (dayHours - 9);
-                        }
-                    }
-                }
-                
-                var avgDaily = workDays > 0 ? totalHours / workDays : 0;
-                var score = workDays >= 20 ? '🥇 מצוין' : workDays >= 15 ? '🥈 טוב' : '🥉 לשיפור';
-                
-                var overtimeClass = totalOvertime > 0 ? ' class="overtime-cell"' : '';
-                
-                html += '<tr>';
-                html += '<td><strong>' + employee + '</strong></td>';
-                html += '<td>' + workDays + '</td>';
-                html += '<td>' + totalHours.toFixed(1) + '</td>';
-                html += '<td' + overtimeClass + '>' + (totalOvertime > 0 ? totalOvertime.toFixed(1) : '-') + '</td>';
-                html += '<td>' + avgDaily.toFixed(1) + '</td>';
-                html += '<td>' + score + '</td>';
-                html += '</tr>';
-            }
-            
-            html += '</tbody></table></div>';
-            html += '<div style="margin-top: 20px; text-align: center;">';
-            html += '<button class="btn btn-success" onclick="exportReport(\'monthly\')">📤 ייצא דוח חודשי</button>';
-            html += '<button class="btn btn-warning" onclick="sendToPayroll()">💰 שלח לשכר</button>';
-            html += '</div>';
-            
-            return html;
-        }
-
-        function createWorkDaysReportTable() {
-            var html = '<div style="background: #e8f5e8; padding: 20px; border-radius: 15px; margin-bottom: 20px;">';
-            html += '<h3 style="text-align: center; margin-bottom: 15px;">🗓️ ספירת ימי עבודה</h3>';
-            html += '</div>';
-            
-            html += '<div class="table-container"><table class="data-table">';
-            html += '<thead><tr>';
-            html += '<th>עובד</th><th>ימי עבודה החודש</th><th>ימי עבודה השבוע</th><th>ימי חיסור</th><th>נוכחות %</th>';
-            html += '</tr></thead><tbody>';
-            
+        function exportDetailed() {
+            var data = [];
             var today = new Date();
-            var daysInMonth = today.getDate();
             
-            for (var e = 0; e < employees.length; e++) {
-                var employee = employees[e];
-                var monthWorkDays = 0;
-                var weekWorkDays = 0;
-                
-                // חישוב ימי עבודה החודש
-                var monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-                for (var d = new Date(monthStart); d <= today; d.setDate(d.getDate() + 1)) {
-                    var dateStr = d.getFullYear() + '-' + 
-                        String(d.getMonth() + 1).padStart(2, '0') + '-' + 
-                        String(d.getDate()).padStart(2, '0');
-                    var dayData = attendanceData[employee] && attendanceData[employee][dateStr];
-                    if (dayData && dayData.checkIn) {
-                        monthWorkDays++;
-                    }
-                }
-                
-                // חישוב ימי עבודה השבוע
-                var weekStart = new Date(today);
-                weekStart.setDate(today.getDate() - today.getDay());
-                for (var w = 0; w < 7; w++) {
-                    var weekDate = new Date(weekStart);
-                    weekDate.setDate(weekStart.getDate() + w);
-                    if (weekDate <= today) {
-                        var weekDateStr = weekDate.getFullYear() + '-' + 
-                            String(weekDate.getMonth() + 1).padStart(2, '0') + '-' + 
-                            String(weekDate.getDate()).padStart(2, '0');
-                        var weekData = attendanceData[employee] && attendanceData[employee][weekDateStr];
-                        if (weekData && weekData.checkIn) {
-                            weekWorkDays++;
-                        }
-                    }
-                }
-                
-                var absentDays = daysInMonth - monthWorkDays;
-                var attendancePercent = Math.round((monthWorkDays / daysInMonth) * 100);
-                
-                html += '<tr>';
-                html += '<td><strong>' + employee + '</strong></td>';
-                html += '<td>' + monthWorkDays + '/' + daysInMonth + '</td>';
-                html += '<td>' + weekWorkDays + '</td>';
-                html += '<td' + (absentDays > 2 ? ' class="absent-cell"' : '') + '>' + absentDays + '</td>';
-                html += '<td>' + attendancePercent + '%</td>';
-                html += '</tr>';
+            var dates = [];
+            var dateStrings = [];
+            for (var i = 6; i >= 0; i--) {
+                var date = new Date(today);
+                date.setDate(today.getDate() - i);
+                dates.push(date);
+                var year = date.getFullYear();
+                var month = String(date.getMonth() + 1).padStart(2, '0');
+                var day = String(date.getDate()).padStart(2, '0');
+                var dateKey = year + '-' + month + '-' + day;
+                dateStrings.push(dateKey);
             }
             
-            html += '</tbody></table></div>';
-            html += '<div style="margin-top: 20px; text-align: center;">';
-            html += '<button class="btn btn-success" onclick="exportReport(\'workdays\')">📤 ייצא דוח ימי עבודה</button>';
-            html += '</div>';
-            
-            return html;
-        }
-
-        function createOvertimeReportTable() {
-            var html = '<div style="background: #fff3e0; padding: 20px; border-radius: 15px; margin-bottom: 20px;">';
-            html += '<h3 style="text-align: center; margin-bottom: 15px;">🌙 שעות נוספות (מעל 9 שעות ביום)</h3>';
-            html += '<p style="text-align: center; color: #f57c00;">תשלום מוגדל על שעות מעל 9 שעות ביום</p>';
-            html += '</div>';
-            
-            html += '<div class="table-container"><table class="data-table">';
-            html += '<thead><tr>';
-            html += '<th>עובד</th><th>תאריך</th><th>שעות ביום</th><th>שעות נוספות</th><th>שכר נוסף (₪)</th>';
-            html += '</tr></thead><tbody>';
-            
-            var totalOvertimePay = 0;
-            var hourlyRate = 50; // שכר לשעה
-            var overtimeMultiplier = 1.25; // 125% לשעות נוספות
-            
-            // חיפוש כל הימים עם שעות נוספות
-            for (var e = 0; e < employees.length; e++) {
-                var employee = employees[e];
-                var employeeData = attendanceData[employee];
-                
-                if (employeeData) {
-                    for (var date in employeeData) {
-                        var dayData = employeeData[date];
-                        if (dayData && dayData.checkIn && dayData.checkOut) {
-                            var dayHours = calculateHours(dayData.checkIn, dayData.checkOut);
-                            if (isOvertime(dayHours)) {
-                                var overtimeHours = dayHours - 9;
-                                var overtimePay = overtimeHours * hourlyRate * overtimeMultiplier;
-                                totalOvertimePay += overtimePay;
-                                
-                                html += '<tr class="overtime-cell">';
-                                html += '<td><strong>' + employee + '</strong></td>';
-                                html += '<td>' + date + '</td>';
-                                html += '<td>' + dayHours.toFixed(1) + '</td>';
-                                html += '<td>' + overtimeHours.toFixed(1) + '</td>';
-                                html += '<td>₪' + overtimePay.toFixed(0) + '</td>';
-                                html += '</tr>';
-                            }
-                        }
-                    }
-                }
+            var headers = ['עובד'];
+            var dayNames = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+            for (var d = 0; d < dates.length; d++) {
+                var dayName = dayNames[dates[d].getDay()];
+                var dateStr = dates[d].getDate() + '/' + (dates[d].getMonth() + 1);
+                headers.push(dayName + ' ' + dateStr);
             }
+            headers.push('סה"כ ימי עבודה');
+            headers.push('סה"כ שעות');
+            headers.push('ממוצע יומי');
             
-            if (totalOvertimePay === 0) {
-                html += '<tr><td colspan="5" style="text-align: center; color: #666;">אין שעות נוספות לתקופה זו</td></tr>';
-            }
+            data.push(headers);
             
-            html += '</tbody></table></div>';
-            
-            if (totalOvertimePay > 0) {
-                html += '<div style="background: #e3f2fd; padding: 15px; border-radius: 10px; margin: 20px 0; text-align: center;">';
-                html += '<h4>💰 סה"כ עלות שעות נוספות: ₪' + totalOvertimePay.toFixed(0) + '</h4>';
-                html += '</div>';
-            }
-            
-            html += '<div style="margin-top: 20px; text-align: center;">';
-            html += '<button class="btn btn-success" onclick="exportReport(\'overtime\')">📤 ייצא דוח נוספות</button>';
-            html += '<button class="btn btn-warning" onclick="sendOvertimeToPayroll()">💰 שלח לשכר</button>';
-            html += '</div>';
-            
-            return html;
-        }
-
-        function createPayrollReportTable() {
-            var html = '<div style="background: linear-gradient(135deg, #4CAF50, #45a049); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px;">';
-            html += '<h3 style="text-align: center; margin-bottom: 15px;">💰 נתוני שכר לחודש</h3>';
-            html += '</div>';
-            
-            html += '<div class="table-container"><table class="data-table">';
-            html += '<thead><tr>';
-            html += '<th>עובד</th><th>ימי עבודה</th><th>שעות רגילות</th><th>שעות נוספות</th><th>שכר רגיל</th><th>שכר נוסף</th><th>סה"כ</th>';
-            html += '</tr></thead><tbody>';
-            
-            var hourlyRate = 50;
-            var overtimeMultiplier = 1.25;
-            var totalPayroll = 0;
-            
-            for (var e = 0; e < employees.length; e++) {
-                var employee = employees[e];
+            for (var i = 0; i < employees.length; i++) {
+                var employee = employees[i];
+                var row = [employee];
+                var totalHours = 0;
                 var workDays = 0;
-                var regularHours = 0;
-                var overtimeHours = 0;
                 
-                // חישוב נתוני החודש
-                var monthStart = new Date();
-                monthStart.setDate(1);
-                var monthDates = [];
-                var currentMonth = new Date();
-                for (var d = new Date(monthStart); d <= currentMonth; d.setDate(d.getDate() + 1)) {
-                    var dateStr = d.getFullYear() + '-' + 
-                        String(d.getMonth() + 1).padStart(2, '0') + '-' + 
-                        String(d.getDate()).padStart(2, '0');
-                    monthDates.push(dateStr);
-                }
-                
-                for (var m = 0; m < monthDates.length; m++) {
-                    var dayData = attendanceData[employee] && attendanceData[employee][monthDates[m]];
-                    if (dayData && dayData.checkIn && dayData.checkOut) {
-                        workDays++;
-                        var dayHours = calculateHours(dayData.checkIn, dayData.checkOut);
-                        
-                        if (dayHours <= 9) {
-                            regularHours += dayHours;
-                        } else {
-                            regularHours += 9;
-                            overtimeHours += (dayHours - 9);
-                        }
-                    }
-                }
-                
-                var regularPay = regularHours * hourlyRate;
-                var overtimePay = overtimeHours * hourlyRate * overtimeMultiplier;
-                var totalPay = regularPay + overtimePay;
-                totalPayroll += totalPay;
-                
-                html += '<tr>';
-                html += '<td><strong>' + employee + '</strong></td>';
-                html += '<td>' + workDays + '</td>';
-                html += '<td>' + regularHours.toFixed(1) + '</td>';
-                html += '<td' + (overtimeHours > 0 ? ' class="overtime-cell"' : '') + '>' + (overtimeHours > 0 ? overtimeHours.toFixed(1) : '-') + '</td>';
-                html += '<td>₪' + regularPay.toFixed(0) + '</td>';
-                html += '<td' + (overtimePay > 0 ? ' class="overtime-cell"' : '') + '>' + (overtimePay > 0 ? '₪' + overtimePay.toFixed(0) : '-') + '</td>';
-                html += '<td><strong>₪' + totalPay.toFixed(0) + '</strong></td>';
-                html += '</tr>';
-            }
-            
-            html += '</tbody></table></div>';
-            
-            html += '<div style="background: #e3f2fd; padding: 15px; border-radius: 10px; margin: 20px 0; text-align: center;">';
-            html += '<h4>💰 סה"כ עלות שכר: ₪' + totalPayroll.toFixed(0) + '</h4>';
-            html += '</div>';
-            
-            html += '<div style="margin-top: 20px; text-align: center;">';
-            html += '<button class="btn btn-success" onclick="exportPayrollData()">📤 ייצא נתוני שכר</button>';
-            html += '<button class="btn btn-info" onclick="emailPayrollData()">📧 שלח למחלקת שכר</button>';
-            html += '</div>';
-            
-            return html;
-        }
-
-        function createCustomReportTable(employee, startDate, endDate, reportType) {
-            var employeeText = employee === 'all' ? 'כל העובדים' : employee;
-            var typeText = {
-                'summary': 'סיכום כללי',
-                'detailed': 'מפורט',
-                'hours': 'שעות בלבד',
-                'attendance': 'נוכחות בלבד'
-            }[reportType];
-
-            var html = '<div style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; text-align: center;">';
-            html += '<h3>📊 דוח מותאם אישית</h3>';
-            html += '<p><strong>עובד:</strong> ' + employeeText + ' | <strong>תקופה:</strong> ' + startDate + ' - ' + endDate + '</p>';
-            html += '<p><strong>סוג:</strong> ' + typeText + '</p>';
-            html += '</div>';
-
-            html += '<div class="table-container"><table class="data-table">';
-            html += '<thead><tr>';
-            html += '<th>תאריך</th><th>עובד</th><th>כניסה</th><th>יציאה</th><th>שעות</th><th>נוספות</th><th>סטטוס</th>';
-            html += '</tr></thead><tbody>';
-            
-            // יצירת טווח תאריכים
-            var start = new Date(startDate);
-            var end = new Date(endDate);
-            var employeesToShow = employee === 'all' ? employees : [employee];
-            
-            for (var d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-                var dateStr = d.getFullYear() + '-' + 
-                    String(d.getMonth() + 1).padStart(2, '0') + '-' + 
-                    String(d.getDate()).padStart(2, '0');
-                
-                for (var e = 0; e < employeesToShow.length; e++) {
-                    var emp = employeesToShow[e];
-                    var dayData = attendanceData[emp] && attendanceData[emp][dateStr];
+                for (var d = 0; d < dateStrings.length; d++) {
+                    var dateKey = dateStrings[d];
+                    var dayData = attendanceData[employee] && attendanceData[employee][dateKey];
                     
-                    if (dayData && dayData.checkIn) {
-                        var checkIn = formatTime(dayData.checkIn);
-                        var checkOut = dayData.checkOut ? formatTime(dayData.checkOut) : 'לא נסגר';
+                    if (dayData && dayData.checkIn && dayData.checkOut) {
                         var hours = calculateHours(dayData.checkIn, dayData.checkOut);
-                        var overtime = isOvertime(hours) ? (hours - 9).toFixed(1) : '-';
-                        var status = dayData.checkOut ? '✅ הושלם' : '🟡 פעיל';
-                        
-                        var overtimeClass = isOvertime(hours) ? ' class="overtime-cell"' : '';
-                        
-                        html += '<tr>';
-                        html += '<td>' + dateStr + '</td>';
-                        html += '<td>' + emp + '</td>';
-                        html += '<td>' + checkIn + '</td>';
-                        html += '<td>' + checkOut + '</td>';
-                        html += '<td' + overtimeClass + '>' + hours.toFixed(1) + '</td>';
-                        html += '<td' + overtimeClass + '>' + overtime + '</td>';
-                        html += '<td>' + status + '</td>';
-                        html += '</tr>';
-                    }
-                }
-            }
-            
-            html += '</tbody></table></div>';
-            html += '<div style="margin-top: 20px; text-align: center;">';
-            html += '<button class="btn btn-success" onclick="exportCustomReport()">📤 ייצא דוח</button>';
-            html += '</div>';
-            
-            return html;
-        }
-
-        function updatePayrollSection() {
-            var html = '';
-            var totalPayroll = 0;
-            var totalRegularHours = 0;
-            var totalOvertimeHours = 0;
-            var hourlyRate = 50;
-            var overtimeMultiplier = 1.25;
-            
-            // חישוב נתוני החודש
-            var monthStart = new Date();
-            monthStart.setDate(1);
-            var monthDates = [];
-            var currentMonth = new Date();
-            for (var d = new Date(monthStart); d <= currentMonth; d.setDate(d.getDate() + 1)) {
-                var dateStr = d.getFullYear() + '-' + 
-                    String(d.getMonth() + 1).padStart(2, '0') + '-' + 
-                    String(d.getDate()).padStart(2, '0');
-                monthDates.push(dateStr);
-            }
-            
-            for (var e = 0; e < employees.length; e++) {
-                var employee = employees[e];
-                var regularHours = 0;
-                var overtimeHours = 0;
-                
-                for (var m = 0; m < monthDates.length; m++) {
-                    var dayData = attendanceData[employee] && attendanceData[employee][monthDates[m]];
-                    if (dayData && dayData.checkIn && dayData.checkOut) {
-                        var dayHours = calculateHours(dayData.checkIn, dayData.checkOut);
-                        
-                        if (dayHours <= 9) {
-                            regularHours += dayHours;
-                        } else {
-                            regularHours += 9;
-                            overtimeHours += (dayHours - 9);
-                        }
-                    }
-                }
-                
-                var regularPay = regularHours * hourlyRate;
-                var overtimePay = overtimeHours * hourlyRate * overtimeMultiplier;
-                var totalPay = regularPay + overtimePay;
-                
-                totalPayroll += totalPay;
-                totalRegularHours += regularHours;
-                totalOvertimeHours += overtimeHours;
-            }
-            
-            html += '<div class="payroll-item">';
-            html += '<h4>שעות רגילות</h4>';
-            html += '<p>' + totalRegularHours.toFixed(1) + ' שעות</p>';
-            html += '</div>';
-            
-            html += '<div class="payroll-item">';
-            html += '<h4>שעות נוספות</h4>';
-            html += '<p>' + totalOvertimeHours.toFixed(1) + ' שעות</p>';
-            html += '</div>';
-            
-            html += '<div class="payroll-item">';
-            html += '<h4>סה"כ לתשלום</h4>';
-            html += '<p>₪' + totalPayroll.toFixed(0) + '</p>';
-            html += '</div>';
-            
-            document.getElementById('payrollInfo').innerHTML = html;
-        }
-
-        // פונקציות עזר נוספות
-        function showReportResults(title, content) {
-            var resultsDiv = document.getElementById('reportResults');
-            var contentDiv = document.getElementById('reportContent');
-            
-            contentDiv.innerHTML = '<h3 style="margin-bottom: 20px;">' + title + '</h3>' + content;
-            resultsDiv.style.display = 'block';
-            resultsDiv.scrollIntoView({ behavior: 'smooth' });
-        }
-
-        // פונקציות ייצוא ושליחה
-        function exportReport(type) {
-            showAlert('מייצא דוח ' + type + '... 📤', 'info');
-            setTimeout(function() {
-                // כאן תוכל להוסיף קוד ייצא אמיתי
-                showAlert('דוח ' + type + ' יוצא בהצלחה! ✅', 'success');
-            }, 1500);
-        }
-
-        function exportToExcel() {
-            showAlert('מייצא לאקסל... 📊', 'info');
-            setTimeout(function() {
-                showAlert('הדוח יוצא לאקסל בהצלחה! ✅', 'success');
-            }, 1500);
-        }
-
-        function exportCustomReport() {
-            exportReport('מותאם אישית');
-        }
-
-        function exportPayrollData() {
-            showAlert('מייצא נתוני שכר... 💰', 'info');
-            setTimeout(function() {
-                showAlert('נתוני שכר יוצאו בהצלחה! ✅', 'success');
-            }, 1500);
-        }
-
-        function emailReport() {
-            var email = prompt('הזן כתובת מייל לשליחת הדוח:', 'manager@raftingbar.com');
-            if (email) {
-                showAlert('שולח דוח למייל ' + email + '... 📧', 'info');
-                setTimeout(function() {
-                    showAlert('דוח נשלח בהצלחה למייל ' + email + '! ✅', 'success');
-                }, 2000);
-            }
-        }
-
-        function emailPayrollData() {
-            var email = prompt('הזן כתובת מייל של מחלקת השכר:', 'payroll@raftingbar.com');
-            if (email) {
-                showAlert('שולח נתוני שכר למייל ' + email + '... 📧', 'info');
-                setTimeout(function() {
-                    showAlert('נתוני שכר נשלחו בהצלחה! 💰', 'success');
-                }, 2000);
-            }
-        }
-
-        function sendToPayroll() {
-            showAlert('מכין נתונים למחלקת שכר... 💰', 'info');
-            setTimeout(function() {
-                document.getElementById('payrollSection').style.display = 'block';
-                updatePayrollSection();
-                document.getElementById('payrollSection').scrollIntoView({ behavior: 'smooth' });
-                showAlert('נתוני שכר מוכנים לשליחה! 💰', 'success');
-            }, 1500);
-        }
-
-        function sendOvertimeToPayroll() {
-            showAlert('שולח נתוני שעות נוספות למחלקת שכר... 🌙', 'info');
-            setTimeout(function() {
-                showAlert('נתוני שעות נוספות נשלחו בהצלחה! ✅', 'success');
-            }, 2000);
-        }
-
-        // פונקציות דוחות מותאמים נוספים
-        function createCustomWorkDaysReport(employee, startDate, endDate) {
-            var employeeText = employee === 'all' ? 'כל העובדים' : employee;
-            
-            var html = '<div style="background: linear-gradient(135deg, #4CAF50, #45a049); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; text-align: center;">';
-            html += '<h3>🗓️ דוח ימי עבודה מותאם</h3>';
-            html += '<p><strong>עובד:</strong> ' + employeeText + ' | <strong>תקופה:</strong> ' + startDate + ' - ' + endDate + '</p>';
-            html += '</div>';
-
-            html += '<div class="table-container"><table class="data-table">';
-            html += '<thead><tr>';
-            html += '<th>עובד</th><th>ימי עבודה</th><th>ימי חיסור</th><th>נוכחות %</th><th>הערות</th>';
-            html += '</tr></thead><tbody>';
-            
-            var start = new Date(startDate);
-            var end = new Date(endDate);
-            var totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
-            var employeesToShow = employee === 'all' ? employees : [employee];
-            
-            for (var e = 0; e < employeesToShow.length; e++) {
-                var emp = employeesToShow[e];
-                var workDays = 0;
-                
-                for (var d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-                    var dateStr = d.getFullYear() + '-' + 
-                        String(d.getMonth() + 1).padStart(2, '0') + '-' + 
-                        String(d.getDate()).padStart(2, '0');
-                    var dayData = attendanceData[emp] && attendanceData[emp][dateStr];
-                    if (dayData && dayData.checkIn) {
+                        row.push(hours + ' שעות');
+                        totalHours += hours;
                         workDays++;
+                    } else if (dayData && dayData.checkIn && !dayData.checkOut) {
+                        row.push('לא נסגר');
+                    } else {
+                        row.push('-');
                     }
                 }
                 
-                var absentDays = totalDays - workDays;
-                var attendancePercent = Math.round((workDays / totalDays) * 100);
-                var grade = attendancePercent >= 90 ? 'מצוין' : attendancePercent >= 75 ? 'טוב' : 'לשיפור';
+                row.push(workDays + ' ימים');
+                row.push(Math.round(totalHours * 100) / 100 + ' שעות');
+                var avgHours = workDays > 0 ? Math.round((totalHours / workDays) * 100) / 100 : 0;
+                row.push(avgHours > 0 ? avgHours + ' שעות' : '-');
                 
-                html += '<tr>';
-                html += '<td><strong>' + emp + '</strong></td>';
-                html += '<td>' + workDays + '/' + totalDays + '</td>';
-                html += '<td' + (absentDays > 2 ? ' class="absent-cell"' : '') + '>' + absentDays + '</td>';
-                html += '<td>' + attendancePercent + '%</td>';
-                html += '<td>' + grade + '</td>';
-                html += '</tr>';
+                data.push(row);
             }
             
-            html += '</tbody></table></div>';
-            return html;
+            var todayStr = today.getFullYear() + '_' + (today.getMonth() + 1) + '_' + today.getDate();
+            downloadCSV(data, 'דוח_מפורט_רפטינג_בר_' + todayStr + '.csv');
         }
 
-        function createCustomOvertimeReport(employee, startDate, endDate) {
-            var employeeText = employee === 'all' ? 'כל העובדים' : employee;
-            
-            var html = '<div style="background: linear-gradient(135deg, #ff9800, #f57c00); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; text-align: center;">';
-            html += '<h3>🌙 דוח שעות נוספות מותאם</h3>';
-            html += '<p><strong>עובד:</strong> ' + employeeText + ' | <strong>תקופה:</strong> ' + startDate + ' - ' + endDate + '</p>';
-            html += '<p>שעות מעל 9 שעות ביום</p>';
-            html += '</div>';
-
-            html += '<div class="table-container"><table class="data-table">';
-            html += '<thead><tr>';
-            html += '<th>תאריך</th><th>עובד</th><th>שעות ביום</th><th>שעות נוספות</th><th>שכר נוסף</th>';
-            html += '</tr></thead><tbody>';
-            
-            var start = new Date(startDate);
-            var end = new Date(endDate);
-            var employeesToShow = employee === 'all' ? employees : [employee];
-            var totalOvertimePay = 0;
-            var hourlyRate = 50;
-            var overtimeMultiplier = 1.25;
-            var hasOvertime = false;
-            
-            for (var d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-                var dateStr = d.getFullYear() + '-' + 
-                    String(d.getMonth() + 1).padStart(2, '0') + '-' + 
-                    String(d.getDate()).padStart(2, '0');
-                
-                for (var e = 0; e < employeesToShow.length; e++) {
-                    var emp = employeesToShow[e];
-                    var dayData = attendanceData[emp] && attendanceData[emp][dateStr];
-                    
-                    if (dayData && dayData.checkIn && dayData.checkOut) {
-                        var dayHours = calculateHours(dayData.checkIn, dayData.checkOut);
-                        if (isOvertime(dayHours)) {
-                            hasOvertime = true;
-                            var overtimeHours = dayHours - 9;
-                            var overtimePay = overtimeHours * hourlyRate * overtimeMultiplier;
-                            totalOvertimePay += overtimePay;
-                            
-                            html += '<tr class="overtime-cell">';
-                            html += '<td>' + dateStr + '</td>';
-                            html += '<td>' + emp + '</td>';
-                            html += '<td>' + dayHours.toFixed(1) + '</td>';
-                            html += '<td>' + overtimeHours.toFixed(1) + '</td>';
-                            html += '<td>₪' + overtimePay.toFixed(0) + '</td>';
-                            html += '</tr>';
-                        }
-                    }
+        function downloadCSV(data, filename) {
+            var csvContent = '\uFEFF';
+            for (var row = 0; row < data.length; row++) {
+                var rowData = [];
+                for (var col = 0; col < data[row].length; col++) {
+                    rowData.push('"' + data[row][col] + '"');
                 }
+                csvContent += rowData.join(',') + '\r\n';
             }
             
-            if (!hasOvertime) {
-                html += '<tr><td colspan="5" style="text-align: center; color: #666;">אין שעות נוספות בתקופה זו</td></tr>';
-            }
+            var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            var link = document.createElement('a');
+            var url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
             
-            html += '</tbody></table></div>';
-            
-            if (totalOvertimePay > 0) {
-                html += '<div style="background: #e3f2fd; padding: 15px; border-radius: 10px; margin: 20px 0; text-align: center;">';
-                html += '<h4>💰 סה"כ עלות שעות נוספות: ₪' + totalOvertimePay.toFixed(0) + '</h4>';
-                html += '</div>';
-            }
-            
-            return html;
+            showAlert('הדוח יוצא בהצלחה!', 'success');
         }
 
-        // אתחול
-        document.addEventListener('DOMContentLoaded', function() {
-            loadData();
-            setDefaultDates();
+        // שמירה וטעינה
+        function loadLocalData() {
+            try {
+                var savedEmployees = localStorage.getItem('raftingbar_employees');
+                if (savedEmployees) {
+                    employees = JSON.parse(savedEmployees);
+                }
+                
+                var savedAttendance = localStorage.getItem('raftingbar_attendance');
+                if (savedAttendance) {
+                    attendanceData = JSON.parse(savedAttendance);
+                }
+                
+                var savedStatus = localStorage.getItem('raftingbar_status');
+                if (savedStatus) {
+                    currentStatus = JSON.parse(savedStatus);
+                }
+                
+                var savedAdminPassword = localStorage.getItem('raftingbar_admin_password');
+                if (savedAdminPassword) {
+                    adminPassword = savedAdminPassword;
+                }
+                
+                var savedPending = localStorage.getItem('raftingbar_pending');
+                if (savedPending) {
+                    pendingSync = JSON.parse(savedPending);
+                }
+            } catch (e) {
+                console.log('שגיאה בטעינת נתונים מקומיים:', e);
+            }
+        }
+
+        function saveLocalData() {
+            try {
+                localStorage.setItem('raftingbar_employees', JSON.stringify(employees));
+                localStorage.setItem('raftingbar_attendance', JSON.stringify(attendanceData));
+                localStorage.setItem('raftingbar_status', JSON.stringify(currentStatus));
+                localStorage.setItem('raftingbar_pending', JSON.stringify(pendingSync));
+            } catch (e) {
+                console.log('שגיאה בשמירת נתונים מקומיים:', e);
+            }
+        }
+
+        // אתחול אפליקציה
+        function initApp() {
+            loadLocalData();
             
-            // עדכון סטטיסטיקות כל 30 שניות
+            updateEmployeeSelects();
+            updateEmployeeGrid();
+            updateEmployeeStatus();
+            updateQuickStats();
+            updateCurrentTime();
+            
+            setInterval(updateCurrentTime, 1000);
+            setInterval(updateQuickStats, 30000);
+            
+            // סנכרון אוטומטי כל 30 שניות (יותר תכוף לסנכרון עובדים)
             setInterval(function() {
-                loadData();
+                if (isInitialized) {
+                    loadDataFromSheet();
+                }
             }, 30000);
-        });
+            
+            testConnection();
+            
+            var employeeSelect = document.getElementById('employeeSelect');
+            if (employeeSelect) {
+                employeeSelect.addEventListener('change', updateEmployeeStatus);
+            }
+            
+            document.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    var activeElement = document.activeElement;
+                    if (activeElement && activeElement.id === 'adminPassword') {
+                        checkAdminPassword();
+                    } else if (activeElement && activeElement.id === 'newAdminPassword') {
+                        changeAdminPassword();
+                    } else if (activeElement && activeElement.id === 'newEmployeeName') {
+                        addEmployee();
+                    }
+                }
+            });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
     </script>
 </body>
 </html>
