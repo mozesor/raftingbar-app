@@ -15,10 +15,6 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="רפטינג בר">
     
-    <!-- Icons for different platforms -->
-    <link rel="icon" type="image/png" sizes="192x192" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iMjQiIGZpbGw9InVybCgjZ3JhZGllbnQwX2xpbmVhcikiLz4KPHN2ZyB4PSI0OCIgeT0iNDgiIHdpZHRoPSI5NiIgaGVpZ2h0PSI5NiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJ3aGl0ZSI+CjxwYXRoIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyem0wIDE4Yy00LjQxIDAtOC0zLjU5LTgtOHMzLjU5LTggOC04IDggMy41OSA4IDgtMy41OSA4LTggOHoiLz4KPHN2ZyB4PSIxMiIgeT0iNiIgd2lkdGg9IjEyIiBoZWlnaHQ9IjEyIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9IndoaXRlIj4KPHN2ZyB4PSI2IiB5PSIxMiIgd2lkdGg9IjEyIiBoZWlnaHQ9IjYiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPgo8ZGVmcz4KPGxpbmVhckdyYWRpZW50IGlkPSJncmFkaWVudDBfbGluZWFyIiB4MT0iMCIgeTE9IjAiIHgyPSIxOTIiIHkyPSIxOTIiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KPHN0b3Agc3RvcC1jb2xvcj0iIzY2N2VlYSIvPgo8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM3NjRiYTIiLz4KPC9saW5lYXJHcmFkaWVudD4KPC9kZWZzPgo8L3N2Zz4=">
-    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgdmlld0JveD0iMCAwIDE4MCAxODAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxODAiIGhlaWdodD0iMTgwIiByeD0iMjQiIGZpbGw9InVybCgjZ3JhZGllbnQwX2xpbmVhcikiLz4KPHN2ZyB4PSI0NSIgeT0iNDUiIHdpZHRoPSI5MCIgaGVpZ2h0PSI5MCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJ3aGl0ZSI+CjxwYXRoIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyem0wIDE4Yy00LjQxIDAtOC0zLjU5LTgtOHMzLjU5LTggOC04IDggMy41OSA4IDgtMy41OSA4LTggOHoiLz4KPC9zdmc+CjxkZWZzPgo8bGluZWFyR3JhZGllbnQgaWQ9ImdyYWRpZW50MF9saW5lYXIiIHgxPSIwIiB5MT0iMCIgeDI9IjE4MCIgeTI9IjE4MCIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPgo8c3RvcCBzdG9wLWNvbG9yPSIjNjY3ZWVhIi8+CjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzc2NGJhMiIvPgo8L2xpbmVhckdyYWRpZW50Pgo8L2RlZnM+Cjwvc3ZnPg==">
-    
     <style>
         * {
             margin: 0;
@@ -380,13 +376,24 @@
             color: #666;
         }
 
-        .setup-section {
-            display: none;
-            margin-bottom: 20px;
+        .connection-info {
+            background: #e3f2fd;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            text-align: center;
+            border-left: 4px solid #2196F3;
         }
 
-        .setup-section.show {
-            display: block;
+        .connection-status {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #1976D2;
+        }
+
+        .connection-details {
+            font-size: 0.9em;
+            color: #666;
         }
 
         @keyframes slideDown {
@@ -460,28 +467,6 @@
     </div>
 
     <div class="container">
-        <!-- הגדרות אתחול -->
-        <div class="card setup-section" id="setupSection">
-            <h2>🔧 הגדרת המערכת</h2>
-            
-            <div class="form-group">
-                <label>Google Sheets API Key:</label>
-                <input type="text" id="apiKey" placeholder="הכנס API Key">
-            </div>
-            
-            <div class="form-group">
-                <label>Google Sheet ID:</label>
-                <input type="text" id="sheetId" placeholder="הכנס Sheet ID">
-            </div>
-
-            <div class="form-group">
-                <label>Apps Script URL:</label>
-                <input type="text" id="scriptUrl" placeholder="הכנס Apps Script URL" value="https://script.google.com/macros/s/AKfycbx_UMxeN_-dYeiR4xQa4HzT9ogZPv8BeYkRuUg0BOeEobOQZJVvj7gZU-2U_5LrxEtK/exec">
-            </div>
-            
-            <button class="btn btn-admin" onclick="saveSettings()" style="width: 100%;">💾 שמור והתחבר</button>
-        </div>
-
         <div id="alertContainer"></div>
 
         <!-- עמוד ראשי -->
@@ -502,10 +487,10 @@
                 </div>
                 
                 <div class="btn-group">
-                    <button class="btn btn-checkin" onclick="checkIn()" id="checkinBtn" disabled>
+                    <button class="btn btn-checkin" onclick="checkIn()" id="checkinBtn">
                         🟢 כניסה
                     </button>
-                    <button class="btn btn-checkout" onclick="checkOut()" id="checkoutBtn" disabled>
+                    <button class="btn btn-checkout" onclick="checkOut()" id="checkoutBtn">
                         🔴 יציאה
                     </button>
                 </div>
@@ -606,15 +591,12 @@
 
                 <div class="card">
                     <h2>🔄 סנכרון</h2>
-                    <p style="text-align: center; color: #666; margin-bottom: 15px;">
-                        הנתונים נשמרים אוטומטית ומסונכרנים בענן
-                    </p>
+                    <div class="connection-info">
+                        <div class="connection-status">מחובר לענן אוטומטית</div>
+                        <div class="connection-details">הנתונים נשמרים ומסונכרנים בזמן אמת</div>
+                    </div>
                     <button class="btn btn-admin" onclick="forcSync()" style="width: 100%; margin-bottom: 15px;">
                         ⚡ סנכרון ידני
-                    </button>
-                    
-                    <button class="btn btn-admin" onclick="showSetup()" style="width: 100%; margin-bottom: 15px;">
-                        🛠️ הגדרות חיבור
                     </button>
                 </div>
 
@@ -657,6 +639,13 @@
     </div>
 
     <script>
+        // 🔧 הגדרות קבועות - מוטמעות מראש:
+        const EMBEDDED_SETTINGS = {
+            apiKey: '',
+            sheetId: '', 
+            scriptUrl: 'https://script.google.com/macros/s/AKfycbx_UMxeN_-dYeiR4xQa4HzT9ogZPv8BeYkRuUg0BOeEobOQZJVvj7gZU-2U_5LrxEtK/exec'
+        };
+
         // PWA Variables
         let deferredPrompt;
         let isAppInstalled = false;
@@ -667,22 +656,20 @@
         var currentStatus = {};
         var adminPassword = '1234';
         var isAdminUnlocked = false;
-        var apiKey = '';
-        var sheetId = '';
-        var scriptUrl = 'https://script.google.com/macros/s/AKfycbx_UMxeN_-dYeiR4xQa4HzT9ogZPv8BeYkRuUg0BOeEobOQZJVvj7gZU-2U_5LrxEtK/exec';
+        var apiKey = EMBEDDED_SETTINGS.apiKey;
+        var sheetId = EMBEDDED_SETTINGS.sheetId;
+        var scriptUrl = EMBEDDED_SETTINGS.scriptUrl;
         var isInitialized = false;
         var pendingSync = [];
 
         // PWA Functions
         function checkInstallPrompt() {
-            // Check if app is already installed
             if (window.matchMedia('(display-mode: standalone)').matches || 
                 window.navigator.standalone === true) {
                 isAppInstalled = true;
                 return;
             }
 
-            // Show install prompt after a delay
             setTimeout(() => {
                 if (deferredPrompt && !isAppInstalled) {
                     document.getElementById('installPrompt').classList.add('show');
@@ -703,12 +690,10 @@
                     deferredPrompt = null;
                 });
             } else {
-                // Fallback instructions
                 showAlert('להתקנה: לחץ על תפריט הדפדפן ← "הוסף למסך הבית"', 'success');
             }
         }
 
-        // Register Service Worker
         function registerServiceWorker() {
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('/sw.js')
@@ -721,7 +706,6 @@
             }
         }
 
-        // PWA Event Listeners
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
@@ -798,38 +782,12 @@
             statusEl.className = 'sync-status ' + className;
         }
 
-        // Settings functions
-        function showSetup() {
-            document.getElementById('setupSection').classList.add('show');
-            document.getElementById('apiKey').value = apiKey;
-            document.getElementById('sheetId').value = sheetId;
-            document.getElementById('scriptUrl').value = scriptUrl;
-        }
-
-        function saveSettings() {
-            apiKey = document.getElementById('apiKey').value.trim();
-            sheetId = document.getElementById('sheetId').value.trim();
-            scriptUrl = document.getElementById('scriptUrl').value.trim();
-            
-            if (!apiKey || !sheetId || !scriptUrl) {
-                showAlert('אנא מלא את כל השדות', 'error');
-                return;
-            }
-            
-            localStorage.setItem('raftingbar_api_key', apiKey);
-            localStorage.setItem('raftingbar_sheet_id', sheetId);
-            localStorage.setItem('raftingbar_script_url', scriptUrl);
-            
-            document.getElementById('setupSection').classList.remove('show');
-            showAlert('הגדרות נשמרו! מתחבר...', 'success');
-            
-            testConnection();
-        }
-
         // Connection functions
         function testConnection() {
-            if (!apiKey || !sheetId) {
+            // בדיקה אם יש הגדרות מוטמעות
+            if (!apiKey || !sheetId || apiKey === 'YOUR_GOOGLE_SHEETS_API_KEY_HERE') {
                 updateSyncStatus('⚠️', 'נדרשת הגדרה', 'sync-error');
+                showAlert('יש להגדיר את הקישורים בקוד האפליקציה', 'error');
                 return;
             }
             
@@ -848,19 +806,13 @@
                 .then(function(data) {
                     updateSyncStatus('☁️', 'מחובר לענן', 'sync-connected');
                     isInitialized = true;
-                    enableUI();
                     loadDataFromSheet();
-                    showAlert('חיבור הצליח!', 'success');
+                    showAlert('מחובר לענן בהצלחה! 🌐', 'success');
                 })
                 .catch(function(error) {
-                    updateSyncStatus('❌', 'שגיאה בחיבור', 'sync-error');
-                    showAlert('שגיאה בחיבור - בדוק הגדרות', 'error');
+                    updateSyncStatus('📱', 'עבודה מקומית', 'sync-error');
+                    showAlert('עובד במצב מקומי - יסונכרן כשהחיבור יהיה זמין', 'success');
                 });
-        }
-
-        function enableUI() {
-            document.getElementById('checkinBtn').disabled = false;
-            document.getElementById('checkoutBtn').disabled = false;
         }
 
         // Data loading functions
@@ -934,7 +886,7 @@
 
         // Record to sheet function
         function recordToSheet(employee, action, timestamp, date, time) {
-            if (!scriptUrl) return Promise.resolve(false);
+            if (!scriptUrl || scriptUrl === 'YOUR_APPS_SCRIPT_URL_HERE') return Promise.resolve(false);
             
             var rowData = [employee, action, timestamp, date, time, 'PWA'];
             
@@ -1351,7 +1303,7 @@
         // Sync functions
         function forcSync() {
             if (!isInitialized) {
-                showAlert('מערכת לא מחוברת - בודק חיבור', 'error');
+                showAlert('מנסה להתחבר לענן...', 'success');
                 testConnection();
                 return;
             }
@@ -1494,10 +1446,6 @@
                 if (savedAdminPassword) {
                     adminPassword = savedAdminPassword;
                 }
-
-                apiKey = localStorage.getItem('raftingbar_api_key') || '';
-                sheetId = localStorage.getItem('raftingbar_sheet_id') || '';
-                scriptUrl = localStorage.getItem('raftingbar_script_url') || 'https://script.google.com/macros/s/AKfycbx_UMxeN_-dYeiR4xQa4HzT9ogZPv8BeYkRuUg0BOeEobOQZJVvj7gZU-2U_5LrxEtK/exec';
                 
                 var savedPending = localStorage.getItem('raftingbar_pending');
                 if (savedPending) {
@@ -1521,20 +1469,14 @@
 
         // Initialize app
         function initApp() {
-            // Register service worker for PWA functionality
             registerServiceWorker();
-            
-            // Load local data
             loadLocalData();
-            
-            // Update UI
             updateEmployeeSelects();
             updateEmployeeGrid();
             updateEmployeeStatus();
             updateQuickStats();
             updateCurrentTime();
             
-            // Set up intervals
             setInterval(updateCurrentTime, 1000);
             setInterval(updateQuickStats, 30000);
             setInterval(function() {
@@ -1543,20 +1485,14 @@
                 }
             }, 60000);
             
-            // Check if setup is needed
-            if (!apiKey || !sheetId || !scriptUrl) {
-                showSetup();
-            } else {
-                testConnection();
-            }
+            // הפעלת חיבור אוטומטי
+            testConnection();
             
-            // Setup event listeners
             var employeeSelect = document.getElementById('employeeSelect');
             if (employeeSelect) {
                 employeeSelect.addEventListener('change', updateEmployeeStatus);
             }
             
-            // Keyboard event listeners
             document.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
                     var activeElement = document.activeElement;
@@ -1570,11 +1506,9 @@
                 }
             });
 
-            // Check for install prompt
             checkInstallPrompt();
         }
 
-        // Start the app when DOM is ready
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', initApp);
         } else {
