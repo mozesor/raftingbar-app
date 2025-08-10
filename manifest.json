@@ -2,7 +2,7 @@
   "name": "רפטינג בר - שעון נוכחות",
   "short_name": "רפטינג בר",
   "description": "מערכת ניהול נוכחות עובדים לרפטינג בר",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "orientation": "portrait",
   "theme_color": "#667eea",
@@ -140,7 +140,7 @@
   "prefer_related_applications": false,
   "protocol_handlers": [],
   "edge_side_panel": {},
-  "scope": "/",
+  "scope": "./",
   "id": "raftingbar-attendance",
   "launch_handler": {
     "client_mode": "navigate-existing"

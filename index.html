@@ -2375,5 +2375,9 @@
             initApp();
         }
     </script>
-</body>
+<script>if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('sw.js', { scope: './' }).catch(function(e){ console.log('SW register failed', e); });
+  });
+}</script></body>
 </html>

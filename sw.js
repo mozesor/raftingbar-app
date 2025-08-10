@@ -7,11 +7,11 @@ const DYNAMIC_CACHE_NAME = 'raftingbar-dynamic-v1.0.0';
 
 // קבצים לשמירה במטמון
 const STATIC_FILES = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon-192x192.png',
-  '/icon-512x512.png'
+  './',
+  './index.html',
+  './manifest.json',
+  './icon-192x192.png',
+  './icon-512x512.png'
 ];
 
 // התקנת Service Worker
@@ -117,7 +117,7 @@ self.addEventListener('fetch', (event) => {
         }).catch(() => {
           // אם זו בקשה לעמוד הראשי ואין אינטרנט, החזר עמוד אופליין
           if (request.mode === 'navigate') {
-            return caches.match('/');
+            return caches.match('./');
           }
           throw new Error('לא זמין אופליין');
         });
@@ -288,20 +288,20 @@ self.addEventListener('push', (event) => {
   
   const options = {
     body: 'יש לך עדכון חדש באפליקציית הנוכחות',
-    icon: '/icon-192x192.png',
-    badge: '/icon-72x72.png',
+    icon: './icon-192x192.png',
+    badge: './icon-72x72.png',
     tag: 'attendance-update',
     requireInteraction: false,
     actions: [
       {
         action: 'open',
         title: 'פתח אפליקציה',
-        icon: '/icon-192x192.png'
+        icon: './icon-192x192.png'
       },
       {
         action: 'dismiss',
         title: 'סגור',
-        icon: '/icon-192x192.png'
+        icon: './icon-192x192.png'
       }
     ]
   };
@@ -327,7 +327,7 @@ self.addEventListener('notificationclick', (event) => {
         
         // אחרת פתח חלון חדש
         if (clients.openWindow) {
-          return clients.openWindow('/');
+          return clients.openWindow('./');
         }
       })
     );
