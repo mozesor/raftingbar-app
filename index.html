@@ -896,6 +896,11 @@
 <div>👥</div>
 <div>עובדים</div>
 </button>
+<button class="nav-btn" onclick="showPage('reports')">
+<div>📊</div>
+<div>דוחות</div>
+</button>
+
 <button class="nav-btn" onclick="showPage('detailedReports')">
 <div>📈</div>
 <div>דוחות מפורטים</div>
@@ -2394,7 +2399,10 @@
 <script>
 function checkReportsPassword() {
     var enteredPassword = document.getElementById('reportsPassword').value;
-    if (enteredPassword === '1986') {
+    try {
+        var adminPass = (typeof adminPassword !== 'undefined' && adminPassword) ? String(adminPassword) : '';
+    } catch(e) { var adminPass = ''; }
+    if (enteredPassword === '1986' || (adminPass && enteredPassword === adminPass)) {
         document.getElementById('reportsLock').style.display = 'none';
         document.getElementById('reportsContent').style.display = 'block';
         document.getElementById('reportsPassword').value = '';
