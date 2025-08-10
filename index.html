@@ -684,6 +684,30 @@
 </div>
 </div>
 <!-- עמוד דוחות -->
+<div class="page" id="reportsPage">
+<div class="card" id="reportsLock" style="display: block;">
+<h2>🔒 דוחות מוגנים</h2>
+<p style="text-align: center; color: #666; margin-bottom: 20px;">
+          הזן קוד גישה לצפייה בדוחות
+        </p>
+<div class="form-group">
+<label>קוד גישה:</label>
+<input id="reportsPassword" maxlength="6" placeholder="הזן קוד גישה" type="password"/>
+</div>
+<button class="btn btn-admin" onclick="checkReportsPassword()" style="width: 100%;">
+          🔓 פתח דוחות
+        </button>
+</div>
+<div class="card" id="reportsContent" style="display: none;">
+<h2>📊 דוחות</h2>
+<div class="btn-group" style="flex-direction: column;">
+<button class="btn btn-admin" onclick="exportToday()">📄 ייצא דוח יומי</button>
+<button class="btn btn-admin" onclick="exportDetailed()">📊 ייצא דוח מפורט</button>
+</div>
+</div>
+</div>
+
+<!-- עמוד דוחות -->
 <!-- עמוד דוחות מפורטים -->
 <div class="page" id="detailedReportsPage">
 <!-- מסך נעילה -->
