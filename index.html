@@ -685,20 +685,7 @@
 </div>
 <!-- עמוד דוחות -->
 <div class="page" id="reportsPage">
-<div class="card" id="reportsLock" style="display: block;">
-<h2>🔒 דוחות מוגנים</h2>
-<p style="text-align: center; color: #666; margin-bottom: 20px;">
-          הזן קוד גישה לצפייה בדוחות
-        </p>
-<div class="form-group">
-<label>קוד גישה:</label>
-<input id="reportsPassword" maxlength="6" placeholder="הזן קוד גישה" type="password"/>
-</div>
-<button class="btn btn-admin" onclick="checkReportsPassword()" style="width: 100%;">
-          🔓 פתח דוחות
-        </button>
-</div>
-<div class="card" id="reportsContent" style="display: none;">
+<div class="card">
 <h2>📊 דוחות</h2>
 <div class="btn-group" style="flex-direction: column;">
 <button class="btn btn-admin" onclick="exportToday()">📄 ייצא דוח יומי</button>
@@ -706,8 +693,6 @@
 </div>
 </div>
 </div>
-
-<!-- עמוד דוחות -->
 <!-- עמוד דוחות מפורטים -->
 <div class="page" id="detailedReportsPage">
 <!-- מסך נעילה -->
@@ -900,10 +885,9 @@
 <div>📊</div>
 <div>דוחות</div>
 </button>
-
 <button class="nav-btn" onclick="showPage('detailedReports')">
 <div>📈</div>
-<div>דוחות מפורטים</div>
+<div>מפורט</div>
 </button>
 <button class="nav-btn" onclick="showPage('admin')">
 <div>⚙️</div>
@@ -2396,22 +2380,52 @@
     navigator.serviceWorker.register('sw.js', { scope: './' }).catch(function(e){ console.log('SW register failed', e); });
   });
 }</script>
+<style>
+  .auth-overlay{position:fixed;inset:0;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+    display:none;align-items:center;justify-content:center;z-index:2000;padding:16px;}
+  .auth-card{width:min(420px,96vw);background:#fff;border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.2);padding:22px;}
+  .auth-card h2{margin:0 0 10px;text-align:center}
+  .auth-note{font-size:.9em;color:#666;text-align:center;margin-bottom:14px}
+  .auth-form .form-group{margin-bottom:12px}
+  .auth-actions{display:flex;gap:10px;margin-top:8px}
+  .auth-actions .btn{flex:1}
+  .auth-hint{margin-top:10px;font-size:12px;color:#1976d2;background:#e3f2fd;padding:10px;border-radius:10px}
+</style>
+<div aria-hidden="true" class="auth-overlay" id="authOverlay">
+<div class="auth-card">
+<h2>🔐 כניסה לעובדים</h2>
+<div class="auth-note">הזן קוד גישה פעם אחת במכשיר זה</div>
+<div class="auth-form">
+<div class="form-group">
+<label>קוד גישה</label>
+<input id="authCodeInput" maxlength="6" placeholder="לדוגמה: 2468" type="password"/>
+</div>
+<div class="form-group" style="display:flex;align-items:center;gap:8px;">
+<input checked="" id="rememberAuth" type="checkbox"/>
+<label for="rememberAuth" style="margin:0;">זכור אותי במכשיר זה</label>
+</div>
+<div class="auth-actions">
+<button class="btn btn-admin" onclick="handleAuthLogin()">כניסה</button>
+<button class="btn btn-checkout" onclick="handleAuthLogout()">התנתק</button>
+</div>
+<div class="auth-hint">הקוד לעובדים הוא <b>2468</b> (שונה מהקוד מנהל).</div>
+</div>
+</div>
+</div>
+
 <script>
-function checkReportsPassword() {
-    var enteredPassword = document.getElementById('reportsPassword').value;
-    try {
-        var adminPass = (typeof adminPassword !== 'undefined' && adminPassword) ? String(adminPassword) : '';
-    } catch(e) { var adminPass = ''; }
-    if (enteredPassword === '1986' || (adminPass && enteredPassword === adminPass)) {
-        document.getElementById('reportsLock').style.display = 'none';
-        document.getElementById('reportsContent').style.display = 'block';
-        document.getElementById('reportsPassword').value = '';
-        if (typeof showAlert === 'function') showAlert('נכנסת לדוחות בהצלחה', 'success');
-    } else {
-        document.getElementById('reportsPassword').value = '';
-        if (typeof showAlert === 'function') showAlert('קוד שגוי! נסה שוב', 'error');
-    }
-}
+  const EMPLOYEE_ACCESS_CODE = '2468';
+  const AUTH_KEY = 'rb_auth_v1';
+  const AUTH_EXP_DAYS = 90;
+  function showAuthOverlay(show=true){ const el=document.getElementById('authOverlay'); if(!el) return; el.style.display=show?'flex':'none'; el.setAttribute('aria-hidden', show?'false':'true'); if(show) setTimeout(()=>document.getElementById('authCodeInput')?.focus(),50); }
+  function isAuthValid(){ try{ const raw=localStorage.getItem(AUTH_KEY); if(!raw) return false; const data=JSON.parse(raw); if(!data||data.ok!==true||!data.ts) return false; const age=(Date.now()-data.ts)/(1000*60*60*24); return age<=AUTH_EXP_DAYS; }catch(e){ return false; } }
+  function rememberAuth(){ localStorage.setItem(AUTH_KEY, JSON.stringify({ ok:true, ts: Date.now() })); }
+  function clearAuth(){ localStorage.removeItem(AUTH_KEY); }
+  function handleAuthLogin(){ const code=String(document.getElementById('authCodeInput')?.value||'').trim(); const remember=document.getElementById('rememberAuth')?.checked; if(!code){ return (typeof showAlert==='function'? showAlert('אנא הזן קוד','error'): alert('אנא הזן קוד')); } if(code===EMPLOYEE_ACCESS_CODE){ if(remember) rememberAuth(); showAuthOverlay(false); (typeof showAlert==='function'? showAlert('ברוך הבא 👋','success'): null); } else { document.getElementById('authCodeInput').value=''; (typeof showAlert==='function'? showAlert('קוד שגוי','error'): alert('קוד שגוי')); } }
+  function handleAuthLogout(){ clearAuth(); showAuthOverlay(true); }
+  function guardAppUntilAuth(){ if(isAuthValid()) showAuthOverlay(false); else showAuthOverlay(true); }
+  const _origShowPage = window.showPage; window.showPage = function(pageName){ if(!isAuthValid() && (pageName==='reports' || pageName==='detailedReports' || pageName==='admin')){ showAuthOverlay(true); return; } return _origShowPage ? _origShowPage(pageName) : null; }
+  document.addEventListener('DOMContentLoaded', guardAppUntilAuth);
 </script>
 </body>
 </html>
