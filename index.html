@@ -868,6 +868,19 @@
                         ⚠️ זכור את הקוד החדש! אין אפשרות לשחזר אותו
                     </div>
 </div>
+
+<div class="card">
+<h2>🔑 קוד עובדים</h2>
+<p style="text-align:center;color:#666;margin-bottom:12px;">קוד זה נדרש לעובדים כדי להיכנס למערכת (לא הקוד מנהל).</p>
+<div class="form-group">
+<label>קוד עובדים חדש (3–6 ספרות):</label>
+<input id="employeeAccessCodeInput" maxlength="6" placeholder="לדוגמה: 2468" type="password"/>
+</div>
+<button class="btn btn-admin" onclick="saveEmployeeAccessCode()" style="width:100%;">עדכן קוד עובדים</button>
+<div style="margin-top:12px;padding:10px;background:#fff3cd;border-radius:8px;font-size:13px;color:#856404;">
+        ⚠️ אחרי שינוי קוד, עובדים יצטרכו להזין אותו מחדש רק במכשירים חדשים/אחרי התנתקות.
+      </div>
+</div>
 </div>
 </div>
 </div>
@@ -2408,24 +2421,101 @@
 <button class="btn btn-admin" onclick="handleAuthLogin()">כניסה</button>
 <button class="btn btn-checkout" onclick="handleAuthLogout()">התנתק</button>
 </div>
-<div class="auth-hint">הקוד לעובדים הוא <b>2468</b> (שונה מהקוד מנהל).</div>
+<div class="auth-hint">קבל/י את קוד הגישה מהמנהל. אין להציג קוד זה לציבור.</div>
 </div>
 </div>
 </div>
 
+
 <script>
-  const EMPLOYEE_ACCESS_CODE = '2468';
-  const AUTH_KEY = 'rb_auth_v1';
+  // ===== Employee Auth (configurable) =====
+  const DEFAULT_EMPLOYEE_ACCESS_CODE = '2468';       // ברירת מחדל (לא מוצג למשתמש)
+  const EMPLOYEE_CODE_KEY = 'rb_emp_code_v1';        // איפה נשמר קוד העובדים המקומי
+  const AUTH_KEY = 'rb_auth_v1';                     // זיכרון "מחובר"
   const AUTH_EXP_DAYS = 90;
-  function showAuthOverlay(show=true){ const el=document.getElementById('authOverlay'); if(!el) return; el.style.display=show?'flex':'none'; el.setAttribute('aria-hidden', show?'false':'true'); if(show) setTimeout(()=>document.getElementById('authCodeInput')?.focus(),50); }
-  function isAuthValid(){ try{ const raw=localStorage.getItem(AUTH_KEY); if(!raw) return false; const data=JSON.parse(raw); if(!data||data.ok!==true||!data.ts) return false; const age=(Date.now()-data.ts)/(1000*60*60*24); return age<=AUTH_EXP_DAYS; }catch(e){ return false; } }
+
+  function getEmployeeCode(){
+    try {
+      const saved = localStorage.getItem(EMPLOYEE_CODE_KEY);
+      return saved ? String(saved) : DEFAULT_EMPLOYEE_ACCESS_CODE;
+    } catch(e){ return DEFAULT_EMPLOYEE_ACCESS_CODE; }
+  }
+  function setEmployeeCode(newCode){
+    if(!newCode || !/^\d{3,6}$/.test(String(newCode))) {
+      return (typeof showAlert==='function' ? showAlert('קוד חייב להיות 3–6 ספרות', 'error') : alert('קוד חייב להיות 3–6 ספרות'));
+    }
+    localStorage.setItem(EMPLOYEE_CODE_KEY, String(newCode));
+    (typeof showAlert==='function' ? showAlert('קוד עובדים עודכן', 'success') : null);
+  }
+
+  function showAuthOverlay(show=true){
+    const el=document.getElementById('authOverlay'); if(!el) return;
+    el.style.display = show ? 'flex' : 'none';
+    el.setAttribute('aria-hidden', show ? 'false' : 'true');
+    if(show) setTimeout(()=>document.getElementById('authCodeInput')?.focus(),50);
+  }
+  function isAuthValid(){
+    try{
+      const raw = localStorage.getItem(AUTH_KEY); if(!raw) return false;
+      const data = JSON.parse(raw); if(!data || data.ok!==true || !data.ts) return false;
+      const ageDays = (Date.now()-data.ts)/(1000*60*60*24);
+      return ageDays <= AUTH_EXP_DAYS;
+    }catch(e){ return false; }
+  }
   function rememberAuth(){ localStorage.setItem(AUTH_KEY, JSON.stringify({ ok:true, ts: Date.now() })); }
   function clearAuth(){ localStorage.removeItem(AUTH_KEY); }
-  function handleAuthLogin(){ const code=String(document.getElementById('authCodeInput')?.value||'').trim(); const remember=document.getElementById('rememberAuth')?.checked; if(!code){ return (typeof showAlert==='function'? showAlert('אנא הזן קוד','error'): alert('אנא הזן קוד')); } if(code===EMPLOYEE_ACCESS_CODE){ if(remember) rememberAuth(); showAuthOverlay(false); (typeof showAlert==='function'? showAlert('ברוך הבא 👋','success'): null); } else { document.getElementById('authCodeInput').value=''; (typeof showAlert==='function'? showAlert('קוד שגוי','error'): alert('קוד שגוי')); } }
+  function handleAuthLogin(){
+    const code = String(document.getElementById('authCodeInput')?.value || '').trim();
+    const remember = document.getElementById('rememberAuth')?.checked;
+    if(!code){ return (typeof showAlert==='function'? showAlert('אנא הזן קוד','error'): alert('אנא הזן קוד')); }
+    if(code === getEmployeeCode()){
+      if(remember) rememberAuth();
+      showAuthOverlay(false);
+      (typeof showAlert==='function'? showAlert('ברוך הבא 👋','success'): null);
+    } else {
+      document.getElementById('authCodeInput').value='';
+      (typeof showAlert==='function'? showAlert('קוד שגוי','error'): alert('קוד שגוי'));
+    }
+  }
   function handleAuthLogout(){ clearAuth(); showAuthOverlay(true); }
-  function guardAppUntilAuth(){ if(isAuthValid()) showAuthOverlay(false); else showAuthOverlay(true); }
-  const _origShowPage = window.showPage; window.showPage = function(pageName){ if(!isAuthValid() && (pageName==='reports' || pageName==='detailedReports' || pageName==='admin')){ showAuthOverlay(true); return; } return _origShowPage ? _origShowPage(pageName) : null; }
+
+  // חסימת ניווט לעמודים רגישים ללא אימות
+  const _origShowPage = window.showPage;
+  window.showPage = function(pageName){
+    if(!isAuthValid() && (pageName==='reports' || pageName==='detailedReports' || pageName==='admin')){
+      showAuthOverlay(true); return;
+    }
+    return _origShowPage ? _origShowPage(pageName) : null;
+  };
+
+  function guardAppUntilAuth(){
+    if(isAuthValid()) showAuthOverlay(false);
+    else showAuthOverlay(true);
+  }
   document.addEventListener('DOMContentLoaded', guardAppUntilAuth);
 </script>
+
+<script>
+      function populateEmployeeCodeInput(){
+        const el = document.getElementById('employeeAccessCodeInput');
+        if(!el) return;
+        try{ el.value = getEmployeeCode(); }catch(e){ el.value = ''; }
+      }
+      function saveEmployeeAccessCode(){
+        const val = String(document.getElementById('employeeAccessCodeInput')?.value || '').trim();
+        setEmployeeCode(val);
+      }
+      // Hook into showing admin page to populate field
+      (function(){
+        const originalShowPage = window.showPage;
+        window.showPage = function(pageName){
+          const ret = originalShowPage ? originalShowPage(pageName) : null;
+          if(pageName === 'admin'){
+            setTimeout(populateEmployeeCodeInput, 50);
+          }
+          return ret;
+        }
+      })();
+    </script>
 </body>
 </html>
