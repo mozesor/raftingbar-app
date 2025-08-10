@@ -2435,5 +2435,23 @@
     };
   })();
 </script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function(){
+    var logoutBtn = document.getElementById('logoutBtn');
+    if(logoutBtn){
+      logoutBtn.addEventListener('click', function(){
+        try {
+          localStorage.removeItem('rb_auth_v1');
+          localStorage.removeItem('rb_emp_code_v1');
+        } catch(e){}
+        if (typeof showAlert === 'function') showAlert('התנתקת בהצלחה', 'success');
+        setTimeout(function(){
+          location.reload();
+        }, 500);
+      });
+    }
+  });
+</script>
 </body>
 </html>
