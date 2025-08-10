@@ -269,9 +269,9 @@
             cursor: pointer;
             transition: all 0.3s;
             flex: 1;
-            max-width: 80px;
+            max-width: 70px;
             text-align: center;
-            font-size: 12px;
+            font-size: 10px;
             color: #666;
         }
 
@@ -325,6 +325,190 @@
             color: #666;
         }
 
+        /* סגנונות עמוד הדוחות המפורטים */
+        .detailed-reports-filters {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-group label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #555;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .detailed-reports-table {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .data-table th {
+            background: #f8f9fa;
+            padding: 12px 8px;
+            border-bottom: 2px solid #667eea;
+            text-align: center;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .data-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #eee;
+            text-align: center;
+        }
+
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .overtime-highlight {
+            background: #fff3cd !important;
+            color: #856404;
+            font-weight: bold;
+        }
+
+        .missing-highlight {
+            background: #f8d7da !important;
+            color: #721c24;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            height: 300px;
+            position: relative;
+        }
+
+        .chart-bar {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border-radius: 4px;
+            position: relative;
+            margin-bottom: 8px;
+            min-height: 25px;
+            display: flex;
+            align-items: center;
+            color: white;
+            font-weight: bold;
+            padding: 0 10px;
+            transition: all 0.3s;
+        }
+
+        .chart-bar:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .chart-label {
+            font-size: 12px;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .export-section {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .export-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .overtime-badge {
+            background: #ff9800;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .missing-badge {
+            background: #f44336;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .perfect-badge {
+            background: #4caf50;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
         @keyframes slideDown {
             from {
                 opacity: 0;
@@ -364,6 +548,34 @@
             
             .btn {
                 margin-bottom: 10px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .filter-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .export-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .data-table {
+                font-size: 12px;
+            }
+            
+            .data-table th,
+            .data-table td {
+                padding: 6px 4px;
+            }
+            
+            .nav-btn {
+                max-width: 60px;
+                font-size: 9px;
             }
         }
 
@@ -445,6 +657,89 @@
                 <div class="btn-group" style="flex-direction: column;">
                     <button class="btn btn-admin" onclick="exportToday()">📄 ייצא דוח יומי</button>
                     <button class="btn btn-admin" onclick="exportDetailed()">📊 ייצא דוח מפורט</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- עמוד דוחות מפורטים -->
+        <div id="detailedReportsPage" class="page">
+            <!-- פילטרים -->
+            <div class="detailed-reports-filters">
+                <h2 style="margin-bottom: 15px;">📊 דוחות מפורטים</h2>
+                
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label>תקופה:</label>
+                        <select id="detailedPeriodFilter">
+                            <option value="today">היום</option>
+                            <option value="week">השבוע</option>
+                            <option value="month" selected>החודש</option>
+                            <option value="custom">תקופה מותאמת</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>עובד:</label>
+                        <select id="detailedEmployeeFilter">
+                            <option value="all">כל העובדים</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="filter-row" id="detailedCustomDateRange" style="display: none;">
+                    <div class="filter-group">
+                        <label>מתאריך:</label>
+                        <input type="date" id="detailedStartDate">
+                    </div>
+                    <div class="filter-group">
+                        <label>עד תאריך:</label>
+                        <input type="date" id="detailedEndDate">
+                    </div>
+                </div>
+                
+                <button class="btn btn-admin" onclick="updateDetailedReports()" style="width: 100%; margin-top: 10px;">
+                    🔄 עדכן דוחות
+                </button>
+            </div>
+
+            <!-- סטטיסטיקות כלליות -->
+            <div class="stats-grid" id="detailedStatsGrid">
+                <!-- יתמלא באופן דינמי -->
+            </div>
+
+            <!-- גרף שעות יומיות -->
+            <div class="chart-container">
+                <h3 style="margin-bottom: 15px;">📊 שעות יומיות</h3>
+                <div id="detailedHoursChart">
+                    <!-- יתמלא באופן דינמי -->
+                </div>
+            </div>
+
+            <!-- טבלת נתונים מפורטת -->
+            <div class="detailed-reports-table">
+                <h3>📋 נתונים מפורטים</h3>
+                <div style="overflow-x: auto;">
+                    <table class="data-table" id="detailedReportsTable">
+                        <!-- יתמלא באופן דינמי -->
+                    </table>
+                </div>
+            </div>
+
+            <!-- ייצוא דוחות -->
+            <div class="export-section">
+                <h3 style="margin-bottom: 15px;">📄 ייצא דוחות מתקדמים</h3>
+                <div class="export-grid">
+                    <button class="btn btn-admin" onclick="exportDetailedCurrent()">
+                        📊 ייצא דוח נוכחי
+                    </button>
+                    <button class="btn btn-admin" onclick="exportDetailedOvertime()">
+                        ⏱️ דוח שעות נוספות
+                    </button>
+                    <button class="btn btn-admin" onclick="exportDetailedSummary()">
+                        📈 דוח סיכום חודשי
+                    </button>
+                    <button class="btn btn-admin" onclick="exportDetailedFull()">
+                        📋 דוח מפורט מלא
+                    </button>
                 </div>
             </div>
         </div>
@@ -551,6 +846,10 @@
         <button class="nav-btn" onclick="showPage('reports')">
             <div>📊</div>
             <div>דוחות</div>
+        </button>
+        <button class="nav-btn" onclick="showPage('detailedReports')">
+            <div>📈</div>
+            <div>מפורט</div>
         </button>
         <button class="nav-btn" onclick="showPage('admin')">
             <div>⚙️</div>
@@ -1103,6 +1402,12 @@
             updateEmployeeGrid();
             updateEmployeeStatus();
             updateQuickStats();
+            
+            // עדכן גם עמוד הדוחות המפורטים אם הוא פעיל
+            var detailedReportsPage = document.getElementById('detailedReportsPage');
+            if (detailedReportsPage && detailedReportsPage.classList.contains('active')) {
+                updateDetailedEmployeeFilterOptions();
+            }
         }
 
         // ניווט
@@ -1120,7 +1425,8 @@
             if (pageName === 'main') navButtons[0].classList.add('active');
             else if (pageName === 'employees') navButtons[1].classList.add('active');
             else if (pageName === 'reports') navButtons[2].classList.add('active');
-            else if (pageName === 'admin') navButtons[3].classList.add('active');
+            else if (pageName === 'detailedReports') navButtons[3].classList.add('active');
+            else if (pageName === 'admin') navButtons[4].classList.add('active');
             
             if (pageName === 'admin') {
                 if (!isAdminUnlocked) {
@@ -1134,6 +1440,10 @@
                     document.getElementById('adminContent').style.display = 'block';
                     updateEmployeeSelects();
                 }
+            } else if (pageName === 'detailedReports') {
+                setTimeout(function() {
+                    initDetailedReportsPage();
+                }, 100);
             }
         }
 
@@ -1363,6 +1673,536 @@
             } catch (e) {
                 console.log('שגיאה בשמירת נתונים מקומיים:', e);
             }
+        }
+
+        // פונקציות עמוד הדוחות המפורטים
+        function initDetailedReportsPage() {
+            updateDetailedEmployeeFilterOptions();
+            setDetailedDefaultDates();
+            updateDetailedReports();
+            
+            // אירועי שינוי
+            var periodFilter = document.getElementById('detailedPeriodFilter');
+            var employeeFilter = document.getElementById('detailedEmployeeFilter');
+            
+            if (periodFilter) {
+                periodFilter.addEventListener('change', function() {
+                    toggleDetailedCustomDateRange();
+                    updateDetailedReports();
+                });
+            }
+            
+            if (employeeFilter) {
+                employeeFilter.addEventListener('change', updateDetailedReports);
+            }
+        }
+
+        function updateDetailedEmployeeFilterOptions() {
+            var employeeFilter = document.getElementById('detailedEmployeeFilter');
+            if (!employeeFilter) return;
+            
+            var currentValue = employeeFilter.value;
+            employeeFilter.innerHTML = '<option value="all">כל העובדים</option>';
+            
+            for (var i = 0; i < employees.length; i++) {
+                var option = document.createElement('option');
+                option.value = employees[i];
+                option.textContent = employees[i];
+                employeeFilter.appendChild(option);
+            }
+            
+            employeeFilter.value = currentValue;
+        }
+
+        function setDetailedDefaultDates() {
+            var today = new Date();
+            var firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            
+            var startDateInput = document.getElementById('detailedStartDate');
+            var endDateInput = document.getElementById('detailedEndDate');
+            
+            if (startDateInput) {
+                startDateInput.value = formatDateForInput(firstDayOfMonth);
+            }
+            if (endDateInput) {
+                endDateInput.value = formatDateForInput(today);
+            }
+        }
+
+        function formatDateForInput(date) {
+            return date.toISOString().split('T')[0];
+        }
+
+        function toggleDetailedCustomDateRange() {
+            var period = document.getElementById('detailedPeriodFilter').value;
+            var customRange = document.getElementById('detailedCustomDateRange');
+            
+            if (customRange) {
+                if (period === 'custom') {
+                    customRange.style.display = 'grid';
+                } else {
+                    customRange.style.display = 'none';
+                }
+            }
+        }
+
+        function getDetailedDateRange() {
+            var period = document.getElementById('detailedPeriodFilter').value;
+            var today = new Date();
+            var startDate, endDate;
+
+            switch (period) {
+                case 'today':
+                    startDate = new Date(today);
+                    endDate = new Date(today);
+                    break;
+                case 'week':
+                    startDate = new Date(today);
+                    startDate.setDate(today.getDate() - 6);
+                    endDate = new Date(today);
+                    break;
+                case 'month':
+                    startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                    endDate = new Date(today);
+                    break;
+                case 'custom':
+                    var startInput = document.getElementById('detailedStartDate');
+                    var endInput = document.getElementById('detailedEndDate');
+                    startDate = startInput ? new Date(startInput.value) : new Date(today);
+                    endDate = endInput ? new Date(endInput.value) : new Date(today);
+                    break;
+                default:
+                    startDate = new Date(today);
+                    endDate = new Date(today);
+            }
+
+            return { startDate: startDate, endDate: endDate };
+        }
+
+        function updateDetailedReports() {
+            var dateRange = getDetailedDateRange();
+            var selectedEmployee = document.getElementById('detailedEmployeeFilter').value;
+            
+            var reportData = generateDetailedReportData(dateRange.startDate, dateRange.endDate, selectedEmployee);
+            
+            updateDetailedStatsGrid(reportData);
+            updateDetailedHoursChart(reportData);
+            updateDetailedReportsTable(reportData);
+        }
+
+        function generateDetailedReportData(startDate, endDate, selectedEmployee) {
+            var data = {
+                totalHours: 0,
+                totalDays: 0,
+                overtimeDays: 0,
+                overtimeHours: 0,
+                missingDays: 0,
+                averageHours: 0,
+                employees: [],
+                dailyData: []
+            };
+
+            var employeeList = selectedEmployee === 'all' ? employees : [selectedEmployee];
+
+            // יצירת מערך תאריכים
+            var dates = [];
+            for (var d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                dates.push(formatDateForStorage(new Date(d)));
+            }
+
+            for (var e = 0; e < employeeList.length; e++) {
+                var employee = employeeList[e];
+                var employeeData = {
+                    name: employee,
+                    totalHours: 0,
+                    workDays: 0,
+                    overtimeDays: 0,
+                    overtimeHours: 0,
+                    missingDays: 0,
+                    dailyHours: []
+                };
+
+                for (var d = 0; d < dates.length; d++) {
+                    var dateStr = dates[d];
+                    var dayData = attendanceData[employee] && attendanceData[employee][dateStr];
+                    
+                    if (dayData && dayData.checkIn && dayData.checkOut) {
+                        var hours = calculateHours(dayData.checkIn, dayData.checkOut);
+                        employeeData.totalHours += hours;
+                        employeeData.workDays++;
+                        employeeData.dailyHours.push({ date: dateStr, hours: hours });
+                        
+                        // בדיקת שעות נוספות (מעל 9 שעות)
+                        if (hours > 9) {
+                            employeeData.overtimeDays++;
+                            employeeData.overtimeHours += (hours - 9);
+                        }
+                    } else if (dayData && dayData.checkIn && !dayData.checkOut) {
+                        // יום לא נסגר
+                        employeeData.missingDays++;
+                        employeeData.dailyHours.push({ date: dateStr, hours: 0, incomplete: true });
+                    } else {
+                        // לא עבד
+                        employeeData.dailyHours.push({ date: dateStr, hours: 0 });
+                    }
+                }
+
+                employeeData.averageHours = employeeData.workDays > 0 ? 
+                    Math.round((employeeData.totalHours / employeeData.workDays) * 100) / 100 : 0;
+
+                data.employees.push(employeeData);
+                data.totalHours += employeeData.totalHours;
+                data.totalDays += employeeData.workDays;
+                data.overtimeDays += employeeData.overtimeDays;
+                data.overtimeHours += employeeData.overtimeHours;
+                data.missingDays += employeeData.missingDays;
+            }
+
+            data.averageHours = data.totalDays > 0 ? 
+                Math.round((data.totalHours / data.totalDays) * 100) / 100 : 0;
+
+            // נתונים יומיים מצורפים
+            for (var d = 0; d < dates.length; d++) {
+                var dateStr = dates[d];
+                var dayTotal = 0;
+                var dayWorkers = 0;
+                
+                for (var e = 0; e < employeeList.length; e++) {
+                    var employee = employeeList[e];
+                    var dayData = attendanceData[employee] && attendanceData[employee][dateStr];
+                    if (dayData && dayData.checkIn && dayData.checkOut) {
+                        dayTotal += calculateHours(dayData.checkIn, dayData.checkOut);
+                        dayWorkers++;
+                    }
+                }
+                
+                data.dailyData.push({
+                    date: dateStr,
+                    totalHours: dayTotal,
+                    workers: dayWorkers,
+                    average: dayWorkers > 0 ? Math.round((dayTotal / dayWorkers) * 100) / 100 : 0
+                });
+            }
+
+            return data;
+        }
+
+        function formatDateForStorage(date) {
+            var year = date.getFullYear();
+            var month = String(date.getMonth() + 1).padStart(2, '0');
+            var day = String(date.getDate()).padStart(2, '0');
+            return year + '-' + month + '-' + day;
+        }
+
+        function updateDetailedStatsGrid(data) {
+            var statsGrid = document.getElementById('detailedStatsGrid');
+            if (!statsGrid) return;
+            
+            statsGrid.innerHTML = 
+                '<div class="stat-card">' +
+                    '<div class="stat-value">' + (Math.round(data.totalHours * 10) / 10) + '</div>' +
+                    '<div class="stat-label">סה"כ שעות</div>' +
+                '</div>' +
+                '<div class="stat-card">' +
+                    '<div class="stat-value">' + data.totalDays + '</div>' +
+                    '<div class="stat-label">ימי עבודה</div>' +
+                '</div>' +
+                '<div class="stat-card">' +
+                    '<div class="stat-value">' + data.averageHours + '</div>' +
+                    '<div class="stat-label">ממוצע יומי</div>' +
+                '</div>' +
+                '<div class="stat-card">' +
+                    '<div class="stat-value">' + data.overtimeDays + '</div>' +
+                    '<div class="stat-label">ימי שעות נוספות</div>' +
+                '</div>' +
+                '<div class="stat-card">' +
+                    '<div class="stat-value">' + (Math.round(data.overtimeHours * 10) / 10) + '</div>' +
+                    '<div class="stat-label">שעות נוספות</div>' +
+                '</div>' +
+                '<div class="stat-card">' +
+                    '<div class="stat-value">' + data.missingDays + '</div>' +
+                    '<div class="stat-label">ימים לא נסגרו</div>' +
+                '</div>';
+        }
+
+        function updateDetailedHoursChart(data) {
+            var chartDiv = document.getElementById('detailedHoursChart');
+            if (!chartDiv) return;
+            
+            if (data.dailyData.length === 0) {
+                chartDiv.innerHTML = '<p style="text-align: center; color: #666;">אין נתונים להצגה</p>';
+                return;
+            }
+
+            var maxHours = 1;
+            for (var i = 0; i < data.dailyData.length; i++) {
+                if (data.dailyData[i].totalHours > maxHours) {
+                    maxHours = data.dailyData[i].totalHours;
+                }
+            }
+            
+            var chartHtml = '';
+            var recentData = data.dailyData.slice(-14); // 14 ימים אחרונים
+            
+            for (var i = 0; i < recentData.length; i++) {
+                var day = recentData[i];
+                var date = new Date(day.date);
+                var dayNames = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+                var dayName = dayNames[date.getDay()];
+                var dayNum = date.getDate();
+                var width = (day.totalHours / maxHours) * 100;
+                
+                chartHtml += 
+                    '<div class="chart-label">' + dayName + ' ' + dayNum + ' - ' + day.totalHours + 'ש (' + day.workers + ' עובדים)</div>' +
+                    '<div class="chart-bar" style="width: ' + width + '%">' +
+                        (day.totalHours > 0 ? day.totalHours + 'ש' : '') +
+                    '</div>';
+            }
+            
+            chartDiv.innerHTML = chartHtml;
+        }
+
+        function updateDetailedReportsTable(data) {
+            var table = document.getElementById('detailedReportsTable');
+            if (!table) return;
+            
+            if (data.employees.length === 0) {
+                table.innerHTML = '<p style="text-align: center; color: #666;">אין נתונים להצגה</p>';
+                return;
+            }
+
+            var tableHtml = 
+                '<thead>' +
+                    '<tr>' +
+                        '<th>עובד</th>' +
+                        '<th>סה"כ שעות</th>' +
+                        '<th>ימי עבודה</th>' +
+                        '<th>ממוצע יומי</th>' +
+                        '<th>שעות נוספות</th>' +
+                        '<th>ימים לא נסגרו</th>' +
+                        '<th>סטטוס</th>' +
+                    '</tr>' +
+                '</thead>' +
+                '<tbody>';
+
+            for (var i = 0; i < data.employees.length; i++) {
+                var emp = data.employees[i];
+                var statusBadge = '';
+                if (emp.missingDays > 0) {
+                    statusBadge = '<span class="missing-badge">חסרים</span>';
+                } else if (emp.overtimeHours > 0) {
+                    statusBadge = '<span class="overtime-badge">שעות נוספות</span>';
+                } else if (emp.workDays > 0) {
+                    statusBadge = '<span class="perfect-badge">מושלם</span>';
+                }
+
+                var rowClass = emp.missingDays > 0 ? 'missing-highlight' : 
+                               emp.overtimeHours > 5 ? 'overtime-highlight' : '';
+
+                tableHtml += 
+                    '<tr class="' + rowClass + '">' +
+                        '<td><strong>' + emp.name + '</strong></td>' +
+                        '<td>' + (Math.round(emp.totalHours * 10) / 10) + '</td>' +
+                        '<td>' + emp.workDays + '</td>' +
+                        '<td>' + emp.averageHours + '</td>' +
+                        '<td>' + (Math.round(emp.overtimeHours * 10) / 10) + '</td>' +
+                        '<td>' + emp.missingDays + '</td>' +
+                        '<td>' + statusBadge + '</td>' +
+                    '</tr>';
+            }
+
+            tableHtml += '</tbody>';
+            table.innerHTML = tableHtml;
+        }
+
+        // פונקציות ייצוא מפורטות
+        function exportDetailedCurrent() {
+            var dateRange = getDetailedDateRange();
+            var selectedEmployee = document.getElementById('detailedEmployeeFilter').value;
+            var reportData = generateDetailedReportData(dateRange.startDate, dateRange.endDate, selectedEmployee);
+            
+            var data = [
+                ['דוח נוכחות מפורט - רפטינג בר'],
+                ['תקופה: ' + formatDateForDisplay(dateRange.startDate) + ' - ' + formatDateForDisplay(dateRange.endDate)],
+                [''],
+                ['עובד', 'סה"כ שעות', 'ימי עבודה', 'ממוצע יומי', 'שעות נוספות', 'ימים לא נסגרו']
+            ];
+
+            for (var i = 0; i < reportData.employees.length; i++) {
+                var emp = reportData.employees[i];
+                data.push([
+                    emp.name,
+                    Math.round(emp.totalHours * 10) / 10,
+                    emp.workDays,
+                    emp.averageHours,
+                    Math.round(emp.overtimeHours * 10) / 10,
+                    emp.missingDays
+                ]);
+            }
+
+            var filename = 'דוח_מפורט_' + formatDateForFilename(dateRange.startDate) + '_' + formatDateForFilename(dateRange.endDate) + '.csv';
+            downloadCSV(data, filename);
+        }
+
+        function exportDetailedOvertime() {
+            var dateRange = getDetailedDateRange();
+            var selectedEmployee = document.getElementById('detailedEmployeeFilter').value;
+            var reportData = generateDetailedReportData(dateRange.startDate, dateRange.endDate, selectedEmployee);
+            
+            var data = [
+                ['דוח שעות נוספות מפורט - רפטינג בר'],
+                ['תקופה: ' + formatDateForDisplay(dateRange.startDate) + ' - ' + formatDateForDisplay(dateRange.endDate)],
+                [''],
+                ['עובד', 'ימי שעות נוספות', 'סה"כ שעות נוספות', 'ממוצע שעות נוספות יומי']
+            ];
+
+            var hasOvertime = false;
+            for (var i = 0; i < reportData.employees.length; i++) {
+                var emp = reportData.employees[i];
+                if (emp.overtimeHours > 0) {
+                    hasOvertime = true;
+                    var avgOvertime = emp.overtimeDays > 0 ? 
+                        Math.round((emp.overtimeHours / emp.overtimeDays) * 100) / 100 : 0;
+                    
+                    data.push([
+                        emp.name,
+                        emp.overtimeDays,
+                        Math.round(emp.overtimeHours * 10) / 10,
+                        avgOvertime
+                    ]);
+                }
+            }
+
+            if (!hasOvertime) {
+                data.push(['אין שעות נוספות בתקופה זו']);
+            }
+
+            var filename = 'דוח_שעות_נוספות_מפורט_' + formatDateForFilename(dateRange.startDate) + '_' + formatDateForFilename(dateRange.endDate) + '.csv';
+            downloadCSV(data, filename);
+        }
+
+        function exportDetailedSummary() {
+            var dateRange = getDetailedDateRange();
+            var selectedEmployee = document.getElementById('detailedEmployeeFilter').value;
+            var reportData = generateDetailedReportData(dateRange.startDate, dateRange.endDate, selectedEmployee);
+            
+            var data = [
+                ['סיכום מפורט - רפטינג בר'],
+                ['תקופה: ' + formatDateForDisplay(dateRange.startDate) + ' - ' + formatDateForDisplay(dateRange.endDate)],
+                [''],
+                ['סטטיסטיקה', 'ערך'],
+                ['סה"כ שעות עבודה', Math.round(reportData.totalHours * 10) / 10],
+                ['סה"כ ימי עבודה', reportData.totalDays],
+                ['ממוצע שעות יומי', reportData.averageHours],
+                ['סה"כ שעות נוספות', Math.round(reportData.overtimeHours * 10) / 10],
+                ['ימי שעות נוספות', reportData.overtimeDays],
+                ['ימים לא נסגרו', reportData.missingDays],
+                ['מספר עובדים', reportData.employees.length],
+                [''],
+                ['עובד מצטיין (הכי הרבה שעות)', ''],
+                ['עובד מצטיין (הכי יציב)', '']
+            ];
+
+            if (reportData.employees.length > 0) {
+                var topHoursEmployee = reportData.employees[0];
+                var mostConsistentEmployee = reportData.employees[0];
+                
+                for (var i = 1; i < reportData.employees.length; i++) {
+                    if (reportData.employees[i].totalHours > topHoursEmployee.totalHours) {
+                        topHoursEmployee = reportData.employees[i];
+                    }
+                    
+                    var current = reportData.employees[i];
+                    if (current.missingDays < mostConsistentEmployee.missingDays || 
+                        (current.missingDays === mostConsistentEmployee.missingDays && current.averageHours > mostConsistentEmployee.averageHours)) {
+                        mostConsistentEmployee = current;
+                    }
+                }
+                
+                data[data.length - 2][1] = topHoursEmployee.name + ' (' + Math.round(topHoursEmployee.totalHours * 10) / 10 + ' שעות)';
+                data[data.length - 1][1] = mostConsistentEmployee.name + ' (' + mostConsistentEmployee.missingDays + ' חסרים)';
+            }
+
+            var filename = 'סיכום_מפורט_' + formatDateForFilename(dateRange.startDate) + '_' + formatDateForFilename(dateRange.endDate) + '.csv';
+            downloadCSV(data, filename);
+        }
+
+        function exportDetailedFull() {
+            var dateRange = getDetailedDateRange();
+            var selectedEmployee = document.getElementById('detailedEmployeeFilter').value;
+            var reportData = generateDetailedReportData(dateRange.startDate, dateRange.endDate, selectedEmployee);
+            
+            // יצירת כותרות עמודות
+            var dates = [];
+            for (var d = new Date(dateRange.startDate); d <= dateRange.endDate; d.setDate(d.getDate() + 1)) {
+                dates.push(formatDateForStorage(new Date(d)));
+            }
+
+            var headers = ['עובד'];
+            for (var i = 0; i < dates.length; i++) {
+                var d = new Date(dates[i]);
+                headers.push(d.getDate() + '/' + (d.getMonth() + 1));
+            }
+            headers.push('סה"כ שעות', 'ימי עבודה', 'שעות נוספות');
+
+            var data = [
+                ['דוח מפורט יומי מלא - רפטינג בר'],
+                ['תקופה: ' + formatDateForDisplay(dateRange.startDate) + ' - ' + formatDateForDisplay(dateRange.endDate)],
+                [''],
+                headers
+            ];
+
+            for (var e = 0; e < reportData.employees.length; e++) {
+                var emp = reportData.employees[e];
+                var row = [emp.name];
+                
+                for (var d = 0; d < dates.length; d++) {
+                    var date = dates[d];
+                    var dayData = null;
+                    
+                    for (var h = 0; h < emp.dailyHours.length; h++) {
+                        if (emp.dailyHours[h].date === date) {
+                            dayData = emp.dailyHours[h];
+                            break;
+                        }
+                    }
+                    
+                    if (dayData) {
+                        if (dayData.incomplete) {
+                            row.push('לא נסגר');
+                        } else if (dayData.hours > 0) {
+                            row.push(Math.round(dayData.hours * 100) / 100);
+                        } else {
+                            row.push('-');
+                        }
+                    } else {
+                        row.push('-');
+                    }
+                }
+                
+                row.push(
+                    Math.round(emp.totalHours * 10) / 10,
+                    emp.workDays,
+                    Math.round(emp.overtimeHours * 10) / 10
+                );
+                
+                data.push(row);
+            }
+
+            var filename = 'דוח_יומי_מלא_' + formatDateForFilename(dateRange.startDate) + '_' + formatDateForFilename(dateRange.endDate) + '.csv';
+            downloadCSV(data, filename);
+        }
+
+        // פונקציות עזר לתאריכים
+        function formatDateForDisplay(date) {
+            return date.toLocaleDateString('he-IL');
+        }
+
+        function formatDateForFilename(date) {
+            var year = date.getFullYear();
+            var month = String(date.getMonth() + 1).padStart(2, '0');
+            var day = String(date.getDate()).padStart(2, '0');
+            return year + '_' + month + '_' + day;
         }
 
         // אתחול אפליקציה
