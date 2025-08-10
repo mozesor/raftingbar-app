@@ -948,6 +948,7 @@
         var scriptUrl = EMBEDDED_SETTINGS.scriptUrl;
         var isInitialized = false;
         var pendingSync = [];
+        var lastPasswordSync = 0;
 
         // פונקציות עזר
         function getCurrentDate() {
@@ -1043,7 +1044,7 @@
                 });
         }
 
-        // טעינת נתונים מהגיליון - עם סנכרון עובדים מלא
+        // טעינת נתונים מהגיליון - עם סנכרון עובדים מלא וסיסמה
         function loadDataFromSheet() {
             if (!isInitialized) return;
             
@@ -1064,11 +1065,18 @@
                     var newAttendanceData = {};
                     var newCurrentStatus = {};
                     var currentDate = getCurrentDate();
+                    var foundPassword = null;
                     
-                    // טען עובדים מהגיליון
+                    // טען עובדים מהגיליון + סיסמה
                     for (var i = 1; i < rows.length; i++) {
                         var row = rows[i];
                         if (row && row[0]) {
+                            // בדיקה אם זה שורת סיסמה
+                            if (row[1] === 'admin_password_change') {
+                                foundPassword = row[0]; // הסיסמה שמורה בעמודה הראשונה
+                                continue;
+                            }
+                            
                             uniqueEmployees.add(row[0]);
                             
                             var employee = row[0];
@@ -1095,6 +1103,13 @@
                                 }
                             }
                         }
+                    }
+                    
+                    // עדכן סיסמה אם נמצאה בגיליון
+                    if (foundPassword && foundPassword !== adminPassword) {
+                        adminPassword = foundPassword;
+                        // אל תשמור ב-localStorage כי אנחנו רוצים שיסתנכרן מהגיליון
+                        showAlert('🔐 סיסמת המנהל עודכנה מהענן', 'success');
                     }
                     
                     // סנכרון רשימת עובדים - החלף לחלוטין עם מה שבגיליון
@@ -1615,11 +1630,33 @@
                 return;
             }
             
-            if (confirm('האם אתה בטוח שברצונך לשנות את קוד הגישה ל-' + newPassword + '?')) {
+            if (confirm('האם אתה בטוח שברצונך לשנות את קוד הגישה ל-' + newPassword + '?\nהקוד יתעדכן בכל המכשירים!')) {
                 adminPassword = newPassword;
-                localStorage.setItem('raftingbar_admin_password', adminPassword);
                 document.getElementById('newAdminPassword').value = '';
-                showAlert('קוד הגישה שונה בהצלחה!', 'success');
+                
+                // שלח את הסיסמה החדשה לגיליון
+                if (isInitialized) {
+                    updateSyncStatus('🔄', 'מעדכן סיסמה...', 'sync-syncing');
+                    var now = new Date();
+                    var today = getCurrentDate();
+                    var timestamp = now.toISOString();
+                    var time = now.toLocaleTimeString('he-IL');
+                    
+                    recordToSheet(newPassword, 'admin_password_change', timestamp, today, time)
+                        .then(function(success) {
+                            if (success) {
+                                updateSyncStatus('☁️', 'מסונכרן', 'sync-connected');
+                                showAlert('🔐 קוד הגישה שונה ויסונכרן לכל המכשירים!', 'success');
+                                // טען מחדש כדי לוודא סנכרון
+                                setTimeout(loadDataFromSheet, 2000);
+                            } else {
+                                updateSyncStatus('📱', 'שמור מקומית', 'sync-error');
+                                showAlert('⚠️ הקוד שונה מקומית, יסונכרן כשהחיבור יחזור', 'success');
+                            }
+                        });
+                } else {
+                    showAlert('⚠️ הקוד שונה מקומית, יסונכרן כשהחיבור יחזור', 'success');
+                }
             }
         }
 
@@ -1765,10 +1802,11 @@
                     currentStatus = JSON.parse(savedStatus);
                 }
                 
-                var savedAdminPassword = localStorage.getItem('raftingbar_admin_password');
-                if (savedAdminPassword) {
-                    adminPassword = savedAdminPassword;
-                }
+                // אל תטען סיסמה מ-localStorage - רק מהגיליון
+                // var savedAdminPassword = localStorage.getItem('raftingbar_admin_password');
+                // if (savedAdminPassword) {
+                //     adminPassword = savedAdminPassword;
+                // }
                 
                 var savedPending = localStorage.getItem('raftingbar_pending');
                 if (savedPending) {
@@ -1785,6 +1823,8 @@
                 localStorage.setItem('raftingbar_attendance', JSON.stringify(attendanceData));
                 localStorage.setItem('raftingbar_status', JSON.stringify(currentStatus));
                 localStorage.setItem('raftingbar_pending', JSON.stringify(pendingSync));
+                // אל תשמור סיסמה ב-localStorage
+                // localStorage.setItem('raftingbar_admin_password', adminPassword);
             } catch (e) {
                 console.log('שגיאה בשמירת נתונים מקומיים:', e);
             }
