@@ -1,17 +1,17 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl">
+
+<html dir="rtl" lang="he">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>רפטינג בר - שעון נוכחות</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#667eea">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="רפטינג בר">
-    
-    <style>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>רפטינג בר - שעון נוכחות</title>
+<link href="manifest.json" rel="manifest"/>
+<meta content="#667eea" name="theme-color"/>
+<meta content="yes" name="mobile-web-app-capable"/>
+<meta content="yes" name="apple-mobile-web-app-capable"/>
+<meta content="default" name="apple-mobile-web-app-status-bar-style"/>
+<meta content="רפטינג בר" name="apple-mobile-web-app-title"/>
+<style>
         * {
             margin: 0;
             padding: 0;
@@ -630,305 +630,271 @@
             }
         }
     </style>
-</head>
+<link href="icon-180x180.png" rel="apple-touch-icon" sizes="180x180"/><link href="icon-167x167.png" rel="apple-touch-icon" sizes="167x167"/><link href="icon-152x152.png" rel="apple-touch-icon" sizes="152x152"/><link href="icon-144x144.png" rel="apple-touch-icon" sizes="144x144"/></head>
 <body>
-    <div class="header">
-        <h1>🏄‍♂️ רפטינג בר</h1>
-        <div class="current-time" id="currentTime"></div>
-        <div class="sync-status" id="syncStatus">
-            <span id="syncIcon">🔄</span>
-            <span id="syncText">מתחבר...</span>
-        </div>
-    </div>
-
-    <div class="container">
-        <div id="alertContainer"></div>
-
-        <!-- עמוד ראשי -->
-        <div id="mainPage" class="page active">
-            <div class="card">
-                <h2>רישום נוכחות</h2>
-                
-                <div class="form-group">
-                    <label for="employeeSelect">בחר עובד:</label>
-                    <select id="employeeSelect">
-                        <option value="">-- בחר עובד --</option>
-                    </select>
-                </div>
-                
-                <div class="btn-group">
-                    <button class="btn btn-checkin" onclick="checkIn()" id="checkinBtn">
+<div class="header">
+<h1>🏄‍♂️ רפטינג בר</h1>
+<div class="current-time" id="currentTime"></div>
+<div class="sync-status" id="syncStatus">
+<span id="syncIcon">🔄</span>
+<span id="syncText">מתחבר...</span>
+</div>
+</div>
+<div class="container">
+<div id="alertContainer"></div>
+<!-- עמוד ראשי -->
+<div class="page active" id="mainPage">
+<div class="card">
+<h2>רישום נוכחות</h2>
+<div class="form-group">
+<label for="employeeSelect">בחר עובד:</label>
+<select id="employeeSelect">
+<option value="">-- בחר עובד --</option>
+</select>
+</div>
+<div class="btn-group">
+<button class="btn btn-checkin" id="checkinBtn" onclick="checkIn()">
                         🟢 כניסה
                     </button>
-                    <button class="btn btn-checkout" onclick="checkOut()" id="checkoutBtn">
+<button class="btn btn-checkout" id="checkoutBtn" onclick="checkOut()">
                         🔴 יציאה
                     </button>
-                </div>
-
-                <div class="status-display">
-                    <h3>מצב נוכחי</h3>
-                    <div id="employeeStatus">בחר עובד לצפייה במצב</div>
-                </div>
-
-                <div class="quick-actions">
-                    <div class="quick-action" onclick="showEmployeesStatus()">
-                        <div class="quick-action-value" id="activeCount">0</div>
-                        <div class="quick-action-label">עובדים פעילים</div>
-                    </div>
-                    <div class="quick-action" onclick="showPage('reports')">
-                        <div class="quick-action-value" id="todayHours">0</div>
-                        <div class="quick-action-label">שעות היום</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- עמוד עובדים -->
-        <div id="employeesPage" class="page">
-            <div class="card">
-                <h2>👥 סטטוס עובדים</h2>
-                <div class="employee-grid" id="employeeGrid"></div>
-            </div>
-        </div>
-
-        <!-- עמוד דוחות -->
-        <div id="reportsPage" class="page">
-            <div class="card">
-                <h2>📊 דוחות</h2>
-                <div class="btn-group" style="flex-direction: column;">
-                    <button class="btn btn-admin" onclick="exportToday()">📄 ייצא דוח יומי</button>
-                    <button class="btn btn-admin" onclick="exportDetailed()">📊 ייצא דוח מפורט</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- עמוד דוחות מפורטים -->
-        <div id="detailedReportsPage" class="page">
-            <!-- מסך נעילה -->
-            <div id="detailedReportsLock" class="card" style="display: block;">
-                <h2>🔒 דוחות מפורטים מוגנים</h2>
-                <p style="text-align: center; color: #666; margin-bottom: 20px;">
+</div>
+<div class="status-display">
+<h3>מצב נוכחי</h3>
+<div id="employeeStatus">בחר עובד לצפייה במצב</div>
+</div>
+<div class="quick-actions">
+<div class="quick-action" onclick="showEmployeesStatus()">
+<div class="quick-action-value" id="activeCount">0</div>
+<div class="quick-action-label">עובדים פעילים</div>
+</div>
+<div class="quick-action" onclick="showPage('reports')">
+<div class="quick-action-value" id="todayHours">0</div>
+<div class="quick-action-label">שעות היום</div>
+</div>
+</div>
+</div>
+</div>
+<!-- עמוד עובדים -->
+<div class="page" id="employeesPage">
+<div class="card">
+<h2>👥 סטטוס עובדים</h2>
+<div class="employee-grid" id="employeeGrid"></div>
+</div>
+</div>
+<!-- עמוד דוחות -->
+<div class="page" id="reportsPage">
+<div class="card">
+<h2>📊 דוחות</h2>
+<div class="btn-group" style="flex-direction: column;">
+<button class="btn btn-admin" onclick="exportToday()">📄 ייצא דוח יומי</button>
+<button class="btn btn-admin" onclick="exportDetailed()">📊 ייצא דוח מפורט</button>
+</div>
+</div>
+</div>
+<!-- עמוד דוחות מפורטים -->
+<div class="page" id="detailedReportsPage">
+<!-- מסך נעילה -->
+<div class="card" id="detailedReportsLock" style="display: block;">
+<h2>🔒 דוחות מפורטים מוגנים</h2>
+<p style="text-align: center; color: #666; margin-bottom: 20px;">
                     הזן קוד גישה לצפייה בדוחות המפורטים
                 </p>
-                
-                <div class="form-group">
-                    <label>קוד גישה:</label>
-                    <input type="password" id="detailedReportsPassword" placeholder="הזן קוד גישה" maxlength="6">
-                </div>
-                
-                <button class="btn btn-admin" onclick="checkDetailedReportsPassword()" style="width: 100%;">
+<div class="form-group">
+<label>קוד גישה:</label>
+<input id="detailedReportsPassword" maxlength="6" placeholder="הזן קוד גישה" type="password"/>
+</div>
+<button class="btn btn-admin" onclick="checkDetailedReportsPassword()" style="width: 100%;">
                     🔓 פתח דוחות
                 </button>
-                
-                <div style="margin-top: 20px; padding: 15px; background: #e3f2fd; border-radius: 10px; font-size: 14px; color: #1976d2;">
-                    💡 <strong>טיפ:</strong> הקוד ברירת המחדל הוא: <strong>1234</strong><br>
+<div style="margin-top: 20px; padding: 15px; background: #e3f2fd; border-radius: 10px; font-size: 14px; color: #1976d2;">
+                    💡 <strong>טיפ:</strong> הקוד ברירת המחדל הוא: <strong>1234</strong><br/>
                     ניתן לשנות בהגדרות המערכת
                 </div>
-            </div>
-
-            <!-- תוכן הדוחות המפורטים -->
-            <div id="detailedReportsContent" style="display: none;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                    <h2 style="margin: 0;">📊 דוחות מפורטים</h2>
-                    <button class="btn" onclick="lockDetailedReports()" style="background: #f44336; color: white; padding: 8px 12px; font-size: 14px;">
+</div>
+<!-- תוכן הדוחות המפורטים -->
+<div id="detailedReportsContent" style="display: none;">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+<h2 style="margin: 0;">📊 דוחות מפורטים</h2>
+<button class="btn" onclick="lockDetailedReports()" style="background: #f44336; color: white; padding: 8px 12px; font-size: 14px;">
                         🔒 נעל
                     </button>
-                </div>
-
-                <!-- פילטרים -->
-                <div class="detailed-reports-filters">
-                    <div class="filter-row">
-                        <div class="filter-group">
-                            <label>תקופה:</label>
-                            <select id="detailedPeriodFilter">
-                                <option value="today">היום</option>
-                                <option value="week">השבוע</option>
-                                <option value="month" selected>החודש</option>
-                                <option value="custom">תקופה מותאמת</option>
-                            </select>
-                        </div>
-                        <div class="filter-group">
-                            <label>עובד:</label>
-                            <select id="detailedEmployeeFilter">
-                                <option value="all">כל העובדים</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div class="filter-row" id="detailedCustomDateRange" style="display: none;">
-                        <div class="filter-group">
-                            <label>מתאריך:</label>
-                            <input type="date" id="detailedStartDate">
-                        </div>
-                        <div class="filter-group">
-                            <label>עד תאריך:</label>
-                            <input type="date" id="detailedEndDate">
-                        </div>
-                    </div>
-                    
-                    <button class="btn btn-admin" onclick="updateDetailedReports()" style="width: 100%; margin-top: 10px;">
+</div>
+<!-- פילטרים -->
+<div class="detailed-reports-filters">
+<div class="filter-row">
+<div class="filter-group">
+<label>תקופה:</label>
+<select id="detailedPeriodFilter">
+<option value="today">היום</option>
+<option value="week">השבוע</option>
+<option selected="" value="month">החודש</option>
+<option value="custom">תקופה מותאמת</option>
+</select>
+</div>
+<div class="filter-group">
+<label>עובד:</label>
+<select id="detailedEmployeeFilter">
+<option value="all">כל העובדים</option>
+</select>
+</div>
+</div>
+<div class="filter-row" id="detailedCustomDateRange" style="display: none;">
+<div class="filter-group">
+<label>מתאריך:</label>
+<input id="detailedStartDate" type="date"/>
+</div>
+<div class="filter-group">
+<label>עד תאריך:</label>
+<input id="detailedEndDate" type="date"/>
+</div>
+</div>
+<button class="btn btn-admin" onclick="updateDetailedReports()" style="width: 100%; margin-top: 10px;">
                         🔄 עדכן דוחות
                     </button>
-                </div>
-
-                <!-- סטטיסטיקות כלליות -->
-                <div class="stats-grid" id="detailedStatsGrid">
-                    <!-- יתמלא באופן דינמי -->
-                </div>
-
-                <!-- גרף שעות יומיות -->
-                <div class="chart-container">
-                    <h3 style="margin-bottom: 15px;">📊 שעות יומיות</h3>
-                    <div id="detailedHoursChart">
-                        <!-- יתמלא באופן דינמי -->
-                    </div>
-                </div>
-
-                <!-- טבלת נתונים מפורטת -->
-                <div class="detailed-reports-table">
-                    <h3>📋 נתונים מפורטים</h3>
-                    <div style="overflow-x: auto;">
-                        <table class="data-table" id="detailedReportsTable">
-                            <!-- יתמלא באופן דינמי -->
-                        </table>
-                    </div>
-                </div>
-
-                <!-- ייצוא דוחות -->
-                <div class="export-section">
-                    <h3 style="margin-bottom: 15px;">📄 ייצא דוחות מתקדמים</h3>
-                    <div class="export-grid">
-                        <button class="btn btn-admin" onclick="exportDetailedCurrent()">
+</div>
+<!-- סטטיסטיקות כלליות -->
+<div class="stats-grid" id="detailedStatsGrid">
+<!-- יתמלא באופן דינמי -->
+</div>
+<!-- גרף שעות יומיות -->
+<div class="chart-container">
+<h3 style="margin-bottom: 15px;">📊 שעות יומיות</h3>
+<div id="detailedHoursChart">
+<!-- יתמלא באופן דינמי -->
+</div>
+</div>
+<!-- טבלת נתונים מפורטת -->
+<div class="detailed-reports-table">
+<h3>📋 נתונים מפורטים</h3>
+<div style="overflow-x: auto;">
+<table class="data-table" id="detailedReportsTable">
+<!-- יתמלא באופן דינמי -->
+</table>
+</div>
+</div>
+<!-- ייצוא דוחות -->
+<div class="export-section">
+<h3 style="margin-bottom: 15px;">📄 ייצא דוחות מתקדמים</h3>
+<div class="export-grid">
+<button class="btn btn-admin" onclick="exportDetailedCurrent()">
                             📊 ייצא דוח נוכחי
                         </button>
-                        <button class="btn btn-admin" onclick="exportDetailedOvertime()">
+<button class="btn btn-admin" onclick="exportDetailedOvertime()">
                             ⏱️ דוח שעות נוספות
                         </button>
-                        <button class="btn btn-admin" onclick="exportDetailedSummary()">
+<button class="btn btn-admin" onclick="exportDetailedSummary()">
                             📈 דוח סיכום חודשי
                         </button>
-                        <button class="btn btn-admin" onclick="exportDetailedFull()">
+<button class="btn btn-admin" onclick="exportDetailedFull()">
                             📋 דוח מפורט מלא
                         </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- עמוד ניהול -->
-        <div id="adminPage" class="page">
-            <!-- מסך נעילה -->
-            <div id="adminLock" class="card" style="display: block;">
-                <h2>🔒 עמוד ניהול מוגן</h2>
-                <p style="text-align: center; color: #666; margin-bottom: 20px;">
+</div>
+</div>
+</div>
+</div>
+<!-- עמוד ניהול -->
+<div class="page" id="adminPage">
+<!-- מסך נעילה -->
+<div class="card" id="adminLock" style="display: block;">
+<h2>🔒 עמוד ניהול מוגן</h2>
+<p style="text-align: center; color: #666; margin-bottom: 20px;">
                     הזן קוד גישה לניהול המערכת
                 </p>
-                
-                <div class="form-group">
-                    <label>קוד גישה:</label>
-                    <input type="password" id="adminPassword" placeholder="הזן קוד גישה" maxlength="6">
-                </div>
-                
-                <button class="btn btn-admin" onclick="checkAdminPassword()" style="width: 100%;">
+<div class="form-group">
+<label>קוד גישה:</label>
+<input id="adminPassword" maxlength="6" placeholder="הזן קוד גישה" type="password"/>
+</div>
+<button class="btn btn-admin" onclick="checkAdminPassword()" style="width: 100%;">
                     🔓 פתח ניהול
                 </button>
-                
-                <div style="margin-top: 20px; padding: 15px; background: #e3f2fd; border-radius: 10px; font-size: 14px; color: #1976d2;">
-                    💡 <strong>טיפ:</strong> הקוד ברירת המחדל הוא: <strong>1234</strong><br>
+<div style="margin-top: 20px; padding: 15px; background: #e3f2fd; border-radius: 10px; font-size: 14px; color: #1976d2;">
+                    💡 <strong>טיפ:</strong> הקוד ברירת המחדל הוא: <strong>1234</strong><br/>
                     ניתן לשנות בהגדרות המערכת
                 </div>
-            </div>
-
-            <!-- תוכן הניהול -->
-            <div id="adminContent" style="display: none;">
-                <div class="card">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <h2 style="margin: 0;">⚙️ ניהול עובדים</h2>
-                        <button class="btn" onclick="lockAdmin()" style="background: #f44336; color: white; padding: 8px 12px; font-size: 14px;">
+</div>
+<!-- תוכן הניהול -->
+<div id="adminContent" style="display: none;">
+<div class="card">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+<h2 style="margin: 0;">⚙️ ניהול עובדים</h2>
+<button class="btn" onclick="lockAdmin()" style="background: #f44336; color: white; padding: 8px 12px; font-size: 14px;">
                             🔒 נעל
                         </button>
-                    </div>
-                    
-                    <div style="background: #e3f2fd; border-radius: 8px; padding: 10px; margin-bottom: 15px; text-align: center; font-size: 0.9em; color: #1976d2;">
+</div>
+<div style="background: #e3f2fd; border-radius: 8px; padding: 10px; margin-bottom: 15px; text-align: center; font-size: 0.9em; color: #1976d2;">
                         📡 העובדים מסונכרנים אוטומטית בין כל המכשירים
                     </div>
-                    
-                    <div class="form-group">
-                        <label>הוסף עובד חדש:</label>
-                        <input type="text" id="newEmployeeName" placeholder="שם העובד החדש">
-                    </div>
-                    <button class="btn btn-admin" onclick="addEmployee()" style="width: 100%; margin-bottom: 15px;">
+<div class="form-group">
+<label>הוסף עובד חדש:</label>
+<input id="newEmployeeName" placeholder="שם העובד החדש" type="text"/>
+</div>
+<button class="btn btn-admin" onclick="addEmployee()" style="width: 100%; margin-bottom: 15px;">
                         ➕ הוסף עובד
                     </button>
-                    
-                    <div class="form-group">
-                        <label>הסר עובד:</label>
-                        <select id="removeEmployeeSelect">
-                            <option value="">-- בחר עובד להסרה --</option>
-                        </select>
-                    </div>
-                    <button class="btn btn-checkout" onclick="removeEmployee()" style="width: 100%; margin-bottom: 20px;">
+<div class="form-group">
+<label>הסר עובד:</label>
+<select id="removeEmployeeSelect">
+<option value="">-- בחר עובד להסרה --</option>
+</select>
+</div>
+<button class="btn btn-checkout" onclick="removeEmployee()" style="width: 100%; margin-bottom: 20px;">
                         🗑️ הסר עובד
                     </button>
-                    
-                    <button class="btn btn-checkout" onclick="clearAll()" style="width: 100%;">
+<button class="btn btn-checkout" onclick="clearAll()" style="width: 100%;">
                         🔄 איפוס נתונים
                     </button>
-                </div>
-
-                <div class="card">
-                    <h2>🔄 סנכרון</h2>
-                    <p style="text-align: center; color: #666; margin-bottom: 15px;">
+</div>
+<div class="card">
+<h2>🔄 סנכרון</h2>
+<p style="text-align: center; color: #666; margin-bottom: 15px;">
                         עובדים ונתוני נוכחות מסונכרנים בזמן אמת
                     </p>
-                    <button class="btn btn-admin" onclick="forcSync()" style="width: 100%;">
+<button class="btn btn-admin" onclick="forcSync()" style="width: 100%;">
                         ⚡ סנכרון ידני
                     </button>
-                </div>
-
-                <div class="card">
-                    <h2>🔐 אבטחה</h2>
-                    <div class="form-group">
-                        <label>שנה קוד גישה:</label>
-                        <input type="password" id="newAdminPassword" placeholder="קוד חדש (4-6 ספרות)" maxlength="6">
-                    </div>
-                    <button class="btn btn-admin" onclick="changeAdminPassword()" style="width: 100%;">
+</div>
+<div class="card">
+<h2>🔐 אבטחה</h2>
+<div class="form-group">
+<label>שנה קוד גישה:</label>
+<input id="newAdminPassword" maxlength="6" placeholder="קוד חדש (4-6 ספרות)" type="password"/>
+</div>
+<button class="btn btn-admin" onclick="changeAdminPassword()" style="width: 100%;">
                         🔑 שנה קוד
                     </button>
-                    
-                    <div style="margin-top: 15px; padding: 10px; background: #fff3cd; border-radius: 8px; font-size: 13px; color: #856404;">
+<div style="margin-top: 15px; padding: 10px; background: #fff3cd; border-radius: 8px; font-size: 13px; color: #856404;">
                         ⚠️ זכור את הקוד החדש! אין אפשרות לשחזר אותו
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ניווט תחתון -->
-    <div class="navigation">
-        <button class="nav-btn active" onclick="showPage('main')">
-            <div>🏠</div>
-            <div>בית</div>
-        </button>
-        <button class="nav-btn" onclick="showPage('employees')">
-            <div>👥</div>
-            <div>עובדים</div>
-        </button>
-        <button class="nav-btn" onclick="showPage('reports')">
-            <div>📊</div>
-            <div>דוחות</div>
-        </button>
-        <button class="nav-btn" onclick="showPage('detailedReports')">
-            <div>📈</div>
-            <div>מפורט</div>
-        </button>
-        <button class="nav-btn" onclick="showPage('admin')">
-            <div>⚙️</div>
-            <div>ניהול</div>
-        </button>
-    </div>
-
-    <script>
+</div>
+</div>
+</div>
+</div>
+<!-- ניווט תחתון -->
+<div class="navigation">
+<button class="nav-btn active" onclick="showPage('main')">
+<div>🏠</div>
+<div>בית</div>
+</button>
+<button class="nav-btn" onclick="showPage('employees')">
+<div>👥</div>
+<div>עובדים</div>
+</button>
+<button class="nav-btn" onclick="showPage('reports')">
+<div>📊</div>
+<div>דוחות</div>
+</button>
+<button class="nav-btn" onclick="showPage('detailedReports')">
+<div>📈</div>
+<div>מפורט</div>
+</button>
+<button class="nav-btn" onclick="showPage('admin')">
+<div>⚙️</div>
+<div>ניהול</div>
+</button>
+</div>
+<script>
         // הגדרות קבועות
         const EMBEDDED_SETTINGS = {
             apiKey: 'AIzaSyB8MgwEZ7hqS_hiZqTcwzODheuwdBA55j4',
