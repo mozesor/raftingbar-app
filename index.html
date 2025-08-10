@@ -684,83 +684,113 @@
 
         <!-- עמוד דוחות מפורטים -->
         <div id="detailedReportsPage" class="page">
-            <!-- פילטרים -->
-            <div class="detailed-reports-filters">
-                <h2 style="margin-bottom: 15px;">📊 דוחות מפורטים</h2>
+            <!-- מסך נעילה -->
+            <div id="detailedReportsLock" class="card" style="display: block;">
+                <h2>🔒 דוחות מפורטים מוגנים</h2>
+                <p style="text-align: center; color: #666; margin-bottom: 20px;">
+                    הזן קוד גישה לצפייה בדוחות המפורטים
+                </p>
                 
-                <div class="filter-row">
-                    <div class="filter-group">
-                        <label>תקופה:</label>
-                        <select id="detailedPeriodFilter">
-                            <option value="today">היום</option>
-                            <option value="week">השבוע</option>
-                            <option value="month" selected>החודש</option>
-                            <option value="custom">תקופה מותאמת</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label>עובד:</label>
-                        <select id="detailedEmployeeFilter">
-                            <option value="all">כל העובדים</option>
-                        </select>
-                    </div>
+                <div class="form-group">
+                    <label>קוד גישה:</label>
+                    <input type="password" id="detailedReportsPassword" placeholder="הזן קוד גישה" maxlength="6">
                 </div>
                 
-                <div class="filter-row" id="detailedCustomDateRange" style="display: none;">
-                    <div class="filter-group">
-                        <label>מתאריך:</label>
-                        <input type="date" id="detailedStartDate">
-                    </div>
-                    <div class="filter-group">
-                        <label>עד תאריך:</label>
-                        <input type="date" id="detailedEndDate">
-                    </div>
-                </div>
-                
-                <button class="btn btn-admin" onclick="updateDetailedReports()" style="width: 100%; margin-top: 10px;">
-                    🔄 עדכן דוחות
+                <button class="btn btn-admin" onclick="checkDetailedReportsPassword()" style="width: 100%;">
+                    🔓 פתח דוחות
                 </button>
+                
+                <div style="margin-top: 20px; padding: 15px; background: #e3f2fd; border-radius: 10px; font-size: 14px; color: #1976d2;">
+                    💡 <strong>טיפ:</strong> הקוד ברירת המחדל הוא: <strong>1234</strong><br>
+                    ניתן לשנות בהגדרות המערכת
+                </div>
             </div>
 
-            <!-- סטטיסטיקות כלליות -->
-            <div class="stats-grid" id="detailedStatsGrid">
-                <!-- יתמלא באופן דינמי -->
-            </div>
+            <!-- תוכן הדוחות המפורטים -->
+            <div id="detailedReportsContent" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <h2 style="margin: 0;">📊 דוחות מפורטים</h2>
+                    <button class="btn" onclick="lockDetailedReports()" style="background: #f44336; color: white; padding: 8px 12px; font-size: 14px;">
+                        🔒 נעל
+                    </button>
+                </div>
 
-            <!-- גרף שעות יומיות -->
-            <div class="chart-container">
-                <h3 style="margin-bottom: 15px;">📊 שעות יומיות</h3>
-                <div id="detailedHoursChart">
+                <!-- פילטרים -->
+                <div class="detailed-reports-filters">
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label>תקופה:</label>
+                            <select id="detailedPeriodFilter">
+                                <option value="today">היום</option>
+                                <option value="week">השבוע</option>
+                                <option value="month" selected>החודש</option>
+                                <option value="custom">תקופה מותאמת</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>עובד:</label>
+                            <select id="detailedEmployeeFilter">
+                                <option value="all">כל העובדים</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-row" id="detailedCustomDateRange" style="display: none;">
+                        <div class="filter-group">
+                            <label>מתאריך:</label>
+                            <input type="date" id="detailedStartDate">
+                        </div>
+                        <div class="filter-group">
+                            <label>עד תאריך:</label>
+                            <input type="date" id="detailedEndDate">
+                        </div>
+                    </div>
+                    
+                    <button class="btn btn-admin" onclick="updateDetailedReports()" style="width: 100%; margin-top: 10px;">
+                        🔄 עדכן דוחות
+                    </button>
+                </div>
+
+                <!-- סטטיסטיקות כלליות -->
+                <div class="stats-grid" id="detailedStatsGrid">
                     <!-- יתמלא באופן דינמי -->
                 </div>
-            </div>
 
-            <!-- טבלת נתונים מפורטת -->
-            <div class="detailed-reports-table">
-                <h3>📋 נתונים מפורטים</h3>
-                <div style="overflow-x: auto;">
-                    <table class="data-table" id="detailedReportsTable">
+                <!-- גרף שעות יומיות -->
+                <div class="chart-container">
+                    <h3 style="margin-bottom: 15px;">📊 שעות יומיות</h3>
+                    <div id="detailedHoursChart">
                         <!-- יתמלא באופן דינמי -->
-                    </table>
+                    </div>
                 </div>
-            </div>
 
-            <!-- ייצוא דוחות -->
-            <div class="export-section">
-                <h3 style="margin-bottom: 15px;">📄 ייצא דוחות מתקדמים</h3>
-                <div class="export-grid">
-                    <button class="btn btn-admin" onclick="exportDetailedCurrent()">
-                        📊 ייצא דוח נוכחי
-                    </button>
-                    <button class="btn btn-admin" onclick="exportDetailedOvertime()">
-                        ⏱️ דוח שעות נוספות
-                    </button>
-                    <button class="btn btn-admin" onclick="exportDetailedSummary()">
-                        📈 דוח סיכום חודשי
-                    </button>
-                    <button class="btn btn-admin" onclick="exportDetailedFull()">
-                        📋 דוח מפורט מלא
-                    </button>
+                <!-- טבלת נתונים מפורטת -->
+                <div class="detailed-reports-table">
+                    <h3>📋 נתונים מפורטים</h3>
+                    <div style="overflow-x: auto;">
+                        <table class="data-table" id="detailedReportsTable">
+                            <!-- יתמלא באופן דינמי -->
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ייצוא דוחות -->
+                <div class="export-section">
+                    <h3 style="margin-bottom: 15px;">📄 ייצא דוחות מתקדמים</h3>
+                    <div class="export-grid">
+                        <button class="btn btn-admin" onclick="exportDetailedCurrent()">
+                            📊 ייצא דוח נוכחי
+                        </button>
+                        <button class="btn btn-admin" onclick="exportDetailedOvertime()">
+                            ⏱️ דוח שעות נוספות
+                        </button>
+                        <button class="btn btn-admin" onclick="exportDetailedSummary()">
+                            📈 דוח סיכום חודשי
+                        </button>
+                        <button class="btn btn-admin" onclick="exportDetailedFull()">
+                            📋 דוח מפורט מלא
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -892,6 +922,7 @@
         var currentStatus = {};
         var adminPassword = '1234';
         var isAdminUnlocked = false;
+        var isDetailedReportsUnlocked = false;
         var apiKey = EMBEDDED_SETTINGS.apiKey;
         var sheetId = EMBEDDED_SETTINGS.sheetId;
         var scriptUrl = EMBEDDED_SETTINGS.scriptUrl;
@@ -1213,6 +1244,39 @@
             }
         }
 
+        // פונקציות נעילה לדוחות מפורטים
+        function checkDetailedReportsPassword() {
+            var enteredPassword = document.getElementById('detailedReportsPassword').value;
+            
+            if (enteredPassword === adminPassword) {
+                isDetailedReportsUnlocked = true;
+                document.getElementById('detailedReportsLock').style.display = 'none';
+                document.getElementById('detailedReportsContent').style.display = 'block';
+                document.getElementById('detailedReportsPassword').value = '';
+                setTimeout(function() {
+                    initDetailedReportsPage();
+                }, 100);
+                showAlert('נכנסת לדוחות המפורטים בהצלחה', 'success');
+            } else {
+                document.getElementById('detailedReportsPassword').value = '';
+                document.getElementById('detailedReportsPassword').focus();
+                showAlert('קוד שגוי! נסה שוב', 'error');
+                
+                var lockCard = document.getElementById('detailedReportsLock');
+                lockCard.style.animation = 'shake 0.5s';
+                setTimeout(function() {
+                    lockCard.style.animation = '';
+                }, 500);
+            }
+        }
+
+        function lockDetailedReports() {
+            isDetailedReportsUnlocked = false;
+            document.getElementById('detailedReportsLock').style.display = 'block';
+            document.getElementById('detailedReportsContent').style.display = 'none';
+            showAlert('עמוד הדוחות המפורטים ננעל', 'success');
+        }
+
         // ניהול עובדים - עם סנכרון מלא
         function addEmployee() {
             var name = document.getElementById('newEmployeeName').value.trim();
@@ -1462,9 +1526,19 @@
                     updateEmployeeSelects();
                 }
             } else if (pageName === 'detailedReports') {
-                setTimeout(function() {
-                    initDetailedReportsPage();
-                }, 100);
+                if (!isDetailedReportsUnlocked) {
+                    document.getElementById('detailedReportsLock').style.display = 'block';
+                    document.getElementById('detailedReportsContent').style.display = 'none';
+                    setTimeout(function() {
+                        document.getElementById('detailedReportsPassword').focus();
+                    }, 100);
+                } else {
+                    document.getElementById('detailedReportsLock').style.display = 'none';
+                    document.getElementById('detailedReportsContent').style.display = 'block';
+                    setTimeout(function() {
+                        initDetailedReportsPage();
+                    }, 100);
+                }
             }
         }
 
@@ -2262,6 +2336,8 @@
                         changeAdminPassword();
                     } else if (activeElement && activeElement.id === 'newEmployeeName') {
                         addEmployee();
+                    } else if (activeElement && activeElement.id === 'detailedReportsPassword') {
+                        checkDetailedReportsPassword();
                     }
                 }
             });
