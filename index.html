@@ -25,7 +25,7 @@
             min-height: 100vh;
             direction: rtl;
             overflow-x: hidden;
-            padding-bottom: 80px;
+            padding-bottom: 90px;
         }
 
         .header {
@@ -252,42 +252,41 @@
             bottom: 0;
             left: 0;
             right: 0;
-            background: rgba(255,255,255,0.95);
-            backdrop-filter: blur(10px);
+            background: rgba(255,255,255,0.98);
+            backdrop-filter: blur(15px);
             border-top: 1px solid rgba(0,0,0,0.1);
-            display: flex;
-            justify-content: space-around;
-            padding: 8px 5px;
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 2px;
+            padding: 6px;
             z-index: 1000;
+            height: 70px;
         }
 
         .nav-btn {
             background: none;
             border: none;
-            padding: 4px 2px;
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.3s;
-            flex: 1;
-            max-width: 60px;
             text-align: center;
-            font-size: 8px;
             color: #666;
-            line-height: 1.0;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 50px;
+            padding: 4px 2px;
+            font-size: 10px;
+            line-height: 1.1;
         }
 
         .nav-btn div:first-child {
-            font-size: 14px;
-            margin-bottom: 2px;
+            font-size: 16px;
+            margin-bottom: 3px;
         }
 
         .nav-btn div:last-child {
-            font-size: 8px;
+            font-size: 10px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -411,9 +410,10 @@
             background: white;
             border-radius: 12px;
             padding: 20px;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             overflow-x: auto;
+            clear: both;
         }
 
         .data-table {
@@ -456,10 +456,11 @@
             background: white;
             border-radius: 12px;
             padding: 20px;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             height: 300px;
             position: relative;
+            overflow-y: auto;
         }
 
         .chart-bar {
@@ -492,6 +493,7 @@
             background: white;
             border-radius: 12px;
             padding: 20px;
+            margin-bottom: 30px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
