@@ -684,15 +684,6 @@
 </div>
 </div>
 <!-- עמוד דוחות -->
-<div class="page" id="reportsPage">
-<div class="card">
-<h2>📊 דוחות</h2>
-<div class="btn-group" style="flex-direction: column;">
-<button class="btn btn-admin" onclick="exportToday()">📄 ייצא דוח יומי</button>
-<button class="btn btn-admin" onclick="exportDetailed()">📊 ייצא דוח מפורט</button>
-</div>
-</div>
-</div>
 <!-- עמוד דוחות מפורטים -->
 <div class="page" id="detailedReportsPage">
 <!-- מסך נעילה -->
@@ -881,13 +872,9 @@
 <div>👥</div>
 <div>עובדים</div>
 </button>
-<button class="nav-btn" onclick="showPage('reports')">
-<div>📊</div>
-<div>דוחות</div>
-</button>
 <button class="nav-btn" onclick="showPage('detailedReports')">
 <div>📈</div>
-<div>מפורט</div>
+<div>דוחות מפורטים</div>
 </button>
 <button class="nav-btn" onclick="showPage('admin')">
 <div>⚙️</div>
@@ -2382,40 +2369,18 @@
 }</script>
 <script>
 (function() {
-  const APP_VERSION = '20250810155952';
-  const SW_URL = 'sw.js?v=' + APP_VERSION;
-
+  const SW = 'sw.js?v=20250810160524';
   if ('serviceWorker' in navigator) {
-    // One-time reset for stubborn old SWs
-    const RESET_KEY = 'sw_reset_done';
-    const resetDone = localStorage.getItem(RESET_KEY);
-
-    const registerNew = () => navigator.serviceWorker.register(SW_URL).then(reg => {
-      // Ensure new SW activates immediately
-      if (reg.waiting) { reg.waiting.postMessage({ type: 'SKIP_WAITING' }); }
-      if (reg.installing) { reg.installing.addEventListener('statechange', (e) => {
-        if (e.target.state === 'installed') { reg.active?.postMessage?.({ type: 'SKIP_WAITING' }); }
-      }); }
-    }).catch(console.error);
-
-    if (!resetDone) {
-      navigator.serviceWorker.getRegistrations()
-        .then(regs => Promise.all(regs.map(r => r.unregister())))
-        .then(() => localStorage.setItem(RESET_KEY, '1'))
-        .then(registerNew)
-        .catch(() => registerNew());
-    } else {
-      registerNew();
-    }
-
-    // Optional: provide a manual clear-cache hook
-    window.clearAppCache = function() {
-      if (navigator.serviceWorker.controller) {
-        const channel = new MessageChannel();
-        navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_CACHE' }, [channel.port2]);
-        channel.port1.onmessage = (e) => console.log('Cache cleared:', e.data);
-      }
-    }
+    navigator.serviceWorker.getRegistrations()
+      .then(regs => Promise.all(regs.map(r => r.unregister())))
+      .finally(() => {
+        navigator.serviceWorker.register(SW).then(reg => {
+          if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          if (reg.installing) reg.installing.addEventListener('statechange', (e) => {
+            if (e.target.state === 'installed') reg.active?.postMessage?.({ type: 'SKIP_WAITING' });
+          });
+        }).catch(console.error);
+      });
   }
 })();
 </script>
