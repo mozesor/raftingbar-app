@@ -257,23 +257,41 @@
             border-top: 1px solid rgba(0,0,0,0.1);
             display: flex;
             justify-content: space-around;
-            padding: 10px 0;
+            padding: 8px 5px;
             z-index: 1000;
         }
 
         .nav-btn {
             background: none;
             border: none;
-            padding: 6px 4px;
-            border-radius: 10px;
+            padding: 4px 2px;
+            border-radius: 8px;
             cursor: pointer;
             transition: all 0.3s;
             flex: 1;
-            max-width: 65px;
+            max-width: 60px;
             text-align: center;
-            font-size: 9px;
+            font-size: 8px;
             color: #666;
-            line-height: 1.1;
+            line-height: 1.0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 50px;
+        }
+
+        .nav-btn div:first-child {
+            font-size: 14px;
+            margin-bottom: 2px;
+        }
+
+        .nav-btn div:last-child {
+            font-size: 8px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
         }
 
         .nav-btn.active {
