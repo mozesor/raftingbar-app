@@ -1,9 +1,9 @@
 // רפטינג בר - Service Worker
 // גרסה 1.0.0
 
-const CACHE_NAME = 'raftingbar-attendance-v1.0.0';
-const STATIC_CACHE_NAME = 'raftingbar-static-v1.0.0';
-const DYNAMIC_CACHE_NAME = 'raftingbar-dynamic-v1.0.0';
+const CACHE_NAME = 'raftingbar-attendance-v1.0.1';
+const STATIC_CACHE_NAME = 'raftingbar-static-v1.0.1';
+const DYNAMIC_CACHE_NAME = 'raftingbar-dynamic-v1.0.1';
 
 // קבצים לשמירה במטמון
 const STATIC_FILES = [
