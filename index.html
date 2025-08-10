@@ -264,15 +264,16 @@
         .nav-btn {
             background: none;
             border: none;
-            padding: 8px;
+            padding: 6px 4px;
             border-radius: 10px;
             cursor: pointer;
             transition: all 0.3s;
             flex: 1;
-            max-width: 70px;
+            max-width: 65px;
             text-align: center;
-            font-size: 10px;
+            font-size: 9px;
             color: #666;
+            line-height: 1.1;
         }
 
         .nav-btn.active {
@@ -549,6 +550,21 @@
             .btn {
                 margin-bottom: 10px;
             }
+            
+            .nav-btn {
+                max-width: 50px;
+                font-size: 7px;
+                padding: 3px 1px;
+            }
+            
+            .nav-btn div:first-child {
+                font-size: 12px;
+                margin-bottom: 2px;
+            }
+            
+            .nav-btn div:last-child {
+                font-size: 7px;
+            }
         }
 
         @media (max-width: 768px) {
@@ -574,8 +590,13 @@
             }
             
             .nav-btn {
-                max-width: 60px;
-                font-size: 9px;
+                max-width: 55px;
+                font-size: 8px;
+                padding: 4px 2px;
+            }
+            
+            .nav-btn div {
+                margin: 1px 0;
             }
         }
 
