@@ -2436,21 +2436,33 @@
   })();
 </script>
 
+<div id="floatingLogoutBtn" style="display:none; position:fixed; top:10px; right:10px; z-index:9999; background:none; border:none; font-size:26px; cursor:pointer; line-height:1;" title="התנתק">
+  🚪
+</div>
+
 <script>
   document.addEventListener('DOMContentLoaded', function(){
-    var logoutBtn = document.getElementById('logoutBtn');
-    if(logoutBtn){
-      logoutBtn.addEventListener('click', function(){
-        try {
-          localStorage.removeItem('rb_auth_v1');
-          localStorage.removeItem('rb_emp_code_v1');
-        } catch(e){}
-        if (typeof showAlert === 'function') showAlert('התנתקת בהצלחה', 'success');
-        setTimeout(function(){
-          location.reload();
-        }, 500);
-      });
+    var logoutBtn = document.getElementById('floatingLogoutBtn');
+    function isLoggedIn(){
+      try {
+        return !!localStorage.getItem('rb_auth_v1');
+      } catch(e){
+        return false;
+      }
     }
+    if(isLoggedIn()){
+      logoutBtn.style.display = 'block';
+    }
+    logoutBtn.addEventListener('click', function(){
+      try {
+        localStorage.removeItem('rb_auth_v1');
+        localStorage.removeItem('rb_emp_code_v1');
+      } catch(e){}
+      if (typeof showAlert === 'function') showAlert('התנתקת בהצלחה', 'success');
+      setTimeout(function(){
+        location.reload();
+      }, 500);
+    });
   });
 </script>
 </body>
