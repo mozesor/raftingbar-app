@@ -2368,21 +2368,18 @@
   });
 }</script>
 <script>
-(function() {
-  const SW = 'sw.js?v=20250810160524';
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistrations()
-      .then(regs => Promise.all(regs.map(r => r.unregister())))
-      .finally(() => {
-        navigator.serviceWorker.register(SW).then(reg => {
-          if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-          if (reg.installing) reg.installing.addEventListener('statechange', (e) => {
-            if (e.target.state === 'installed') reg.active?.postMessage?.({ type: 'SKIP_WAITING' });
-          });
-        }).catch(console.error);
-      });
-  }
-})();
+function checkReportsPassword() {
+    var enteredPassword = document.getElementById('reportsPassword').value;
+    if (enteredPassword === '1986') {
+        document.getElementById('reportsLock').style.display = 'none';
+        document.getElementById('reportsContent').style.display = 'block';
+        document.getElementById('reportsPassword').value = '';
+        if (typeof showAlert === 'function') showAlert('נכנסת לדוחות בהצלחה', 'success');
+    } else {
+        document.getElementById('reportsPassword').value = '';
+        if (typeof showAlert === 'function') showAlert('קוד שגוי! נסה שוב', 'error');
+    }
+}
 </script>
 </body>
 </html>
