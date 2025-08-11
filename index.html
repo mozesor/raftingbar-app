@@ -2394,9 +2394,38 @@
     navigator.serviceWorker.register('sw.js', { scope: './' }).catch(function(e){ console.log('SW register failed', e); });
   });
 }</script>
+
+<div id="floatingLogoutBtn" style="display:none; position:fixed; top:10px; right:10px; z-index:9999; background:none; border:none; font-size:26px; cursor:pointer; line-height:1;" title="התנתק">
+  🚪
+</div>
 <script>
-  // שימוש בקוד מנהל לעמוד "דוחות"
-  function checkReportsPassword(){
+  document.addEventListener('DOMContentLoaded', function(){
+    var logoutBtn = document.getElementById('floatingLogoutBtn');
+    function isLoggedIn(){
+      try {
+        return !!localStorage.getItem('rb_auth_v1');
+      } catch(e){
+        return false;
+      }
+    }
+    if(isLoggedIn()){
+      logoutBtn.style.display = 'block';
+    }
+    logoutBtn.addEventListener('click', function(){
+      try {
+        localStorage.removeItem('rb_auth_v1');
+        localStorage.removeItem('rb_emp_code_v1');
+      } catch(e){}
+      if (typeof showAlert === 'function') showAlert('התנתקת בהצלחה', 'success');
+      setTimeout(function(){
+        location.reload();
+      }, 500);
+    });
+  });
+</script>
+
+<script>
+function checkReportsPassword(){
     var entered = String(document.getElementById('reportsPassword')?.value || '').trim();
     var adminPass = '1986';
     try { if (typeof adminPassword !== 'undefined' && adminPassword) adminPass = String(adminPassword); } catch(e){}
@@ -2409,8 +2438,8 @@
       document.getElementById('reportsPassword').value = '';
       if (typeof showAlert === 'function') showAlert('קוד שגוי! נסה שוב', 'error');
     }
-  }
-  function lockReports(){
+}
+function lockReports(){
     var lockEl = document.getElementById('reportsLock');
     var contentEl = document.getElementById('reportsContent');
     if(lockEl && contentEl){
@@ -2418,8 +2447,8 @@
       contentEl.style.display = 'none';
       if (typeof showAlert === 'function') showAlert('עמוד הדוחות ננעל', 'success');
     }
-  }
-  (function(){
+}
+(function(){
     var _s = window.showPage;
     window.showPage = function(pageName){
       var ret = _s ? _s(pageName) : null;
@@ -2433,7 +2462,7 @@
       }
       return ret;
     };
-  })();
+})();
 </script>
 
 <div id="floatingLogoutBtn" style="display:none; position:fixed; top:10px; right:10px; z-index:9999; background:none; border:none; font-size:26px; cursor:pointer; line-height:1;" title="התנתק">
