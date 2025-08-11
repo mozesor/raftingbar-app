@@ -2497,11 +2497,9 @@
     });
   });
 </script>
-
 <div id="floatingLogoutBtn" style="display:none; position:fixed; top:10px; right:10px; z-index:2500; background:none; border:none; font-size:26px; cursor:pointer; line-height:1;" title="התנתק">
   🚪
 </div>
-
 <script>
 (function(){
   const AUTH_KEY = 'rb_auth_v1';
@@ -2606,6 +2604,274 @@
     }
   });
 })();
+</script>
+
+<script>
+
+// backfill_bulk.js
+// יוצר כרטיס "רישום אחורה (מרוכז)" אוטומטית בעמוד הניהול, בלי לשנות את index.html
+
+(function () {
+  const ID_CARD = "bulk-backfill-card";
+
+  // כלי עזר
+  function byId(id) { return document.getElementById(id); }
+  function el(tag, attrs = {}, children = []) {
+    const e = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === "class") e.className = v;
+      else if (k === "style") e.setAttribute("style", v);
+      else e[k] = v;
+    }
+    for (const c of children) {
+      if (typeof c === "string") e.appendChild(document.createTextNode(c));
+      else if (c) e.appendChild(c);
+    }
+    return e;
+  }
+
+  // ממיר "2025-08-05" ו-"09:00" ל-ISO מקומי
+  function toLocalISO(dateStr, timeStr) {
+    const [y, m, d] = dateStr.split("-").map(Number);
+    const [hh, mm] = timeStr.split(":").map(Number);
+    const dt = new Date(y, (m - 1), d, hh, mm, 0, 0);
+    return dt.toISOString();
+  }
+
+  // בונה/מזריק את הממשק
+  function injectCard() {
+    if (byId(ID_CARD)) return;
+    const adminContent = byId("adminContent");
+    if (!adminContent || adminContent.style.display === "none") return;
+
+    const card = el("div", { class: "card", id: ID_CARD }, [
+      el("h2", {}, [ "🕒 רישום אחורה (מרוכז)" ]),
+      el("div", { style: "background:#e3f2fd;border-radius:8px;padding:10px;margin:10px 0;font-size:13px;color:#1976d2;" },
+        [ "ממלא מספר ימים בבת אחת – לכל יום יווצרו שורות כניסה/יציאה." ]),
+
+      // עובד
+      el("div", { class: "form-group" }, [
+        el("label", {}, [ "עובד:" ]),
+        el("select", { id: "bbEmployee", className: "auth-input", style: "padding:10px;border:2px solid #ddd;border-radius:8px;" })
+      ]),
+
+      // טווח תאריכים
+      el("div", { class: "filter-row" }, [
+        el("div", { class: "filter-group" }, [
+          el("label", {}, [ "מתאריך:" ]),
+          el("input", { id: "bbStart", type: "date" })
+        ]),
+        el("div", { class: "filter-group" }, [
+          el("label", {}, [ "עד תאריך:" ]),
+          el("input", { id: "bbEnd", type: "date" })
+        ])
+      ]),
+
+      // שעות
+      el("div", { class: "filter-row" }, [
+        el("div", { class: "filter-group" }, [
+          el("label", {}, [ "שעת כניסה:" ]),
+          el("input", { id: "bbIn", type: "time", value: "09:00" })
+        ]),
+        el("div", { class: "filter-group" }, [
+          el("label", {}, [ "שעת יציאה:" ]),
+          el("input", { id: "bbOut", type: "time", value: "17:00" })
+        ])
+      ]),
+
+      // ימים בשבוע + אפשרויות
+      el("div", { class: "card", style: "padding:12px;margin:10px 0;" }, [
+        el("div", { style: "display:flex;gap:8px;flex-wrap:wrap;align-items:center;" }, [
+          // ימים א-ש (ישראל: 0=Sunday? ב-JS 0=Sunday)
+          ...["א", "ב", "ג", "ד", "ה", "ו", "ש"].map((lbl, idx) => {
+            const dayIndex = [0,1,2,3,4,5,6][idx]; // JS: 0=Sun ... 6=Sat
+            const id = "bbDay" + dayIndex;
+            return el("label", { style: "display:flex;gap:6px;align-items:center;font-size:13px;" }, [
+              el("input", { type: "checkbox", id, checked: dayIndex <= 4 }), // ברירת מחדל: א-ה
+              document.createTextNode("יום " + lbl)
+            ]);
+          }),
+        ]),
+        el("div", { style: "display:flex;gap:16px;margin-top:8px;align-items:center;flex-wrap:wrap;" }, [
+          el("label", { style: "display:flex;gap:6px;align-items:center;font-size:13px;" }, [
+            el("input", { type: "checkbox", id: "bbSkipExisting", checked: true }),
+            "דלג על ימים שכבר קיימים"
+          ]),
+          el("label", { style: "display:flex;gap:6px;align-items:center;font-size:13px;" }, [
+            el("input", { type: "checkbox", id: "bbWriteToCloud", checked: true }),
+            "סנכרן גם לענן (Sheets)"
+          ]),
+        ])
+      ]),
+
+      // תצוגת ספירה
+      el("div", { id: "bbPreview", style: "background:#f8f9fa;padding:10px;border-radius:8px;border-left:4px solid #667eea;font-size:13px;" },
+        [ "בחר נתונים לקבלת תצוגה מקדימה..." ]),
+
+      // כפתור הרצה
+      el("button", { class: "btn btn-admin", id: "bbRunBtn", style: "width:100%;margin-top:10px;" }, [ "✅ בצע רישום אחורה" ])
+    ]);
+
+    adminContent.appendChild(card);
+
+    // מלא רשימת עובדים
+    try {
+      const sel = byId("bbEmployee");
+      if (sel && Array.isArray(window.employees)) {
+        sel.innerHTML = "";
+        window.employees.forEach((name) => {
+          const opt = document.createElement("option");
+          opt.value = name; opt.textContent = name;
+          sel.appendChild(opt);
+        });
+      }
+    } catch (e) {}
+
+    // ערכי ברירת מחדל: החודש הנוכחי עד היום
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, "0");
+    const d = String(today.getDate()).padStart(2, "0");
+    const firstDay = `${y}-${m}-01`;
+    const todayStr = `${y}-${m}-${d}`;
+    byId("bbStart").value = firstDay;
+    byId("bbEnd").value = todayStr;
+
+    // אירועים
+    ["bbEmployee","bbStart","bbEnd","bbIn","bbOut","bbSkipExisting","bbDay0","bbDay1","bbDay2","bbDay3","bbDay4","bbDay5","bbDay6"]
+      .forEach(id => byId(id)?.addEventListener("change", updatePreview));
+    byId("bbRunBtn").addEventListener("click", runBackfill);
+
+    updatePreview();
+  }
+
+  function iterateDatesInclusive(startStr, endStr) {
+    const arr = [];
+    const s = new Date(startStr);
+    const e = new Date(endStr);
+    if (isNaN(s) || isNaN(e)) return arr;
+    for (let dt = new Date(s); dt <= e; dt.setDate(dt.getDate() + 1)) {
+      const y = dt.getFullYear();
+      const m = String(dt.getMonth() + 1).padStart(2, "0");
+      const d = String(dt.getDate()).padStart(2, "0");
+      arr.push(`${y}-${m}-${d}`);
+    }
+    return arr;
+  }
+
+  function shouldIncludeDay(dateStr) {
+    const dt = new Date(dateStr);
+    const day = dt.getDay(); // 0..6
+    const cb = document.getElementById("bbDay"+day);
+    return !!(cb && cb.checked);
+  }
+
+  function getExistingForDate(emp, dateStr) {
+    try {
+      return window.attendanceData?.[emp]?.[dateStr] || null;
+    } catch (e) { return null; }
+  }
+
+  function updatePreview() {
+    const emp = byId("bbEmployee")?.value;
+    const s = byId("bbStart")?.value;
+    const e = byId("bbEnd")?.value;
+    const skip = byId("bbSkipExisting")?.checked;
+    if (!emp || !s || !e) {
+      byId("bbPreview").textContent = "בחר עובד וטווח תאריכים לקבלת תצוגה מקדימה.";
+      return;
+    }
+    const dates = iterateDatesInclusive(s, e).filter(shouldIncludeDay);
+    let willWrite = 0, skipped = 0;
+    for (const dateStr of dates) {
+      const exist = getExistingForDate(emp, dateStr);
+      if (exist && skip) skipped++; else willWrite++;
+    }
+    byId("bbPreview").textContent =
+      `ימים בטווח: ${dates.length} • יירשמו: ${willWrite} • דילוג על קיימים: ${skipped}`;
+  }
+
+  async function runBackfill() {
+    const emp = byId("bbEmployee")?.value;
+    const s = byId("bbStart")?.value;
+    const e = byId("bbEnd")?.value;
+    const tIn = byId("bbIn")?.value;
+    const tOut = byId("bbOut")?.value;
+    const skip = byId("bbSkipExisting")?.checked;
+    const toCloud = byId("bbWriteToCloud")?.checked;
+
+    if (!emp || !s || !e || !tIn || !tOut) {
+      alert("נא למלא עובד, טווח תאריכים ושעות כניסה/יציאה.");
+      return;
+    }
+
+    const dates = iterateDatesInclusive(s, e).filter(shouldIncludeDay);
+    if (dates.length === 0) {
+      alert("אין ימים לסמן בטווח שנבחר.");
+      return;
+    }
+
+    const makeRecord = (employee, action, timestamp, dateStr) => {
+      // עידכון מבנה הנתונים המקומי
+      window.attendanceData ||= {};
+      window.attendanceData[employee] ||= {};
+      window.attendanceData[employee][dateStr] ||= {};
+      if (action === "checkin") window.attendanceData[employee][dateStr].checkIn = timestamp;
+      if (action === "checkout") window.attendanceData[employee][dateStr].checkOut = timestamp;
+
+      try { window.saveLocalData?.(); } catch(e) {}
+      try { window.updateAll?.(); } catch(e) {}
+
+      // ענן
+      if (toCloud && typeof window.recordToSheet === "function") {
+        const ts = new Date(timestamp);
+        const timeText = ts.toLocaleTimeString?.("he-IL") || "";
+        window.recordToSheet(employee, action, timestamp, dateStr, timeText);
+      }
+    };
+
+    let wrote = 0, skippedCount = 0;
+    for (const dateStr of dates) {
+      const existing = getExistingForDate(emp, dateStr);
+      if (existing && skip) { skippedCount++; continue; }
+
+      const cinISO = toLocalISO(dateStr, tIn);
+      const coutISO = toLocalISO(dateStr, tOut);
+
+      makeRecord(emp, "checkin", cinISO, dateStr);
+      makeRecord(emp, "checkout", coutISO, dateStr);
+
+      wrote++;
+      // הפסקה קצרה כדי לא להציף את ה־Apps Script
+      await new Promise(r => setTimeout(r, 60));
+    }
+
+    // הודעות UI
+    try {
+      if (typeof window.showAlert === "function") {
+        window.showAlert(`הושלם! נרשמו ${wrote} ימים, דולגו ${skippedCount}.`, "success");
+      } else {
+        alert(`הושלם! נרשמו ${wrote} ימים, דולגו ${skippedCount}.`);
+      }
+    } catch (e) {}
+
+    // רענון מצב
+    try { window.updateAll?.(); } catch(e) {}
+  }
+
+  // נסה להזריק מיד, ואם עמוד הניהול נפתח אחרי – נשתמש בצופה
+  const tryInject = () => {
+    try { injectCard(); } catch(e) {}
+  };
+  document.addEventListener("DOMContentLoaded", tryInject);
+
+  // MutationObserver כדי לתפוס פתיחה של עמוד הניהול בעתיד
+  const obs = new MutationObserver(() => {
+    tryInject();
+  });
+  obs.observe(document.documentElement, { childList: true, subtree: true });
+})();
+
 </script>
 </body>
 </html>
