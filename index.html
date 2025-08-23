@@ -764,6 +764,8 @@
 </div>
 </div>
 <div class="quick-actions">
+<button class="btn btn-admin" onclick="testCloud()" title="בדיקת חיבור לענן">בדיקת חיבור</button>
+
 <button class="btn btn-admin" onclick="openSelfPrevMonth()" title="דוח אישי – החודש הקודם">דוח החודש הקודם</button>
 
 <div class="quick-action" onclick="showEmployeesStatus()">
@@ -944,6 +946,9 @@
             sheetId: '1SNSdRdJy-vP--spyKmVwDbnaz808KEwTYSKiLreFn0w', 
             scriptUrl: 'https://script.google.com/macros/s/AKfycbx_UMxeN_-dYeiR4xQa4HzT9ogZPv8BeYkRuUg0BOeEobOQZJVvj7gZU-2U_5LrxEtK/exec'
         };
+// Shim: use SETTINGS as EMBEDDED_SETTINGS when not provided externally
+var EMBEDDED_SETTINGS = (typeof window!=='undefined' && window.EMBEDDED_SETTINGS) ? window.EMBEDDED_SETTINGS : SETTINGS;
+
 
         // משתני האפליקציה
         var employees = [];
@@ -2005,6 +2010,42 @@ function openSelfPrevMonth(){
   }
 }
 
+
+function testCloud(){
+  try{
+    updateSyncStatus && updateSyncStatus('🔍','בודק חיבור...', 'sync-syncing');
+  }catch(e){}
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + apiKey;
+  fetch(url).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(meta){
+    showAlert && showAlert('חיבור לענן תקין ✅', 'success');
+    try{ updateSyncStatus('✅','מחובר', 'sync-ok'); }catch(e){}
+    console.log('Sheets meta OK:', meta.properties && meta.properties.title);
+  }).catch(function(err){
+    console.error('Cloud test failed:', err);
+    showAlert && showAlert('אין חיבור לענן: '+ err.message, 'error');
+    try{ updateSyncStatus('⚠️','אין חיבור', 'sync-error'); }catch(e){}
+  });
+}
+
+
+function validateCloudSettings(){
+  var problems = [];
+  if(!apiKey) problems.push('apiKey חסר');
+  if(!sheetId) problems.push('sheetId חסר');
+  if(typeof scriptUrl === 'undefined' || !scriptUrl) problems.push('scriptUrl חסר (כתובת Apps Script)');
+  if(problems.length){
+    console.warn('בעיית הגדרות ענן:', problems.join(', '));
+    showAlert && showAlert('הגדרות ענן חסרות: ' + problems.join(', '), 'error');
+    try{ updateSyncStatus('⚠️','הגדרות חסרות', 'sync-error'); }catch(e){}
+    return false;
+  }
+  return true;
+}
+(function(){ try{ validateCloudSettings(); }catch(e){} })();
+
 </script>
 <script>
   // שימוש בקוד מנהל לעמוד "דוחות"
@@ -2100,6 +2141,42 @@ function openSelfPrevMonth(){
   }
 }
 
+
+function testCloud(){
+  try{
+    updateSyncStatus && updateSyncStatus('🔍','בודק חיבור...', 'sync-syncing');
+  }catch(e){}
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + apiKey;
+  fetch(url).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(meta){
+    showAlert && showAlert('חיבור לענן תקין ✅', 'success');
+    try{ updateSyncStatus('✅','מחובר', 'sync-ok'); }catch(e){}
+    console.log('Sheets meta OK:', meta.properties && meta.properties.title);
+  }).catch(function(err){
+    console.error('Cloud test failed:', err);
+    showAlert && showAlert('אין חיבור לענן: '+ err.message, 'error');
+    try{ updateSyncStatus('⚠️','אין חיבור', 'sync-error'); }catch(e){}
+  });
+}
+
+
+function validateCloudSettings(){
+  var problems = [];
+  if(!apiKey) problems.push('apiKey חסר');
+  if(!sheetId) problems.push('sheetId חסר');
+  if(typeof scriptUrl === 'undefined' || !scriptUrl) problems.push('scriptUrl חסר (כתובת Apps Script)');
+  if(problems.length){
+    console.warn('בעיית הגדרות ענן:', problems.join(', '));
+    showAlert && showAlert('הגדרות ענן חסרות: ' + problems.join(', '), 'error');
+    try{ updateSyncStatus('⚠️','הגדרות חסרות', 'sync-error'); }catch(e){}
+    return false;
+  }
+  return true;
+}
+(function(){ try{ validateCloudSettings(); }catch(e){} })();
+
 </script>
 <div id="floatingLogoutBtn" style="display:none; position:fixed; top:10px; right:10px; z-index:9999; background:none; border:none; font-size:26px; cursor:pointer; line-height:1;" title="התנתק">
   🚪
@@ -2181,6 +2258,42 @@ function openSelfPrevMonth(){
     if (typeof showAlert === 'function') showAlert('שגיאה בפתיחת דוח החודש הקודם','error');
   }
 }
+
+
+function testCloud(){
+  try{
+    updateSyncStatus && updateSyncStatus('🔍','בודק חיבור...', 'sync-syncing');
+  }catch(e){}
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + apiKey;
+  fetch(url).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(meta){
+    showAlert && showAlert('חיבור לענן תקין ✅', 'success');
+    try{ updateSyncStatus('✅','מחובר', 'sync-ok'); }catch(e){}
+    console.log('Sheets meta OK:', meta.properties && meta.properties.title);
+  }).catch(function(err){
+    console.error('Cloud test failed:', err);
+    showAlert && showAlert('אין חיבור לענן: '+ err.message, 'error');
+    try{ updateSyncStatus('⚠️','אין חיבור', 'sync-error'); }catch(e){}
+  });
+}
+
+
+function validateCloudSettings(){
+  var problems = [];
+  if(!apiKey) problems.push('apiKey חסר');
+  if(!sheetId) problems.push('sheetId חסר');
+  if(typeof scriptUrl === 'undefined' || !scriptUrl) problems.push('scriptUrl חסר (כתובת Apps Script)');
+  if(problems.length){
+    console.warn('בעיית הגדרות ענן:', problems.join(', '));
+    showAlert && showAlert('הגדרות ענן חסרות: ' + problems.join(', '), 'error');
+    try{ updateSyncStatus('⚠️','הגדרות חסרות', 'sync-error'); }catch(e){}
+    return false;
+  }
+  return true;
+}
+(function(){ try{ validateCloudSettings(); }catch(e){} })();
 
 </script>
 <div id="floatingLogoutBtn" style="display:none; position:fixed; top:10px; right:10px; z-index:2500; background:none; border:none; font-size:26px; cursor:pointer; line-height:1;" title="התנתק">
@@ -2343,6 +2456,42 @@ function openSelfPrevMonth(){
     if (typeof showAlert === 'function') showAlert('שגיאה בפתיחת דוח החודש הקודם','error');
   }
 }
+
+
+function testCloud(){
+  try{
+    updateSyncStatus && updateSyncStatus('🔍','בודק חיבור...', 'sync-syncing');
+  }catch(e){}
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + apiKey;
+  fetch(url).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(meta){
+    showAlert && showAlert('חיבור לענן תקין ✅', 'success');
+    try{ updateSyncStatus('✅','מחובר', 'sync-ok'); }catch(e){}
+    console.log('Sheets meta OK:', meta.properties && meta.properties.title);
+  }).catch(function(err){
+    console.error('Cloud test failed:', err);
+    showAlert && showAlert('אין חיבור לענן: '+ err.message, 'error');
+    try{ updateSyncStatus('⚠️','אין חיבור', 'sync-error'); }catch(e){}
+  });
+}
+
+
+function validateCloudSettings(){
+  var problems = [];
+  if(!apiKey) problems.push('apiKey חסר');
+  if(!sheetId) problems.push('sheetId חסר');
+  if(typeof scriptUrl === 'undefined' || !scriptUrl) problems.push('scriptUrl חסר (כתובת Apps Script)');
+  if(problems.length){
+    console.warn('בעיית הגדרות ענן:', problems.join(', '));
+    showAlert && showAlert('הגדרות ענן חסרות: ' + problems.join(', '), 'error');
+    try{ updateSyncStatus('⚠️','הגדרות חסרות', 'sync-error'); }catch(e){}
+    return false;
+  }
+  return true;
+}
+(function(){ try{ validateCloudSettings(); }catch(e){} })();
 
 </script>
 <script>
@@ -2758,6 +2907,42 @@ function openSelfPrevMonth(){
   }
 }
 
+
+function testCloud(){
+  try{
+    updateSyncStatus && updateSyncStatus('🔍','בודק חיבור...', 'sync-syncing');
+  }catch(e){}
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + apiKey;
+  fetch(url).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(meta){
+    showAlert && showAlert('חיבור לענן תקין ✅', 'success');
+    try{ updateSyncStatus('✅','מחובר', 'sync-ok'); }catch(e){}
+    console.log('Sheets meta OK:', meta.properties && meta.properties.title);
+  }).catch(function(err){
+    console.error('Cloud test failed:', err);
+    showAlert && showAlert('אין חיבור לענן: '+ err.message, 'error');
+    try{ updateSyncStatus('⚠️','אין חיבור', 'sync-error'); }catch(e){}
+  });
+}
+
+
+function validateCloudSettings(){
+  var problems = [];
+  if(!apiKey) problems.push('apiKey חסר');
+  if(!sheetId) problems.push('sheetId חסר');
+  if(typeof scriptUrl === 'undefined' || !scriptUrl) problems.push('scriptUrl חסר (כתובת Apps Script)');
+  if(problems.length){
+    console.warn('בעיית הגדרות ענן:', problems.join(', '));
+    showAlert && showAlert('הגדרות ענן חסרות: ' + problems.join(', '), 'error');
+    try{ updateSyncStatus('⚠️','הגדרות חסרות', 'sync-error'); }catch(e){}
+    return false;
+  }
+  return true;
+}
+(function(){ try{ validateCloudSettings(); }catch(e){} })();
+
 </script><div class="page" id="adminPage">
 <!-- מסך נעילה -->
 <div class="card" id="adminLock" style="display: block;">
@@ -3080,6 +3265,42 @@ function openSelfPrevMonth(){
   }
 }
 
+
+function testCloud(){
+  try{
+    updateSyncStatus && updateSyncStatus('🔍','בודק חיבור...', 'sync-syncing');
+  }catch(e){}
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + apiKey;
+  fetch(url).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(meta){
+    showAlert && showAlert('חיבור לענן תקין ✅', 'success');
+    try{ updateSyncStatus('✅','מחובר', 'sync-ok'); }catch(e){}
+    console.log('Sheets meta OK:', meta.properties && meta.properties.title);
+  }).catch(function(err){
+    console.error('Cloud test failed:', err);
+    showAlert && showAlert('אין חיבור לענן: '+ err.message, 'error');
+    try{ updateSyncStatus('⚠️','אין חיבור', 'sync-error'); }catch(e){}
+  });
+}
+
+
+function validateCloudSettings(){
+  var problems = [];
+  if(!apiKey) problems.push('apiKey חסר');
+  if(!sheetId) problems.push('sheetId חסר');
+  if(typeof scriptUrl === 'undefined' || !scriptUrl) problems.push('scriptUrl חסר (כתובת Apps Script)');
+  if(problems.length){
+    console.warn('בעיית הגדרות ענן:', problems.join(', '));
+    showAlert && showAlert('הגדרות ענן חסרות: ' + problems.join(', '), 'error');
+    try{ updateSyncStatus('⚠️','הגדרות חסרות', 'sync-error'); }catch(e){}
+    return false;
+  }
+  return true;
+}
+(function(){ try{ validateCloudSettings(); }catch(e){} })();
+
 </script>
 <script>
 (function(){
@@ -3148,6 +3369,42 @@ function openSelfPrevMonth(){
     if (typeof showAlert === 'function') showAlert('שגיאה בפתיחת דוח החודש הקודם','error');
   }
 }
+
+
+function testCloud(){
+  try{
+    updateSyncStatus && updateSyncStatus('🔍','בודק חיבור...', 'sync-syncing');
+  }catch(e){}
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + apiKey;
+  fetch(url).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(meta){
+    showAlert && showAlert('חיבור לענן תקין ✅', 'success');
+    try{ updateSyncStatus('✅','מחובר', 'sync-ok'); }catch(e){}
+    console.log('Sheets meta OK:', meta.properties && meta.properties.title);
+  }).catch(function(err){
+    console.error('Cloud test failed:', err);
+    showAlert && showAlert('אין חיבור לענן: '+ err.message, 'error');
+    try{ updateSyncStatus('⚠️','אין חיבור', 'sync-error'); }catch(e){}
+  });
+}
+
+
+function validateCloudSettings(){
+  var problems = [];
+  if(!apiKey) problems.push('apiKey חסר');
+  if(!sheetId) problems.push('sheetId חסר');
+  if(typeof scriptUrl === 'undefined' || !scriptUrl) problems.push('scriptUrl חסר (כתובת Apps Script)');
+  if(problems.length){
+    console.warn('בעיית הגדרות ענן:', problems.join(', '));
+    showAlert && showAlert('הגדרות ענן חסרות: ' + problems.join(', '), 'error');
+    try{ updateSyncStatus('⚠️','הגדרות חסרות', 'sync-error'); }catch(e){}
+    return false;
+  }
+  return true;
+}
+(function(){ try{ validateCloudSettings(); }catch(e){} })();
 
 </script>
 <script>
@@ -3219,6 +3476,42 @@ function openSelfPrevMonth(){
   }
 }
 
+
+function testCloud(){
+  try{
+    updateSyncStatus && updateSyncStatus('🔍','בודק חיבור...', 'sync-syncing');
+  }catch(e){}
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + apiKey;
+  fetch(url).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(meta){
+    showAlert && showAlert('חיבור לענן תקין ✅', 'success');
+    try{ updateSyncStatus('✅','מחובר', 'sync-ok'); }catch(e){}
+    console.log('Sheets meta OK:', meta.properties && meta.properties.title);
+  }).catch(function(err){
+    console.error('Cloud test failed:', err);
+    showAlert && showAlert('אין חיבור לענן: '+ err.message, 'error');
+    try{ updateSyncStatus('⚠️','אין חיבור', 'sync-error'); }catch(e){}
+  });
+}
+
+
+function validateCloudSettings(){
+  var problems = [];
+  if(!apiKey) problems.push('apiKey חסר');
+  if(!sheetId) problems.push('sheetId חסר');
+  if(typeof scriptUrl === 'undefined' || !scriptUrl) problems.push('scriptUrl חסר (כתובת Apps Script)');
+  if(problems.length){
+    console.warn('בעיית הגדרות ענן:', problems.join(', '));
+    showAlert && showAlert('הגדרות ענן חסרות: ' + problems.join(', '), 'error');
+    try{ updateSyncStatus('⚠️','הגדרות חסרות', 'sync-error'); }catch(e){}
+    return false;
+  }
+  return true;
+}
+(function(){ try{ validateCloudSettings(); }catch(e){} })();
+
 </script>
 <script>
 function wireExportEventsBtn(){
@@ -3287,6 +3580,42 @@ function openSelfPrevMonth(){
     if (typeof showAlert === 'function') showAlert('שגיאה בפתיחת דוח החודש הקודם','error');
   }
 }
+
+
+function testCloud(){
+  try{
+    updateSyncStatus && updateSyncStatus('🔍','בודק חיבור...', 'sync-syncing');
+  }catch(e){}
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + apiKey;
+  fetch(url).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(meta){
+    showAlert && showAlert('חיבור לענן תקין ✅', 'success');
+    try{ updateSyncStatus('✅','מחובר', 'sync-ok'); }catch(e){}
+    console.log('Sheets meta OK:', meta.properties && meta.properties.title);
+  }).catch(function(err){
+    console.error('Cloud test failed:', err);
+    showAlert && showAlert('אין חיבור לענן: '+ err.message, 'error');
+    try{ updateSyncStatus('⚠️','אין חיבור', 'sync-error'); }catch(e){}
+  });
+}
+
+
+function validateCloudSettings(){
+  var problems = [];
+  if(!apiKey) problems.push('apiKey חסר');
+  if(!sheetId) problems.push('sheetId חסר');
+  if(typeof scriptUrl === 'undefined' || !scriptUrl) problems.push('scriptUrl חסר (כתובת Apps Script)');
+  if(problems.length){
+    console.warn('בעיית הגדרות ענן:', problems.join(', '));
+    showAlert && showAlert('הגדרות ענן חסרות: ' + problems.join(', '), 'error');
+    try{ updateSyncStatus('⚠️','הגדרות חסרות', 'sync-error'); }catch(e){}
+    return false;
+  }
+  return true;
+}
+(function(){ try{ validateCloudSettings(); }catch(e){} })();
 
 </script>
 <script>
@@ -3429,6 +3758,42 @@ function openSelfPrevMonth(){
     if (typeof showAlert === 'function') showAlert('שגיאה בפתיחת דוח החודש הקודם','error');
   }
 }
+
+
+function testCloud(){
+  try{
+    updateSyncStatus && updateSyncStatus('🔍','בודק חיבור...', 'sync-syncing');
+  }catch(e){}
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + apiKey;
+  fetch(url).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(meta){
+    showAlert && showAlert('חיבור לענן תקין ✅', 'success');
+    try{ updateSyncStatus('✅','מחובר', 'sync-ok'); }catch(e){}
+    console.log('Sheets meta OK:', meta.properties && meta.properties.title);
+  }).catch(function(err){
+    console.error('Cloud test failed:', err);
+    showAlert && showAlert('אין חיבור לענן: '+ err.message, 'error');
+    try{ updateSyncStatus('⚠️','אין חיבור', 'sync-error'); }catch(e){}
+  });
+}
+
+
+function validateCloudSettings(){
+  var problems = [];
+  if(!apiKey) problems.push('apiKey חסר');
+  if(!sheetId) problems.push('sheetId חסר');
+  if(typeof scriptUrl === 'undefined' || !scriptUrl) problems.push('scriptUrl חסר (כתובת Apps Script)');
+  if(problems.length){
+    console.warn('בעיית הגדרות ענן:', problems.join(', '));
+    showAlert && showAlert('הגדרות ענן חסרות: ' + problems.join(', '), 'error');
+    try{ updateSyncStatus('⚠️','הגדרות חסרות', 'sync-error'); }catch(e){}
+    return false;
+  }
+  return true;
+}
+(function(){ try{ validateCloudSettings(); }catch(e){} })();
 
 </script>
 <script>
@@ -3574,6 +3939,42 @@ function openSelfPrevMonth(){
   }
 }
 
+
+function testCloud(){
+  try{
+    updateSyncStatus && updateSyncStatus('🔍','בודק חיבור...', 'sync-syncing');
+  }catch(e){}
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + apiKey;
+  fetch(url).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(meta){
+    showAlert && showAlert('חיבור לענן תקין ✅', 'success');
+    try{ updateSyncStatus('✅','מחובר', 'sync-ok'); }catch(e){}
+    console.log('Sheets meta OK:', meta.properties && meta.properties.title);
+  }).catch(function(err){
+    console.error('Cloud test failed:', err);
+    showAlert && showAlert('אין חיבור לענן: '+ err.message, 'error');
+    try{ updateSyncStatus('⚠️','אין חיבור', 'sync-error'); }catch(e){}
+  });
+}
+
+
+function validateCloudSettings(){
+  var problems = [];
+  if(!apiKey) problems.push('apiKey חסר');
+  if(!sheetId) problems.push('sheetId חסר');
+  if(typeof scriptUrl === 'undefined' || !scriptUrl) problems.push('scriptUrl חסר (כתובת Apps Script)');
+  if(problems.length){
+    console.warn('בעיית הגדרות ענן:', problems.join(', '));
+    showAlert && showAlert('הגדרות ענן חסרות: ' + problems.join(', '), 'error');
+    try{ updateSyncStatus('⚠️','הגדרות חסרות', 'sync-error'); }catch(e){}
+    return false;
+  }
+  return true;
+}
+(function(){ try{ validateCloudSettings(); }catch(e){} })();
+
 </script>
 <!-- RB_PATCH: cancel_harden + detailed_open_btn -->
 <script>
@@ -3715,6 +4116,42 @@ function openSelfPrevMonth(){
   }
 }
 
+
+function testCloud(){
+  try{
+    updateSyncStatus && updateSyncStatus('🔍','בודק חיבור...', 'sync-syncing');
+  }catch(e){}
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + apiKey;
+  fetch(url).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(meta){
+    showAlert && showAlert('חיבור לענן תקין ✅', 'success');
+    try{ updateSyncStatus('✅','מחובר', 'sync-ok'); }catch(e){}
+    console.log('Sheets meta OK:', meta.properties && meta.properties.title);
+  }).catch(function(err){
+    console.error('Cloud test failed:', err);
+    showAlert && showAlert('אין חיבור לענן: '+ err.message, 'error');
+    try{ updateSyncStatus('⚠️','אין חיבור', 'sync-error'); }catch(e){}
+  });
+}
+
+
+function validateCloudSettings(){
+  var problems = [];
+  if(!apiKey) problems.push('apiKey חסר');
+  if(!sheetId) problems.push('sheetId חסר');
+  if(typeof scriptUrl === 'undefined' || !scriptUrl) problems.push('scriptUrl חסר (כתובת Apps Script)');
+  if(problems.length){
+    console.warn('בעיית הגדרות ענן:', problems.join(', '));
+    showAlert && showAlert('הגדרות ענן חסרות: ' + problems.join(', '), 'error');
+    try{ updateSyncStatus('⚠️','הגדרות חסרות', 'sync-error'); }catch(e){}
+    return false;
+  }
+  return true;
+}
+(function(){ try{ validateCloudSettings(); }catch(e){} })();
+
 </script>
 
 <!-- RB_PATCH: admin_retro_event_only -->
@@ -3843,6 +4280,42 @@ function openSelfPrevMonth(){
     if (typeof showAlert === 'function') showAlert('שגיאה בפתיחת דוח החודש הקודם','error');
   }
 }
+
+
+function testCloud(){
+  try{
+    updateSyncStatus && updateSyncStatus('🔍','בודק חיבור...', 'sync-syncing');
+  }catch(e){}
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + apiKey;
+  fetch(url).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(meta){
+    showAlert && showAlert('חיבור לענן תקין ✅', 'success');
+    try{ updateSyncStatus('✅','מחובר', 'sync-ok'); }catch(e){}
+    console.log('Sheets meta OK:', meta.properties && meta.properties.title);
+  }).catch(function(err){
+    console.error('Cloud test failed:', err);
+    showAlert && showAlert('אין חיבור לענן: '+ err.message, 'error');
+    try{ updateSyncStatus('⚠️','אין חיבור', 'sync-error'); }catch(e){}
+  });
+}
+
+
+function validateCloudSettings(){
+  var problems = [];
+  if(!apiKey) problems.push('apiKey חסר');
+  if(!sheetId) problems.push('sheetId חסר');
+  if(typeof scriptUrl === 'undefined' || !scriptUrl) problems.push('scriptUrl חסר (כתובת Apps Script)');
+  if(problems.length){
+    console.warn('בעיית הגדרות ענן:', problems.join(', '));
+    showAlert && showAlert('הגדרות ענן חסרות: ' + problems.join(', '), 'error');
+    try{ updateSyncStatus('⚠️','הגדרות חסרות', 'sync-error'); }catch(e){}
+    return false;
+  }
+  return true;
+}
+(function(){ try{ validateCloudSettings(); }catch(e){} })();
 
 </script>
 
