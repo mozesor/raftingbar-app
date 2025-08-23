@@ -669,21 +669,7 @@
 #eventsInlineTable tbody tr:nth-child(even){ background: #fafbff; }
 #eventsInlineTable tbody tr:hover{ background: #f0f3ff; }
     
-
-/* MOBILE INPUT WIDTH FIX */
-.form-group input[type="date"],
-.form-group input[type="text"],
-.form-group input[type="number"],
-.form-group select {
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-  display: block;
-  margin: 0;
-  border-radius: 12px;
-}
-#eventDate { margin-inline-start: 0; }
-
+#eventDate{ margin-inline-start:0; }
 </style>
 <link href="icon-180x180.png" rel="apple-touch-icon" sizes="180x180"/><link href="icon-167x167.png" rel="apple-touch-icon" sizes="167x167"/><link href="icon-152x152.png" rel="apple-touch-icon" sizes="152x152"/><link href="icon-144x144.png" rel="apple-touch-icon" sizes="144x144"/><style>
 /* Force blue primary look for the detailed reports 'פתח ניהול' button */
@@ -778,6 +764,8 @@
 </div>
 </div>
 <div class="quick-actions">
+<button class="btn btn-admin" onclick="testCloud()" title="בדיקת חיבור לענן">בדיקת חיבור</button>
+
 <button class="btn btn-admin" onclick="openSelfPrevMonth()" title="דוח אישי – החודש הקודם">דוח החודש הקודם</button>
 
 <div class="quick-action" onclick="showEmployeesStatus()">
@@ -811,15 +799,15 @@
 <label>תקופה:</label>
 <select id="selfPeriod" onchange="toggleSelfCustom()"><option selected="" value="month">החודש</option>
 <option value="week">השבוע</option>
-<option value="t
+<option value="today">היום</option>
+  <option value="prevMonth">החודש הקודם</option>
+  <option value="custom">טווח תאריכים…</option>
+</select>
 <div id="selfCustomRange" style="display:none; margin:8px 0;">
   <div class="form-group"><label>מתאריך:</label> <input type="date" id="selfStart"></div>
   <div class="form-group"><label>עד תאריך:</label> <input type="date" id="selfEnd"></div>
 </div>
-oday">היום</option>
-<option value="prevMonth">החודש הקודם</option>
-<option value="custom">טווח תאריכים…</option>
-</select>
+
 </div>
 <button class="btn btn-admin" onclick="renderSelf()" style="width:100%;">הצג דוח</button>
 <div class="detailed-reports-table" style="margin-top:12px;">
@@ -958,6 +946,9 @@ oday">היום</option>
             sheetId: '1SNSdRdJy-vP--spyKmVwDbnaz808KEwTYSKiLreFn0w', 
             scriptUrl: 'https://script.google.com/macros/s/AKfycbx_UMxeN_-dYeiR4xQa4HzT9ogZPv8BeYkRuUg0BOeEobOQZJVvj7gZU-2U_5LrxEtK/exec'
         };
+// Shim: use SETTINGS as EMBEDDED_SETTINGS when not provided externally
+var EMBEDDED_SETTINGS = (typeof window!=='undefined' && window.EMBEDDED_SETTINGS) ? window.EMBEDDED_SETTINGS : SETTINGS;
+
 
         // משתני האפליקציה
         var employees = [];
@@ -1058,7 +1049,9 @@ oday">היום</option>
                 .then(function(data) {
                     updateSyncStatus('☁️', 'מחובר לענן', 'sync-connected');
                     isInitialized = true;
-                    loadDataFromSheet();
+                    \1
+window.__cloudInitialized=true; try{ updateSyncStatus && updateSyncStatus('✅','מחובר','sync-ok'); }catch(e){}
+
                     showAlert('מחובר לענן ומסנכרן! 🌐', 'success');
                 })
                 .catch(function(error) {
@@ -1928,39 +1921,133 @@ oday">היום</option>
 
         
 function getDetailedDateRange() {
-    var periodEl = document.getElementById('detailedPeriodFilter') || document.getElementById('detailedPeriod');
-    var period = periodEl ? periodEl.value : 'month';
+    var period = document.getElementById('detailedPeriodFilter').value;
     var today = new Date();
     var startDate, endDate;
+
     switch (period) {
         case 'today':
-            startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-            endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23,59,59,999);
+            startDate = new Date(today);
+            endDate = new Date(today);
             break;
         case 'week':
-            startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate()-6);
-            endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23,59,59,999);
+            startDate = new Date(today);
+            startDate.setDate(today.getDate() - 6);
+            endDate = new Date(today);
             break;
         case 'month':
             startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-            endDate = new Date(today.getFullYear(), today.getMonth()+1, 0, 23,59,59,999);
+            endDate = new Date(today);
             break;
         case 'prevMonth':
-            startDate = new Date(today.getFullYear(), today.getMonth()-1, 1);
-            endDate = new Date(today.getFullYear(), today.getMonth(), 0, 23,59,59,999);
+            var y = today.getFullYear();
+            var m = today.getMonth(); // 0-based
+            startDate = new Date(y, m - 1, 1);
+            endDate = new Date(y, m, 0);
             break;
         case 'custom':
-            var s = document.getElementById('detailedStartDate') || document.getElementById('detailedStart');
-            var e = document.getElementById('detailedEndDate') || document.getElementById('detailedEnd');
-            startDate = s && s.value ? new Date(s.value) : new Date(today.getFullYear(), today.getMonth(), 1);
-            endDate   = e && e.value ? new Date(e.value) : new Date(today.getFullYear(), today.getMonth()+1, 0, 23,59,59,999);
+            var startInput = document.getElementById('detailedStartDate');
+            var endInput = document.getElementById('detailedEndDate');
+            startDate = startInput ? new Date(startInput.value) : new Date(today);
+            endDate = endInput ? new Date(endInput.value) : new Date(today);
             break;
         default:
-            startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-            endDate   = new Date(today.getFullYear(), today.getMonth()+1, 0, 23,59,59,999);
+            startDate = new Date(today);
+            endDate = new Date(today);
     }
+
     return { startDate: startDate, endDate: endDate };
 }
+
+function ensureDefaultEventDate(){
+    var el = document.getElementById('eventDate');
+    if (el && !el.value) {
+        el.value = getCurrentDate();
+    }
+}
+
+
+function toggleSelfCustom(){
+  var val = (document.getElementById('selfPeriod')||{}).value;
+  var box = document.getElementById('selfCustomRange');
+  if (!box) return;
+  box.style.display = (val === 'custom') ? 'block' : 'none';
+  if (val === 'custom'){
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), 1);
+    var end = new Date(now.getFullYear(), now.getMonth()+1, 0);
+    var fmt = d => d.toISOString().slice(0,10);
+    var s = document.getElementById('selfStart'); if (s && !s.value) s.value = fmt(start);
+    var e = document.getElementById('selfEnd'); if (e && !e.value) e.value = fmt(end);
+  }
+}
+
+
+// /*wrap_self_update*/ keep custom UI in sync on updates
+(function(){
+  var _u = window.updateAll;
+  window.updateAll = function(){
+    if (typeof _u === 'function') _u.apply(this, arguments);
+    try{ toggleSelfCustom(); }catch(e){}
+  };
+})();
+
+
+function openSelfPrevMonth(){
+  try{
+    var currentEmp = (document.getElementById('employeeSelect')||{}).value || null;
+    showPage('self');
+    setTimeout(function(){
+      try{
+        var selfEmpSel = document.getElementById('selfEmployee');
+        if (selfEmpSel && currentEmp) selfEmpSel.value = currentEmp;
+        var p = document.getElementById('selfPeriod');
+        if (p){ p.value = 'prevMonth'; }
+        if (typeof toggleSelfCustom === 'function') toggleSelfCustom();
+        if (typeof renderSelf === 'function') renderSelf();
+      }catch(e){}
+    }, 0);
+  }catch(e){
+    if (typeof showAlert === 'function') showAlert('שגיאה בפתיחת דוח החודש הקודם','error');
+  }
+}
+
+
+function testCloud(){
+  try{
+    updateSyncStatus && updateSyncStatus('🔍','בודק חיבור...', 'sync-syncing');
+  }catch(e){}
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + apiKey;
+  fetch(url).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(meta){
+    showAlert && showAlert('חיבור לענן תקין ✅', 'success');
+    try{ updateSyncStatus('✅','מחובר', 'sync-ok'); }catch(e){}
+    console.log('Sheets meta OK:', meta.properties && meta.properties.title);
+  }).catch(function(err){
+    console.error('Cloud test failed:', err);
+    showAlert && showAlert('אין חיבור לענן: '+ err.message, 'error');
+    try{ updateSyncStatus('⚠️','אין חיבור', 'sync-error'); }catch(e){}
+  });
+}
+
+
+function validateCloudSettings(){
+  var problems = [];
+  if(!apiKey) problems.push('apiKey חסר');
+  if(!sheetId) problems.push('sheetId חסר');
+  if(typeof scriptUrl === 'undefined' || !scriptUrl) problems.push('scriptUrl חסר (כתובת Apps Script)');
+  if(problems.length){
+    console.warn('בעיית הגדרות ענן:', problems.join(', '));
+    showAlert && showAlert('הגדרות ענן חסרות: ' + problems.join(', '), 'error');
+    try{ updateSyncStatus('⚠️','הגדרות חסרות', 'sync-error'); }catch(e){}
+    return false;
+  }
+  return true;
+}
+(function(){ try{ validateCloudSettings(); }catch(e){} })();
+
 </script>
 <script>
   // שימוש בקוד מנהל לעמוד "דוחות"
@@ -2002,6 +2089,96 @@ function getDetailedDateRange() {
       return ret;
     };
   })();
+
+function ensureDefaultEventDate(){
+    var el = document.getElementById('eventDate');
+    if (el && !el.value) {
+        el.value = getCurrentDate();
+    }
+}
+
+
+function toggleSelfCustom(){
+  var val = (document.getElementById('selfPeriod')||{}).value;
+  var box = document.getElementById('selfCustomRange');
+  if (!box) return;
+  box.style.display = (val === 'custom') ? 'block' : 'none';
+  if (val === 'custom'){
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), 1);
+    var end = new Date(now.getFullYear(), now.getMonth()+1, 0);
+    var fmt = d => d.toISOString().slice(0,10);
+    var s = document.getElementById('selfStart'); if (s && !s.value) s.value = fmt(start);
+    var e = document.getElementById('selfEnd'); if (e && !e.value) e.value = fmt(end);
+  }
+}
+
+
+// /*wrap_self_update*/ keep custom UI in sync on updates
+(function(){
+  var _u = window.updateAll;
+  window.updateAll = function(){
+    if (typeof _u === 'function') _u.apply(this, arguments);
+    try{ toggleSelfCustom(); }catch(e){}
+  };
+})();
+
+
+function openSelfPrevMonth(){
+  try{
+    var currentEmp = (document.getElementById('employeeSelect')||{}).value || null;
+    showPage('self');
+    setTimeout(function(){
+      try{
+        var selfEmpSel = document.getElementById('selfEmployee');
+        if (selfEmpSel && currentEmp) selfEmpSel.value = currentEmp;
+        var p = document.getElementById('selfPeriod');
+        if (p){ p.value = 'prevMonth'; }
+        if (typeof toggleSelfCustom === 'function') toggleSelfCustom();
+        if (typeof renderSelf === 'function') renderSelf();
+      }catch(e){}
+    }, 0);
+  }catch(e){
+    if (typeof showAlert === 'function') showAlert('שגיאה בפתיחת דוח החודש הקודם','error');
+  }
+}
+
+
+function testCloud(){
+  try{
+    updateSyncStatus && updateSyncStatus('🔍','בודק חיבור...', 'sync-syncing');
+  }catch(e){}
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + apiKey;
+  fetch(url).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(meta){
+    showAlert && showAlert('חיבור לענן תקין ✅', 'success');
+    try{ updateSyncStatus('✅','מחובר', 'sync-ok'); }catch(e){}
+    console.log('Sheets meta OK:', meta.properties && meta.properties.title);
+  }).catch(function(err){
+    console.error('Cloud test failed:', err);
+    showAlert && showAlert('אין חיבור לענן: '+ err.message, 'error');
+    try{ updateSyncStatus('⚠️','אין חיבור', 'sync-error'); }catch(e){}
+  });
+}
+
+
+function validateCloudSettings(){
+  var problems = [];
+  if(!apiKey) problems.push('apiKey חסר');
+  if(!sheetId) problems.push('sheetId חסר');
+  if(typeof scriptUrl === 'undefined' || !scriptUrl) problems.push('scriptUrl חסר (כתובת Apps Script)');
+  if(problems.length){
+    console.warn('בעיית הגדרות ענן:', problems.join(', '));
+    showAlert && showAlert('הגדרות ענן חסרות: ' + problems.join(', '), 'error');
+    try{ updateSyncStatus('⚠️','הגדרות חסרות', 'sync-error'); }catch(e){}
+    return false;
+  }
+  return true;
+}
+(function(){ try{ validateCloudSettings(); }catch(e){} })();
+
 </script>
 <div id="floatingLogoutBtn" style="display:none; position:fixed; top:10px; right:10px; z-index:9999; background:none; border:none; font-size:26px; cursor:pointer; line-height:1;" title="התנתק">
   🚪
@@ -2030,6 +2207,96 @@ function getDetailedDateRange() {
       }, 500);
     });
   });
+
+function ensureDefaultEventDate(){
+    var el = document.getElementById('eventDate');
+    if (el && !el.value) {
+        el.value = getCurrentDate();
+    }
+}
+
+
+function toggleSelfCustom(){
+  var val = (document.getElementById('selfPeriod')||{}).value;
+  var box = document.getElementById('selfCustomRange');
+  if (!box) return;
+  box.style.display = (val === 'custom') ? 'block' : 'none';
+  if (val === 'custom'){
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), 1);
+    var end = new Date(now.getFullYear(), now.getMonth()+1, 0);
+    var fmt = d => d.toISOString().slice(0,10);
+    var s = document.getElementById('selfStart'); if (s && !s.value) s.value = fmt(start);
+    var e = document.getElementById('selfEnd'); if (e && !e.value) e.value = fmt(end);
+  }
+}
+
+
+// /*wrap_self_update*/ keep custom UI in sync on updates
+(function(){
+  var _u = window.updateAll;
+  window.updateAll = function(){
+    if (typeof _u === 'function') _u.apply(this, arguments);
+    try{ toggleSelfCustom(); }catch(e){}
+  };
+})();
+
+
+function openSelfPrevMonth(){
+  try{
+    var currentEmp = (document.getElementById('employeeSelect')||{}).value || null;
+    showPage('self');
+    setTimeout(function(){
+      try{
+        var selfEmpSel = document.getElementById('selfEmployee');
+        if (selfEmpSel && currentEmp) selfEmpSel.value = currentEmp;
+        var p = document.getElementById('selfPeriod');
+        if (p){ p.value = 'prevMonth'; }
+        if (typeof toggleSelfCustom === 'function') toggleSelfCustom();
+        if (typeof renderSelf === 'function') renderSelf();
+      }catch(e){}
+    }, 0);
+  }catch(e){
+    if (typeof showAlert === 'function') showAlert('שגיאה בפתיחת דוח החודש הקודם','error');
+  }
+}
+
+
+function testCloud(){
+  try{
+    updateSyncStatus && updateSyncStatus('🔍','בודק חיבור...', 'sync-syncing');
+  }catch(e){}
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + apiKey;
+  fetch(url).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(meta){
+    showAlert && showAlert('חיבור לענן תקין ✅', 'success');
+    try{ updateSyncStatus('✅','מחובר', 'sync-ok'); }catch(e){}
+    console.log('Sheets meta OK:', meta.properties && meta.properties.title);
+  }).catch(function(err){
+    console.error('Cloud test failed:', err);
+    showAlert && showAlert('אין חיבור לענן: '+ err.message, 'error');
+    try{ updateSyncStatus('⚠️','אין חיבור', 'sync-error'); }catch(e){}
+  });
+}
+
+
+function validateCloudSettings(){
+  var problems = [];
+  if(!apiKey) problems.push('apiKey חסר');
+  if(!sheetId) problems.push('sheetId חסר');
+  if(typeof scriptUrl === 'undefined' || !scriptUrl) problems.push('scriptUrl חסר (כתובת Apps Script)');
+  if(problems.length){
+    console.warn('בעיית הגדרות ענן:', problems.join(', '));
+    showAlert && showAlert('הגדרות ענן חסרות: ' + problems.join(', '), 'error');
+    try{ updateSyncStatus('⚠️','הגדרות חסרות', 'sync-error'); }catch(e){}
+    return false;
+  }
+  return true;
+}
+(function(){ try{ validateCloudSettings(); }catch(e){} })();
+
 </script>
 <div id="floatingLogoutBtn" style="display:none; position:fixed; top:10px; right:10px; z-index:2500; background:none; border:none; font-size:26px; cursor:pointer; line-height:1;" title="התנתק">
   🚪
@@ -2138,6 +2405,96 @@ function getDetailedDateRange() {
     }
   });
 })();
+
+function ensureDefaultEventDate(){
+    var el = document.getElementById('eventDate');
+    if (el && !el.value) {
+        el.value = getCurrentDate();
+    }
+}
+
+
+function toggleSelfCustom(){
+  var val = (document.getElementById('selfPeriod')||{}).value;
+  var box = document.getElementById('selfCustomRange');
+  if (!box) return;
+  box.style.display = (val === 'custom') ? 'block' : 'none';
+  if (val === 'custom'){
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), 1);
+    var end = new Date(now.getFullYear(), now.getMonth()+1, 0);
+    var fmt = d => d.toISOString().slice(0,10);
+    var s = document.getElementById('selfStart'); if (s && !s.value) s.value = fmt(start);
+    var e = document.getElementById('selfEnd'); if (e && !e.value) e.value = fmt(end);
+  }
+}
+
+
+// /*wrap_self_update*/ keep custom UI in sync on updates
+(function(){
+  var _u = window.updateAll;
+  window.updateAll = function(){
+    if (typeof _u === 'function') _u.apply(this, arguments);
+    try{ toggleSelfCustom(); }catch(e){}
+  };
+})();
+
+
+function openSelfPrevMonth(){
+  try{
+    var currentEmp = (document.getElementById('employeeSelect')||{}).value || null;
+    showPage('self');
+    setTimeout(function(){
+      try{
+        var selfEmpSel = document.getElementById('selfEmployee');
+        if (selfEmpSel && currentEmp) selfEmpSel.value = currentEmp;
+        var p = document.getElementById('selfPeriod');
+        if (p){ p.value = 'prevMonth'; }
+        if (typeof toggleSelfCustom === 'function') toggleSelfCustom();
+        if (typeof renderSelf === 'function') renderSelf();
+      }catch(e){}
+    }, 0);
+  }catch(e){
+    if (typeof showAlert === 'function') showAlert('שגיאה בפתיחת דוח החודש הקודם','error');
+  }
+}
+
+
+function testCloud(){
+  try{
+    updateSyncStatus && updateSyncStatus('🔍','בודק חיבור...', 'sync-syncing');
+  }catch(e){}
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + apiKey;
+  fetch(url).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(meta){
+    showAlert && showAlert('חיבור לענן תקין ✅', 'success');
+    try{ updateSyncStatus('✅','מחובר', 'sync-ok'); }catch(e){}
+    console.log('Sheets meta OK:', meta.properties && meta.properties.title);
+  }).catch(function(err){
+    console.error('Cloud test failed:', err);
+    showAlert && showAlert('אין חיבור לענן: '+ err.message, 'error');
+    try{ updateSyncStatus('⚠️','אין חיבור', 'sync-error'); }catch(e){}
+  });
+}
+
+
+function validateCloudSettings(){
+  var problems = [];
+  if(!apiKey) problems.push('apiKey חסר');
+  if(!sheetId) problems.push('sheetId חסר');
+  if(typeof scriptUrl === 'undefined' || !scriptUrl) problems.push('scriptUrl חסר (כתובת Apps Script)');
+  if(problems.length){
+    console.warn('בעיית הגדרות ענן:', problems.join(', '));
+    showAlert && showAlert('הגדרות ענן חסרות: ' + problems.join(', '), 'error');
+    try{ updateSyncStatus('⚠️','הגדרות חסרות', 'sync-error'); }catch(e){}
+    return false;
+  }
+  return true;
+}
+(function(){ try{ validateCloudSettings(); }catch(e){} })();
+
 </script>
 <script>
 
@@ -2498,6 +2855,96 @@ function setEventDateDefault(){
 }
 (function(){ var _u = updateAll; updateAll = function(){ _u(); updateTodayEventsUI(); setEventDateDefault(); }; })();
 
+
+function ensureDefaultEventDate(){
+    var el = document.getElementById('eventDate');
+    if (el && !el.value) {
+        el.value = getCurrentDate();
+    }
+}
+
+
+function toggleSelfCustom(){
+  var val = (document.getElementById('selfPeriod')||{}).value;
+  var box = document.getElementById('selfCustomRange');
+  if (!box) return;
+  box.style.display = (val === 'custom') ? 'block' : 'none';
+  if (val === 'custom'){
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), 1);
+    var end = new Date(now.getFullYear(), now.getMonth()+1, 0);
+    var fmt = d => d.toISOString().slice(0,10);
+    var s = document.getElementById('selfStart'); if (s && !s.value) s.value = fmt(start);
+    var e = document.getElementById('selfEnd'); if (e && !e.value) e.value = fmt(end);
+  }
+}
+
+
+// /*wrap_self_update*/ keep custom UI in sync on updates
+(function(){
+  var _u = window.updateAll;
+  window.updateAll = function(){
+    if (typeof _u === 'function') _u.apply(this, arguments);
+    try{ toggleSelfCustom(); }catch(e){}
+  };
+})();
+
+
+function openSelfPrevMonth(){
+  try{
+    var currentEmp = (document.getElementById('employeeSelect')||{}).value || null;
+    showPage('self');
+    setTimeout(function(){
+      try{
+        var selfEmpSel = document.getElementById('selfEmployee');
+        if (selfEmpSel && currentEmp) selfEmpSel.value = currentEmp;
+        var p = document.getElementById('selfPeriod');
+        if (p){ p.value = 'prevMonth'; }
+        if (typeof toggleSelfCustom === 'function') toggleSelfCustom();
+        if (typeof renderSelf === 'function') renderSelf();
+      }catch(e){}
+    }, 0);
+  }catch(e){
+    if (typeof showAlert === 'function') showAlert('שגיאה בפתיחת דוח החודש הקודם','error');
+  }
+}
+
+
+function testCloud(){
+  try{
+    updateSyncStatus && updateSyncStatus('🔍','בודק חיבור...', 'sync-syncing');
+  }catch(e){}
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + apiKey;
+  fetch(url).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(meta){
+    showAlert && showAlert('חיבור לענן תקין ✅', 'success');
+    try{ updateSyncStatus('✅','מחובר', 'sync-ok'); }catch(e){}
+    console.log('Sheets meta OK:', meta.properties && meta.properties.title);
+  }).catch(function(err){
+    console.error('Cloud test failed:', err);
+    showAlert && showAlert('אין חיבור לענן: '+ err.message, 'error');
+    try{ updateSyncStatus('⚠️','אין חיבור', 'sync-error'); }catch(e){}
+  });
+}
+
+
+function validateCloudSettings(){
+  var problems = [];
+  if(!apiKey) problems.push('apiKey חסר');
+  if(!sheetId) problems.push('sheetId חסר');
+  if(typeof scriptUrl === 'undefined' || !scriptUrl) problems.push('scriptUrl חסר (כתובת Apps Script)');
+  if(problems.length){
+    console.warn('בעיית הגדרות ענן:', problems.join(', '));
+    showAlert && showAlert('הגדרות ענן חסרות: ' + problems.join(', '), 'error');
+    try{ updateSyncStatus('⚠️','הגדרות חסרות', 'sync-error'); }catch(e){}
+    return false;
+  }
+  return true;
+}
+(function(){ try{ validateCloudSettings(); }catch(e){} })();
+
 </script><div class="page" id="adminPage">
 <!-- מסך נעילה -->
 <div class="card" id="adminLock" style="display: block;">
@@ -2766,6 +3213,96 @@ window.updateDetailedHoursChart = function(data){
     }
   };
 })();
+
+function ensureDefaultEventDate(){
+    var el = document.getElementById('eventDate');
+    if (el && !el.value) {
+        el.value = getCurrentDate();
+    }
+}
+
+
+function toggleSelfCustom(){
+  var val = (document.getElementById('selfPeriod')||{}).value;
+  var box = document.getElementById('selfCustomRange');
+  if (!box) return;
+  box.style.display = (val === 'custom') ? 'block' : 'none';
+  if (val === 'custom'){
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), 1);
+    var end = new Date(now.getFullYear(), now.getMonth()+1, 0);
+    var fmt = d => d.toISOString().slice(0,10);
+    var s = document.getElementById('selfStart'); if (s && !s.value) s.value = fmt(start);
+    var e = document.getElementById('selfEnd'); if (e && !e.value) e.value = fmt(end);
+  }
+}
+
+
+// /*wrap_self_update*/ keep custom UI in sync on updates
+(function(){
+  var _u = window.updateAll;
+  window.updateAll = function(){
+    if (typeof _u === 'function') _u.apply(this, arguments);
+    try{ toggleSelfCustom(); }catch(e){}
+  };
+})();
+
+
+function openSelfPrevMonth(){
+  try{
+    var currentEmp = (document.getElementById('employeeSelect')||{}).value || null;
+    showPage('self');
+    setTimeout(function(){
+      try{
+        var selfEmpSel = document.getElementById('selfEmployee');
+        if (selfEmpSel && currentEmp) selfEmpSel.value = currentEmp;
+        var p = document.getElementById('selfPeriod');
+        if (p){ p.value = 'prevMonth'; }
+        if (typeof toggleSelfCustom === 'function') toggleSelfCustom();
+        if (typeof renderSelf === 'function') renderSelf();
+      }catch(e){}
+    }, 0);
+  }catch(e){
+    if (typeof showAlert === 'function') showAlert('שגיאה בפתיחת דוח החודש הקודם','error');
+  }
+}
+
+
+function testCloud(){
+  try{
+    updateSyncStatus && updateSyncStatus('🔍','בודק חיבור...', 'sync-syncing');
+  }catch(e){}
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + apiKey;
+  fetch(url).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(meta){
+    showAlert && showAlert('חיבור לענן תקין ✅', 'success');
+    try{ updateSyncStatus('✅','מחובר', 'sync-ok'); }catch(e){}
+    console.log('Sheets meta OK:', meta.properties && meta.properties.title);
+  }).catch(function(err){
+    console.error('Cloud test failed:', err);
+    showAlert && showAlert('אין חיבור לענן: '+ err.message, 'error');
+    try{ updateSyncStatus('⚠️','אין חיבור', 'sync-error'); }catch(e){}
+  });
+}
+
+
+function validateCloudSettings(){
+  var problems = [];
+  if(!apiKey) problems.push('apiKey חסר');
+  if(!sheetId) problems.push('sheetId חסר');
+  if(typeof scriptUrl === 'undefined' || !scriptUrl) problems.push('scriptUrl חסר (כתובת Apps Script)');
+  if(problems.length){
+    console.warn('בעיית הגדרות ענן:', problems.join(', '));
+    showAlert && showAlert('הגדרות ענן חסרות: ' + problems.join(', '), 'error');
+    try{ updateSyncStatus('⚠️','הגדרות חסרות', 'sync-error'); }catch(e){}
+    return false;
+  }
+  return true;
+}
+(function(){ try{ validateCloudSettings(); }catch(e){} })();
+
 </script>
 <script>
 (function(){
@@ -2781,6 +3318,96 @@ window.updateDetailedHoursChart = function(data){
     wire();
   }
 })();
+
+function ensureDefaultEventDate(){
+    var el = document.getElementById('eventDate');
+    if (el && !el.value) {
+        el.value = getCurrentDate();
+    }
+}
+
+
+function toggleSelfCustom(){
+  var val = (document.getElementById('selfPeriod')||{}).value;
+  var box = document.getElementById('selfCustomRange');
+  if (!box) return;
+  box.style.display = (val === 'custom') ? 'block' : 'none';
+  if (val === 'custom'){
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), 1);
+    var end = new Date(now.getFullYear(), now.getMonth()+1, 0);
+    var fmt = d => d.toISOString().slice(0,10);
+    var s = document.getElementById('selfStart'); if (s && !s.value) s.value = fmt(start);
+    var e = document.getElementById('selfEnd'); if (e && !e.value) e.value = fmt(end);
+  }
+}
+
+
+// /*wrap_self_update*/ keep custom UI in sync on updates
+(function(){
+  var _u = window.updateAll;
+  window.updateAll = function(){
+    if (typeof _u === 'function') _u.apply(this, arguments);
+    try{ toggleSelfCustom(); }catch(e){}
+  };
+})();
+
+
+function openSelfPrevMonth(){
+  try{
+    var currentEmp = (document.getElementById('employeeSelect')||{}).value || null;
+    showPage('self');
+    setTimeout(function(){
+      try{
+        var selfEmpSel = document.getElementById('selfEmployee');
+        if (selfEmpSel && currentEmp) selfEmpSel.value = currentEmp;
+        var p = document.getElementById('selfPeriod');
+        if (p){ p.value = 'prevMonth'; }
+        if (typeof toggleSelfCustom === 'function') toggleSelfCustom();
+        if (typeof renderSelf === 'function') renderSelf();
+      }catch(e){}
+    }, 0);
+  }catch(e){
+    if (typeof showAlert === 'function') showAlert('שגיאה בפתיחת דוח החודש הקודם','error');
+  }
+}
+
+
+function testCloud(){
+  try{
+    updateSyncStatus && updateSyncStatus('🔍','בודק חיבור...', 'sync-syncing');
+  }catch(e){}
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + apiKey;
+  fetch(url).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(meta){
+    showAlert && showAlert('חיבור לענן תקין ✅', 'success');
+    try{ updateSyncStatus('✅','מחובר', 'sync-ok'); }catch(e){}
+    console.log('Sheets meta OK:', meta.properties && meta.properties.title);
+  }).catch(function(err){
+    console.error('Cloud test failed:', err);
+    showAlert && showAlert('אין חיבור לענן: '+ err.message, 'error');
+    try{ updateSyncStatus('⚠️','אין חיבור', 'sync-error'); }catch(e){}
+  });
+}
+
+
+function validateCloudSettings(){
+  var problems = [];
+  if(!apiKey) problems.push('apiKey חסר');
+  if(!sheetId) problems.push('sheetId חסר');
+  if(typeof scriptUrl === 'undefined' || !scriptUrl) problems.push('scriptUrl חסר (כתובת Apps Script)');
+  if(problems.length){
+    console.warn('בעיית הגדרות ענן:', problems.join(', '));
+    showAlert && showAlert('הגדרות ענן חסרות: ' + problems.join(', '), 'error');
+    try{ updateSyncStatus('⚠️','הגדרות חסרות', 'sync-error'); }catch(e){}
+    return false;
+  }
+  return true;
+}
+(function(){ try{ validateCloudSettings(); }catch(e){} })();
+
 </script>
 <script>
 (function(){
@@ -2797,6 +3424,96 @@ window.updateDetailedHoursChart = function(data){
     wire();
   }
 })();
+
+function ensureDefaultEventDate(){
+    var el = document.getElementById('eventDate');
+    if (el && !el.value) {
+        el.value = getCurrentDate();
+    }
+}
+
+
+function toggleSelfCustom(){
+  var val = (document.getElementById('selfPeriod')||{}).value;
+  var box = document.getElementById('selfCustomRange');
+  if (!box) return;
+  box.style.display = (val === 'custom') ? 'block' : 'none';
+  if (val === 'custom'){
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), 1);
+    var end = new Date(now.getFullYear(), now.getMonth()+1, 0);
+    var fmt = d => d.toISOString().slice(0,10);
+    var s = document.getElementById('selfStart'); if (s && !s.value) s.value = fmt(start);
+    var e = document.getElementById('selfEnd'); if (e && !e.value) e.value = fmt(end);
+  }
+}
+
+
+// /*wrap_self_update*/ keep custom UI in sync on updates
+(function(){
+  var _u = window.updateAll;
+  window.updateAll = function(){
+    if (typeof _u === 'function') _u.apply(this, arguments);
+    try{ toggleSelfCustom(); }catch(e){}
+  };
+})();
+
+
+function openSelfPrevMonth(){
+  try{
+    var currentEmp = (document.getElementById('employeeSelect')||{}).value || null;
+    showPage('self');
+    setTimeout(function(){
+      try{
+        var selfEmpSel = document.getElementById('selfEmployee');
+        if (selfEmpSel && currentEmp) selfEmpSel.value = currentEmp;
+        var p = document.getElementById('selfPeriod');
+        if (p){ p.value = 'prevMonth'; }
+        if (typeof toggleSelfCustom === 'function') toggleSelfCustom();
+        if (typeof renderSelf === 'function') renderSelf();
+      }catch(e){}
+    }, 0);
+  }catch(e){
+    if (typeof showAlert === 'function') showAlert('שגיאה בפתיחת דוח החודש הקודם','error');
+  }
+}
+
+
+function testCloud(){
+  try{
+    updateSyncStatus && updateSyncStatus('🔍','בודק חיבור...', 'sync-syncing');
+  }catch(e){}
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + apiKey;
+  fetch(url).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(meta){
+    showAlert && showAlert('חיבור לענן תקין ✅', 'success');
+    try{ updateSyncStatus('✅','מחובר', 'sync-ok'); }catch(e){}
+    console.log('Sheets meta OK:', meta.properties && meta.properties.title);
+  }).catch(function(err){
+    console.error('Cloud test failed:', err);
+    showAlert && showAlert('אין חיבור לענן: '+ err.message, 'error');
+    try{ updateSyncStatus('⚠️','אין חיבור', 'sync-error'); }catch(e){}
+  });
+}
+
+
+function validateCloudSettings(){
+  var problems = [];
+  if(!apiKey) problems.push('apiKey חסר');
+  if(!sheetId) problems.push('sheetId חסר');
+  if(typeof scriptUrl === 'undefined' || !scriptUrl) problems.push('scriptUrl חסר (כתובת Apps Script)');
+  if(problems.length){
+    console.warn('בעיית הגדרות ענן:', problems.join(', '));
+    showAlert && showAlert('הגדרות ענן חסרות: ' + problems.join(', '), 'error');
+    try{ updateSyncStatus('⚠️','הגדרות חסרות', 'sync-error'); }catch(e){}
+    return false;
+  }
+  return true;
+}
+(function(){ try{ validateCloudSettings(); }catch(e){} })();
+
 </script>
 <script>
 function wireExportEventsBtn(){
@@ -2812,6 +3529,96 @@ function wireExportEventsBtn(){
 if (document.readyState === 'loading'){
   document.addEventListener('DOMContentLoaded', wireExportEventsBtn);
 } else { wireExportEventsBtn(); }
+
+function ensureDefaultEventDate(){
+    var el = document.getElementById('eventDate');
+    if (el && !el.value) {
+        el.value = getCurrentDate();
+    }
+}
+
+
+function toggleSelfCustom(){
+  var val = (document.getElementById('selfPeriod')||{}).value;
+  var box = document.getElementById('selfCustomRange');
+  if (!box) return;
+  box.style.display = (val === 'custom') ? 'block' : 'none';
+  if (val === 'custom'){
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), 1);
+    var end = new Date(now.getFullYear(), now.getMonth()+1, 0);
+    var fmt = d => d.toISOString().slice(0,10);
+    var s = document.getElementById('selfStart'); if (s && !s.value) s.value = fmt(start);
+    var e = document.getElementById('selfEnd'); if (e && !e.value) e.value = fmt(end);
+  }
+}
+
+
+// /*wrap_self_update*/ keep custom UI in sync on updates
+(function(){
+  var _u = window.updateAll;
+  window.updateAll = function(){
+    if (typeof _u === 'function') _u.apply(this, arguments);
+    try{ toggleSelfCustom(); }catch(e){}
+  };
+})();
+
+
+function openSelfPrevMonth(){
+  try{
+    var currentEmp = (document.getElementById('employeeSelect')||{}).value || null;
+    showPage('self');
+    setTimeout(function(){
+      try{
+        var selfEmpSel = document.getElementById('selfEmployee');
+        if (selfEmpSel && currentEmp) selfEmpSel.value = currentEmp;
+        var p = document.getElementById('selfPeriod');
+        if (p){ p.value = 'prevMonth'; }
+        if (typeof toggleSelfCustom === 'function') toggleSelfCustom();
+        if (typeof renderSelf === 'function') renderSelf();
+      }catch(e){}
+    }, 0);
+  }catch(e){
+    if (typeof showAlert === 'function') showAlert('שגיאה בפתיחת דוח החודש הקודם','error');
+  }
+}
+
+
+function testCloud(){
+  try{
+    updateSyncStatus && updateSyncStatus('🔍','בודק חיבור...', 'sync-syncing');
+  }catch(e){}
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + apiKey;
+  fetch(url).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(meta){
+    showAlert && showAlert('חיבור לענן תקין ✅', 'success');
+    try{ updateSyncStatus('✅','מחובר', 'sync-ok'); }catch(e){}
+    console.log('Sheets meta OK:', meta.properties && meta.properties.title);
+  }).catch(function(err){
+    console.error('Cloud test failed:', err);
+    showAlert && showAlert('אין חיבור לענן: '+ err.message, 'error');
+    try{ updateSyncStatus('⚠️','אין חיבור', 'sync-error'); }catch(e){}
+  });
+}
+
+
+function validateCloudSettings(){
+  var problems = [];
+  if(!apiKey) problems.push('apiKey חסר');
+  if(!sheetId) problems.push('sheetId חסר');
+  if(typeof scriptUrl === 'undefined' || !scriptUrl) problems.push('scriptUrl חסר (כתובת Apps Script)');
+  if(problems.length){
+    console.warn('בעיית הגדרות ענן:', problems.join(', '));
+    showAlert && showAlert('הגדרות ענן חסרות: ' + problems.join(', '), 'error');
+    try{ updateSyncStatus('⚠️','הגדרות חסרות', 'sync-error'); }catch(e){}
+    return false;
+  }
+  return true;
+}
+(function(){ try{ validateCloudSettings(); }catch(e){} })();
+
 </script>
 <script>
 (function(){
@@ -2900,6 +3707,96 @@ if (document.readyState === 'loading'){
     renderEventsInline();
   };
 })();
+
+function ensureDefaultEventDate(){
+    var el = document.getElementById('eventDate');
+    if (el && !el.value) {
+        el.value = getCurrentDate();
+    }
+}
+
+
+function toggleSelfCustom(){
+  var val = (document.getElementById('selfPeriod')||{}).value;
+  var box = document.getElementById('selfCustomRange');
+  if (!box) return;
+  box.style.display = (val === 'custom') ? 'block' : 'none';
+  if (val === 'custom'){
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), 1);
+    var end = new Date(now.getFullYear(), now.getMonth()+1, 0);
+    var fmt = d => d.toISOString().slice(0,10);
+    var s = document.getElementById('selfStart'); if (s && !s.value) s.value = fmt(start);
+    var e = document.getElementById('selfEnd'); if (e && !e.value) e.value = fmt(end);
+  }
+}
+
+
+// /*wrap_self_update*/ keep custom UI in sync on updates
+(function(){
+  var _u = window.updateAll;
+  window.updateAll = function(){
+    if (typeof _u === 'function') _u.apply(this, arguments);
+    try{ toggleSelfCustom(); }catch(e){}
+  };
+})();
+
+
+function openSelfPrevMonth(){
+  try{
+    var currentEmp = (document.getElementById('employeeSelect')||{}).value || null;
+    showPage('self');
+    setTimeout(function(){
+      try{
+        var selfEmpSel = document.getElementById('selfEmployee');
+        if (selfEmpSel && currentEmp) selfEmpSel.value = currentEmp;
+        var p = document.getElementById('selfPeriod');
+        if (p){ p.value = 'prevMonth'; }
+        if (typeof toggleSelfCustom === 'function') toggleSelfCustom();
+        if (typeof renderSelf === 'function') renderSelf();
+      }catch(e){}
+    }, 0);
+  }catch(e){
+    if (typeof showAlert === 'function') showAlert('שגיאה בפתיחת דוח החודש הקודם','error');
+  }
+}
+
+
+function testCloud(){
+  try{
+    updateSyncStatus && updateSyncStatus('🔍','בודק חיבור...', 'sync-syncing');
+  }catch(e){}
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + apiKey;
+  fetch(url).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(meta){
+    showAlert && showAlert('חיבור לענן תקין ✅', 'success');
+    try{ updateSyncStatus('✅','מחובר', 'sync-ok'); }catch(e){}
+    console.log('Sheets meta OK:', meta.properties && meta.properties.title);
+  }).catch(function(err){
+    console.error('Cloud test failed:', err);
+    showAlert && showAlert('אין חיבור לענן: '+ err.message, 'error');
+    try{ updateSyncStatus('⚠️','אין חיבור', 'sync-error'); }catch(e){}
+  });
+}
+
+
+function validateCloudSettings(){
+  var problems = [];
+  if(!apiKey) problems.push('apiKey חסר');
+  if(!sheetId) problems.push('sheetId חסר');
+  if(typeof scriptUrl === 'undefined' || !scriptUrl) problems.push('scriptUrl חסר (כתובת Apps Script)');
+  if(problems.length){
+    console.warn('בעיית הגדרות ענן:', problems.join(', '));
+    showAlert && showAlert('הגדרות ענן חסרות: ' + problems.join(', '), 'error');
+    try{ updateSyncStatus('⚠️','הגדרות חסרות', 'sync-error'); }catch(e){}
+    return false;
+  }
+  return true;
+}
+(function(){ try{ validateCloudSettings(); }catch(e){} })();
+
 </script>
 <script>
 // === Ensure employee list populates (bbEmployee & others) ===
@@ -2990,6 +3887,96 @@ if (document.readyState === 'loading'){
     setTimeout(refreshEmployeeSelects, 800);
   }
 })();
+
+function ensureDefaultEventDate(){
+    var el = document.getElementById('eventDate');
+    if (el && !el.value) {
+        el.value = getCurrentDate();
+    }
+}
+
+
+function toggleSelfCustom(){
+  var val = (document.getElementById('selfPeriod')||{}).value;
+  var box = document.getElementById('selfCustomRange');
+  if (!box) return;
+  box.style.display = (val === 'custom') ? 'block' : 'none';
+  if (val === 'custom'){
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), 1);
+    var end = new Date(now.getFullYear(), now.getMonth()+1, 0);
+    var fmt = d => d.toISOString().slice(0,10);
+    var s = document.getElementById('selfStart'); if (s && !s.value) s.value = fmt(start);
+    var e = document.getElementById('selfEnd'); if (e && !e.value) e.value = fmt(end);
+  }
+}
+
+
+// /*wrap_self_update*/ keep custom UI in sync on updates
+(function(){
+  var _u = window.updateAll;
+  window.updateAll = function(){
+    if (typeof _u === 'function') _u.apply(this, arguments);
+    try{ toggleSelfCustom(); }catch(e){}
+  };
+})();
+
+
+function openSelfPrevMonth(){
+  try{
+    var currentEmp = (document.getElementById('employeeSelect')||{}).value || null;
+    showPage('self');
+    setTimeout(function(){
+      try{
+        var selfEmpSel = document.getElementById('selfEmployee');
+        if (selfEmpSel && currentEmp) selfEmpSel.value = currentEmp;
+        var p = document.getElementById('selfPeriod');
+        if (p){ p.value = 'prevMonth'; }
+        if (typeof toggleSelfCustom === 'function') toggleSelfCustom();
+        if (typeof renderSelf === 'function') renderSelf();
+      }catch(e){}
+    }, 0);
+  }catch(e){
+    if (typeof showAlert === 'function') showAlert('שגיאה בפתיחת דוח החודש הקודם','error');
+  }
+}
+
+
+function testCloud(){
+  try{
+    updateSyncStatus && updateSyncStatus('🔍','בודק חיבור...', 'sync-syncing');
+  }catch(e){}
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + apiKey;
+  fetch(url).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(meta){
+    showAlert && showAlert('חיבור לענן תקין ✅', 'success');
+    try{ updateSyncStatus('✅','מחובר', 'sync-ok'); }catch(e){}
+    console.log('Sheets meta OK:', meta.properties && meta.properties.title);
+  }).catch(function(err){
+    console.error('Cloud test failed:', err);
+    showAlert && showAlert('אין חיבור לענן: '+ err.message, 'error');
+    try{ updateSyncStatus('⚠️','אין חיבור', 'sync-error'); }catch(e){}
+  });
+}
+
+
+function validateCloudSettings(){
+  var problems = [];
+  if(!apiKey) problems.push('apiKey חסר');
+  if(!sheetId) problems.push('sheetId חסר');
+  if(typeof scriptUrl === 'undefined' || !scriptUrl) problems.push('scriptUrl חסר (כתובת Apps Script)');
+  if(problems.length){
+    console.warn('בעיית הגדרות ענן:', problems.join(', '));
+    showAlert && showAlert('הגדרות ענן חסרות: ' + problems.join(', '), 'error');
+    try{ updateSyncStatus('⚠️','הגדרות חסרות', 'sync-error'); }catch(e){}
+    return false;
+  }
+  return true;
+}
+(function(){ try{ validateCloudSettings(); }catch(e){} })();
+
 </script>
 <!-- RB_PATCH: cancel_harden + detailed_open_btn -->
 <script>
@@ -3077,6 +4064,96 @@ if (document.readyState === 'loading'){
     }
   };
 })();
+
+function ensureDefaultEventDate(){
+    var el = document.getElementById('eventDate');
+    if (el && !el.value) {
+        el.value = getCurrentDate();
+    }
+}
+
+
+function toggleSelfCustom(){
+  var val = (document.getElementById('selfPeriod')||{}).value;
+  var box = document.getElementById('selfCustomRange');
+  if (!box) return;
+  box.style.display = (val === 'custom') ? 'block' : 'none';
+  if (val === 'custom'){
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), 1);
+    var end = new Date(now.getFullYear(), now.getMonth()+1, 0);
+    var fmt = d => d.toISOString().slice(0,10);
+    var s = document.getElementById('selfStart'); if (s && !s.value) s.value = fmt(start);
+    var e = document.getElementById('selfEnd'); if (e && !e.value) e.value = fmt(end);
+  }
+}
+
+
+// /*wrap_self_update*/ keep custom UI in sync on updates
+(function(){
+  var _u = window.updateAll;
+  window.updateAll = function(){
+    if (typeof _u === 'function') _u.apply(this, arguments);
+    try{ toggleSelfCustom(); }catch(e){}
+  };
+})();
+
+
+function openSelfPrevMonth(){
+  try{
+    var currentEmp = (document.getElementById('employeeSelect')||{}).value || null;
+    showPage('self');
+    setTimeout(function(){
+      try{
+        var selfEmpSel = document.getElementById('selfEmployee');
+        if (selfEmpSel && currentEmp) selfEmpSel.value = currentEmp;
+        var p = document.getElementById('selfPeriod');
+        if (p){ p.value = 'prevMonth'; }
+        if (typeof toggleSelfCustom === 'function') toggleSelfCustom();
+        if (typeof renderSelf === 'function') renderSelf();
+      }catch(e){}
+    }, 0);
+  }catch(e){
+    if (typeof showAlert === 'function') showAlert('שגיאה בפתיחת דוח החודש הקודם','error');
+  }
+}
+
+
+function testCloud(){
+  try{
+    updateSyncStatus && updateSyncStatus('🔍','בודק חיבור...', 'sync-syncing');
+  }catch(e){}
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + apiKey;
+  fetch(url).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(meta){
+    showAlert && showAlert('חיבור לענן תקין ✅', 'success');
+    try{ updateSyncStatus('✅','מחובר', 'sync-ok'); }catch(e){}
+    console.log('Sheets meta OK:', meta.properties && meta.properties.title);
+  }).catch(function(err){
+    console.error('Cloud test failed:', err);
+    showAlert && showAlert('אין חיבור לענן: '+ err.message, 'error');
+    try{ updateSyncStatus('⚠️','אין חיבור', 'sync-error'); }catch(e){}
+  });
+}
+
+
+function validateCloudSettings(){
+  var problems = [];
+  if(!apiKey) problems.push('apiKey חסר');
+  if(!sheetId) problems.push('sheetId חסר');
+  if(typeof scriptUrl === 'undefined' || !scriptUrl) problems.push('scriptUrl חסר (כתובת Apps Script)');
+  if(problems.length){
+    console.warn('בעיית הגדרות ענן:', problems.join(', '));
+    showAlert && showAlert('הגדרות ענן חסרות: ' + problems.join(', '), 'error');
+    try{ updateSyncStatus('⚠️','הגדרות חסרות', 'sync-error'); }catch(e){}
+    return false;
+  }
+  return true;
+}
+(function(){ try{ validateCloudSettings(); }catch(e){} })();
+
 </script>
 
 <!-- RB_PATCH: admin_retro_event_only -->
@@ -3153,6 +4230,14 @@ if (document.readyState === 'loading'){
   };
 })();
 
+function ensureDefaultEventDate(){
+    var el = document.getElementById('eventDate');
+    if (el && !el.value) {
+        el.value = getCurrentDate();
+    }
+}
+
+
 function toggleSelfCustom(){
   var val = (document.getElementById('selfPeriod')||{}).value;
   var box = document.getElementById('selfCustomRange');
@@ -3169,10 +4254,20 @@ function toggleSelfCustom(){
 }
 
 
+// /*wrap_self_update*/ keep custom UI in sync on updates
+(function(){
+  var _u = window.updateAll;
+  window.updateAll = function(){
+    if (typeof _u === 'function') _u.apply(this, arguments);
+    try{ toggleSelfCustom(); }catch(e){}
+  };
+})();
+
+
 function openSelfPrevMonth(){
   try{
     var currentEmp = (document.getElementById('employeeSelect')||{}).value || null;
-    showPage && showPage('self');
+    showPage('self');
     setTimeout(function(){
       try{
         var selfEmpSel = document.getElementById('selfEmployee');
@@ -3183,8 +4278,78 @@ function openSelfPrevMonth(){
         if (typeof renderSelf === 'function') renderSelf();
       }catch(e){}
     }, 0);
+  }catch(e){
+    if (typeof showAlert === 'function') showAlert('שגיאה בפתיחת דוח החודש הקודם','error');
+  }
+}
+
+
+function testCloud(){
+  try{
+    updateSyncStatus && updateSyncStatus('🔍','בודק חיבור...', 'sync-syncing');
+  }catch(e){}
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + apiKey;
+  fetch(url).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(meta){
+    showAlert && showAlert('חיבור לענן תקין ✅', 'success');
+    try{ updateSyncStatus('✅','מחובר', 'sync-ok'); }catch(e){}
+    console.log('Sheets meta OK:', meta.properties && meta.properties.title);
+  }).catch(function(err){
+    console.error('Cloud test failed:', err);
+    showAlert && showAlert('אין חיבור לענן: '+ err.message, 'error');
+    try{ updateSyncStatus('⚠️','אין חיבור', 'sync-error'); }catch(e){}
+  });
+}
+
+
+function validateCloudSettings(){
+  var problems = [];
+  if(!apiKey) problems.push('apiKey חסר');
+  if(!sheetId) problems.push('sheetId חסר');
+  if(typeof scriptUrl === 'undefined' || !scriptUrl) problems.push('scriptUrl חסר (כתובת Apps Script)');
+  if(problems.length){
+    console.warn('בעיית הגדרות ענן:', problems.join(', '));
+    showAlert && showAlert('הגדרות ענן חסרות: ' + problems.join(', '), 'error');
+    try{ updateSyncStatus('⚠️','הגדרות חסרות', 'sync-error'); }catch(e){}
+    return false;
+  }
+  return true;
+}
+(function(){ try{ validateCloudSettings(); }catch(e){} })();
+
+
+// -------- Non-blocking startup + offline fallback --------
+var STARTUP_CLOUD_TIMEOUT = 3500; // ms
+function employeesFromSettingsOrLocal(){
+  try {
+    var local = [];
+    try{ local = JSON.parse(localStorage.getItem('employees')||'[]'); }catch(e){}
+    var embed = (typeof EMBEDDED_SETTINGS!=='undefined' ? EMBEDDED_SETTINGS : (typeof SETTINGS!=='undefined'?SETTINGS:{}));
+    var cfg = (embed && Array.isArray(embed.employees)) ? embed.employees : [];
+    return (local && local.length) ? local : cfg;
+  } catch(e){ return []; }
+}
+function fillEmployeeSelects(list){
+  try{
+    var opts = '<option value="">… בחר עובד</option>' + list.map(function(n){return '<option value="'+n+'">'+n+'</option>';}).join('');
+    var sel1 = document.getElementById('employeeSelect'); if (sel1) sel1.innerHTML = opts;
+    var sel2 = document.getElementById('selfEmployee');  if (sel2) sel2.innerHTML = opts;
   }catch(e){}
 }
+function bootOfflineFallback(){
+  var list = employeesFromSettingsOrLocal();
+  if (list && list.length) fillEmployeeSelects(list);
+  try{ updateSyncStatus && updateSyncStatus('⏳','מנסה להתחבר…','sync-syncing'); }catch(e){}
+  setTimeout(function(){
+    if (!window.__cloudInitialized){
+      try{ updateSyncStatus && updateSyncStatus('⚠️','לא מחובר (מצב מקומי)','sync-error'); }catch(e){}
+      console.warn('Cloud connection timeout -> using offline data');
+    }
+  }, STARTUP_CLOUD_TIMEOUT);
+}
+document.addEventListener('DOMContentLoaded', bootOfflineFallback);
 
 </script>
 
