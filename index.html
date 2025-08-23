@@ -764,6 +764,8 @@
 </div>
 </div>
 <div class="quick-actions">
+<button class="btn btn-admin" onclick="openSelfPrevMonth()" title="דוח אישי – החודש הקודם">דוח החודש הקודם</button>
+
 <div class="quick-action" onclick="showEmployeesStatus()">
 <div class="quick-action-value" id="activeCount">0</div>
 <div class="quick-action-label">עובדים פעילים</div>
@@ -793,11 +795,17 @@
 </div>
 <div class="form-group">
 <label>תקופה:</label>
-<select id="selfPeriod">
-<option selected="" value="month">החודש</option>
+<select id="selfPeriod" onchange="toggleSelfCustom()"><option selected="" value="month">החודש</option>
 <option value="week">השבוע</option>
 <option value="today">היום</option>
+  <option value="prevMonth">החודש הקודם</option>
+  <option value="custom">טווח תאריכים…</option>
 </select>
+<div id="selfCustomRange" style="display:none; margin:8px 0;">
+  <div class="form-group"><label>מתאריך:</label> <input type="date" id="selfStart"></div>
+  <div class="form-group"><label>עד תאריך:</label> <input type="date" id="selfEnd"></div>
+</div>
+
 </div>
 <button class="btn btn-admin" onclick="renderSelf()" style="width:100%;">הצג דוח</button>
 <div class="detailed-reports-table" style="margin-top:12px;">
@@ -1951,6 +1959,52 @@ function ensureDefaultEventDate(){
     }
 }
 
+
+function toggleSelfCustom(){
+  var val = (document.getElementById('selfPeriod')||{}).value;
+  var box = document.getElementById('selfCustomRange');
+  if (!box) return;
+  box.style.display = (val === 'custom') ? 'block' : 'none';
+  if (val === 'custom'){
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), 1);
+    var end = new Date(now.getFullYear(), now.getMonth()+1, 0);
+    var fmt = d => d.toISOString().slice(0,10);
+    var s = document.getElementById('selfStart'); if (s && !s.value) s.value = fmt(start);
+    var e = document.getElementById('selfEnd'); if (e && !e.value) e.value = fmt(end);
+  }
+}
+
+
+// /*wrap_self_update*/ keep custom UI in sync on updates
+(function(){
+  var _u = window.updateAll;
+  window.updateAll = function(){
+    if (typeof _u === 'function') _u.apply(this, arguments);
+    try{ toggleSelfCustom(); }catch(e){}
+  };
+})();
+
+
+function openSelfPrevMonth(){
+  try{
+    var currentEmp = (document.getElementById('employeeSelect')||{}).value || null;
+    showPage('self');
+    setTimeout(function(){
+      try{
+        var selfEmpSel = document.getElementById('selfEmployee');
+        if (selfEmpSel && currentEmp) selfEmpSel.value = currentEmp;
+        var p = document.getElementById('selfPeriod');
+        if (p){ p.value = 'prevMonth'; }
+        if (typeof toggleSelfCustom === 'function') toggleSelfCustom();
+        if (typeof renderSelf === 'function') renderSelf();
+      }catch(e){}
+    }, 0);
+  }catch(e){
+    if (typeof showAlert === 'function') showAlert('שגיאה בפתיחת דוח החודש הקודם','error');
+  }
+}
+
 </script>
 <script>
   // שימוש בקוד מנהל לעמוד "דוחות"
@@ -2000,6 +2054,52 @@ function ensureDefaultEventDate(){
     }
 }
 
+
+function toggleSelfCustom(){
+  var val = (document.getElementById('selfPeriod')||{}).value;
+  var box = document.getElementById('selfCustomRange');
+  if (!box) return;
+  box.style.display = (val === 'custom') ? 'block' : 'none';
+  if (val === 'custom'){
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), 1);
+    var end = new Date(now.getFullYear(), now.getMonth()+1, 0);
+    var fmt = d => d.toISOString().slice(0,10);
+    var s = document.getElementById('selfStart'); if (s && !s.value) s.value = fmt(start);
+    var e = document.getElementById('selfEnd'); if (e && !e.value) e.value = fmt(end);
+  }
+}
+
+
+// /*wrap_self_update*/ keep custom UI in sync on updates
+(function(){
+  var _u = window.updateAll;
+  window.updateAll = function(){
+    if (typeof _u === 'function') _u.apply(this, arguments);
+    try{ toggleSelfCustom(); }catch(e){}
+  };
+})();
+
+
+function openSelfPrevMonth(){
+  try{
+    var currentEmp = (document.getElementById('employeeSelect')||{}).value || null;
+    showPage('self');
+    setTimeout(function(){
+      try{
+        var selfEmpSel = document.getElementById('selfEmployee');
+        if (selfEmpSel && currentEmp) selfEmpSel.value = currentEmp;
+        var p = document.getElementById('selfPeriod');
+        if (p){ p.value = 'prevMonth'; }
+        if (typeof toggleSelfCustom === 'function') toggleSelfCustom();
+        if (typeof renderSelf === 'function') renderSelf();
+      }catch(e){}
+    }, 0);
+  }catch(e){
+    if (typeof showAlert === 'function') showAlert('שגיאה בפתיחת דוח החודש הקודם','error');
+  }
+}
+
 </script>
 <div id="floatingLogoutBtn" style="display:none; position:fixed; top:10px; right:10px; z-index:9999; background:none; border:none; font-size:26px; cursor:pointer; line-height:1;" title="התנתק">
   🚪
@@ -2034,6 +2134,52 @@ function ensureDefaultEventDate(){
     if (el && !el.value) {
         el.value = getCurrentDate();
     }
+}
+
+
+function toggleSelfCustom(){
+  var val = (document.getElementById('selfPeriod')||{}).value;
+  var box = document.getElementById('selfCustomRange');
+  if (!box) return;
+  box.style.display = (val === 'custom') ? 'block' : 'none';
+  if (val === 'custom'){
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), 1);
+    var end = new Date(now.getFullYear(), now.getMonth()+1, 0);
+    var fmt = d => d.toISOString().slice(0,10);
+    var s = document.getElementById('selfStart'); if (s && !s.value) s.value = fmt(start);
+    var e = document.getElementById('selfEnd'); if (e && !e.value) e.value = fmt(end);
+  }
+}
+
+
+// /*wrap_self_update*/ keep custom UI in sync on updates
+(function(){
+  var _u = window.updateAll;
+  window.updateAll = function(){
+    if (typeof _u === 'function') _u.apply(this, arguments);
+    try{ toggleSelfCustom(); }catch(e){}
+  };
+})();
+
+
+function openSelfPrevMonth(){
+  try{
+    var currentEmp = (document.getElementById('employeeSelect')||{}).value || null;
+    showPage('self');
+    setTimeout(function(){
+      try{
+        var selfEmpSel = document.getElementById('selfEmployee');
+        if (selfEmpSel && currentEmp) selfEmpSel.value = currentEmp;
+        var p = document.getElementById('selfPeriod');
+        if (p){ p.value = 'prevMonth'; }
+        if (typeof toggleSelfCustom === 'function') toggleSelfCustom();
+        if (typeof renderSelf === 'function') renderSelf();
+      }catch(e){}
+    }, 0);
+  }catch(e){
+    if (typeof showAlert === 'function') showAlert('שגיאה בפתיחת דוח החודש הקודם','error');
+  }
 }
 
 </script>
@@ -2150,6 +2296,52 @@ function ensureDefaultEventDate(){
     if (el && !el.value) {
         el.value = getCurrentDate();
     }
+}
+
+
+function toggleSelfCustom(){
+  var val = (document.getElementById('selfPeriod')||{}).value;
+  var box = document.getElementById('selfCustomRange');
+  if (!box) return;
+  box.style.display = (val === 'custom') ? 'block' : 'none';
+  if (val === 'custom'){
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), 1);
+    var end = new Date(now.getFullYear(), now.getMonth()+1, 0);
+    var fmt = d => d.toISOString().slice(0,10);
+    var s = document.getElementById('selfStart'); if (s && !s.value) s.value = fmt(start);
+    var e = document.getElementById('selfEnd'); if (e && !e.value) e.value = fmt(end);
+  }
+}
+
+
+// /*wrap_self_update*/ keep custom UI in sync on updates
+(function(){
+  var _u = window.updateAll;
+  window.updateAll = function(){
+    if (typeof _u === 'function') _u.apply(this, arguments);
+    try{ toggleSelfCustom(); }catch(e){}
+  };
+})();
+
+
+function openSelfPrevMonth(){
+  try{
+    var currentEmp = (document.getElementById('employeeSelect')||{}).value || null;
+    showPage('self');
+    setTimeout(function(){
+      try{
+        var selfEmpSel = document.getElementById('selfEmployee');
+        if (selfEmpSel && currentEmp) selfEmpSel.value = currentEmp;
+        var p = document.getElementById('selfPeriod');
+        if (p){ p.value = 'prevMonth'; }
+        if (typeof toggleSelfCustom === 'function') toggleSelfCustom();
+        if (typeof renderSelf === 'function') renderSelf();
+      }catch(e){}
+    }, 0);
+  }catch(e){
+    if (typeof showAlert === 'function') showAlert('שגיאה בפתיחת דוח החודש הקודם','error');
+  }
 }
 
 </script>
@@ -2421,13 +2613,29 @@ function ensureDefaultEventDate(){
 
 
 /*** Self Report Page ***/
+
 function selfDateRange(period){
   var end = new Date(); end.setHours(23,59,59,999);
   var start = new Date(end);
-  if (period === 'today') start = new Date(end.getFullYear(), end.getMonth(), end.getDate(),0,0,0,0);
-  else if (period === 'week') start.setDate(end.getDate() - 6);
-  else start = new Date(end.getFullYear(), end.getMonth(), 1,0,0,0,0);
+  if (period === 'today') {
+    start = new Date(end.getFullYear(), end.getMonth(), end.getDate(),0,0,0,0);
+  } else if (period === 'week') {
+    start.setDate(end.getDate() - 6);
+  } else if (period === 'prevMonth') {
+    var y = end.getFullYear(), m = end.getMonth();
+    start = new Date(y, m-1, 1,0,0,0,0);
+    end   = new Date(y, m,   0,23,59,59,999);
+  } else if (period === 'custom') {
+    var s = document.getElementById('selfStart')?.value;
+    var e = document.getElementById('selfEnd')?.value;
+    if (s) { var ps = s.split('-'); start = new Date(+ps[0], +ps[1]-1, +ps[2],0,0,0,0); }
+    if (e) { var pe = e.split('-'); end   = new Date(+pe[0], +pe[1]-1, +pe[2],23,59,59,999); }
+  } else {
+    start = new Date(end.getFullYear(), end.getMonth(), 1,0,0,0,0);
+  }
   return {start:start, end:end};
+}
+;
 }
 function fillSelfEmployees(){
   var sel = document.getElementById('selfEmployee');
@@ -2502,6 +2710,52 @@ function ensureDefaultEventDate(){
     if (el && !el.value) {
         el.value = getCurrentDate();
     }
+}
+
+
+function toggleSelfCustom(){
+  var val = (document.getElementById('selfPeriod')||{}).value;
+  var box = document.getElementById('selfCustomRange');
+  if (!box) return;
+  box.style.display = (val === 'custom') ? 'block' : 'none';
+  if (val === 'custom'){
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), 1);
+    var end = new Date(now.getFullYear(), now.getMonth()+1, 0);
+    var fmt = d => d.toISOString().slice(0,10);
+    var s = document.getElementById('selfStart'); if (s && !s.value) s.value = fmt(start);
+    var e = document.getElementById('selfEnd'); if (e && !e.value) e.value = fmt(end);
+  }
+}
+
+
+// /*wrap_self_update*/ keep custom UI in sync on updates
+(function(){
+  var _u = window.updateAll;
+  window.updateAll = function(){
+    if (typeof _u === 'function') _u.apply(this, arguments);
+    try{ toggleSelfCustom(); }catch(e){}
+  };
+})();
+
+
+function openSelfPrevMonth(){
+  try{
+    var currentEmp = (document.getElementById('employeeSelect')||{}).value || null;
+    showPage('self');
+    setTimeout(function(){
+      try{
+        var selfEmpSel = document.getElementById('selfEmployee');
+        if (selfEmpSel && currentEmp) selfEmpSel.value = currentEmp;
+        var p = document.getElementById('selfPeriod');
+        if (p){ p.value = 'prevMonth'; }
+        if (typeof toggleSelfCustom === 'function') toggleSelfCustom();
+        if (typeof renderSelf === 'function') renderSelf();
+      }catch(e){}
+    }, 0);
+  }catch(e){
+    if (typeof showAlert === 'function') showAlert('שגיאה בפתיחת דוח החודש הקודם','error');
+  }
 }
 
 </script><div class="page" id="adminPage">
@@ -2780,6 +3034,52 @@ function ensureDefaultEventDate(){
     }
 }
 
+
+function toggleSelfCustom(){
+  var val = (document.getElementById('selfPeriod')||{}).value;
+  var box = document.getElementById('selfCustomRange');
+  if (!box) return;
+  box.style.display = (val === 'custom') ? 'block' : 'none';
+  if (val === 'custom'){
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), 1);
+    var end = new Date(now.getFullYear(), now.getMonth()+1, 0);
+    var fmt = d => d.toISOString().slice(0,10);
+    var s = document.getElementById('selfStart'); if (s && !s.value) s.value = fmt(start);
+    var e = document.getElementById('selfEnd'); if (e && !e.value) e.value = fmt(end);
+  }
+}
+
+
+// /*wrap_self_update*/ keep custom UI in sync on updates
+(function(){
+  var _u = window.updateAll;
+  window.updateAll = function(){
+    if (typeof _u === 'function') _u.apply(this, arguments);
+    try{ toggleSelfCustom(); }catch(e){}
+  };
+})();
+
+
+function openSelfPrevMonth(){
+  try{
+    var currentEmp = (document.getElementById('employeeSelect')||{}).value || null;
+    showPage('self');
+    setTimeout(function(){
+      try{
+        var selfEmpSel = document.getElementById('selfEmployee');
+        if (selfEmpSel && currentEmp) selfEmpSel.value = currentEmp;
+        var p = document.getElementById('selfPeriod');
+        if (p){ p.value = 'prevMonth'; }
+        if (typeof toggleSelfCustom === 'function') toggleSelfCustom();
+        if (typeof renderSelf === 'function') renderSelf();
+      }catch(e){}
+    }, 0);
+  }catch(e){
+    if (typeof showAlert === 'function') showAlert('שגיאה בפתיחת דוח החודש הקודם','error');
+  }
+}
+
 </script>
 <script>
 (function(){
@@ -2801,6 +3101,52 @@ function ensureDefaultEventDate(){
     if (el && !el.value) {
         el.value = getCurrentDate();
     }
+}
+
+
+function toggleSelfCustom(){
+  var val = (document.getElementById('selfPeriod')||{}).value;
+  var box = document.getElementById('selfCustomRange');
+  if (!box) return;
+  box.style.display = (val === 'custom') ? 'block' : 'none';
+  if (val === 'custom'){
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), 1);
+    var end = new Date(now.getFullYear(), now.getMonth()+1, 0);
+    var fmt = d => d.toISOString().slice(0,10);
+    var s = document.getElementById('selfStart'); if (s && !s.value) s.value = fmt(start);
+    var e = document.getElementById('selfEnd'); if (e && !e.value) e.value = fmt(end);
+  }
+}
+
+
+// /*wrap_self_update*/ keep custom UI in sync on updates
+(function(){
+  var _u = window.updateAll;
+  window.updateAll = function(){
+    if (typeof _u === 'function') _u.apply(this, arguments);
+    try{ toggleSelfCustom(); }catch(e){}
+  };
+})();
+
+
+function openSelfPrevMonth(){
+  try{
+    var currentEmp = (document.getElementById('employeeSelect')||{}).value || null;
+    showPage('self');
+    setTimeout(function(){
+      try{
+        var selfEmpSel = document.getElementById('selfEmployee');
+        if (selfEmpSel && currentEmp) selfEmpSel.value = currentEmp;
+        var p = document.getElementById('selfPeriod');
+        if (p){ p.value = 'prevMonth'; }
+        if (typeof toggleSelfCustom === 'function') toggleSelfCustom();
+        if (typeof renderSelf === 'function') renderSelf();
+      }catch(e){}
+    }, 0);
+  }catch(e){
+    if (typeof showAlert === 'function') showAlert('שגיאה בפתיחת דוח החודש הקודם','error');
+  }
 }
 
 </script>
@@ -2827,6 +3173,52 @@ function ensureDefaultEventDate(){
     }
 }
 
+
+function toggleSelfCustom(){
+  var val = (document.getElementById('selfPeriod')||{}).value;
+  var box = document.getElementById('selfCustomRange');
+  if (!box) return;
+  box.style.display = (val === 'custom') ? 'block' : 'none';
+  if (val === 'custom'){
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), 1);
+    var end = new Date(now.getFullYear(), now.getMonth()+1, 0);
+    var fmt = d => d.toISOString().slice(0,10);
+    var s = document.getElementById('selfStart'); if (s && !s.value) s.value = fmt(start);
+    var e = document.getElementById('selfEnd'); if (e && !e.value) e.value = fmt(end);
+  }
+}
+
+
+// /*wrap_self_update*/ keep custom UI in sync on updates
+(function(){
+  var _u = window.updateAll;
+  window.updateAll = function(){
+    if (typeof _u === 'function') _u.apply(this, arguments);
+    try{ toggleSelfCustom(); }catch(e){}
+  };
+})();
+
+
+function openSelfPrevMonth(){
+  try{
+    var currentEmp = (document.getElementById('employeeSelect')||{}).value || null;
+    showPage('self');
+    setTimeout(function(){
+      try{
+        var selfEmpSel = document.getElementById('selfEmployee');
+        if (selfEmpSel && currentEmp) selfEmpSel.value = currentEmp;
+        var p = document.getElementById('selfPeriod');
+        if (p){ p.value = 'prevMonth'; }
+        if (typeof toggleSelfCustom === 'function') toggleSelfCustom();
+        if (typeof renderSelf === 'function') renderSelf();
+      }catch(e){}
+    }, 0);
+  }catch(e){
+    if (typeof showAlert === 'function') showAlert('שגיאה בפתיחת דוח החודש הקודם','error');
+  }
+}
+
 </script>
 <script>
 function wireExportEventsBtn(){
@@ -2848,6 +3240,52 @@ function ensureDefaultEventDate(){
     if (el && !el.value) {
         el.value = getCurrentDate();
     }
+}
+
+
+function toggleSelfCustom(){
+  var val = (document.getElementById('selfPeriod')||{}).value;
+  var box = document.getElementById('selfCustomRange');
+  if (!box) return;
+  box.style.display = (val === 'custom') ? 'block' : 'none';
+  if (val === 'custom'){
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), 1);
+    var end = new Date(now.getFullYear(), now.getMonth()+1, 0);
+    var fmt = d => d.toISOString().slice(0,10);
+    var s = document.getElementById('selfStart'); if (s && !s.value) s.value = fmt(start);
+    var e = document.getElementById('selfEnd'); if (e && !e.value) e.value = fmt(end);
+  }
+}
+
+
+// /*wrap_self_update*/ keep custom UI in sync on updates
+(function(){
+  var _u = window.updateAll;
+  window.updateAll = function(){
+    if (typeof _u === 'function') _u.apply(this, arguments);
+    try{ toggleSelfCustom(); }catch(e){}
+  };
+})();
+
+
+function openSelfPrevMonth(){
+  try{
+    var currentEmp = (document.getElementById('employeeSelect')||{}).value || null;
+    showPage('self');
+    setTimeout(function(){
+      try{
+        var selfEmpSel = document.getElementById('selfEmployee');
+        if (selfEmpSel && currentEmp) selfEmpSel.value = currentEmp;
+        var p = document.getElementById('selfPeriod');
+        if (p){ p.value = 'prevMonth'; }
+        if (typeof toggleSelfCustom === 'function') toggleSelfCustom();
+        if (typeof renderSelf === 'function') renderSelf();
+      }catch(e){}
+    }, 0);
+  }catch(e){
+    if (typeof showAlert === 'function') showAlert('שגיאה בפתיחת דוח החודש הקודם','error');
+  }
 }
 
 </script>
@@ -2944,6 +3382,52 @@ function ensureDefaultEventDate(){
     if (el && !el.value) {
         el.value = getCurrentDate();
     }
+}
+
+
+function toggleSelfCustom(){
+  var val = (document.getElementById('selfPeriod')||{}).value;
+  var box = document.getElementById('selfCustomRange');
+  if (!box) return;
+  box.style.display = (val === 'custom') ? 'block' : 'none';
+  if (val === 'custom'){
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), 1);
+    var end = new Date(now.getFullYear(), now.getMonth()+1, 0);
+    var fmt = d => d.toISOString().slice(0,10);
+    var s = document.getElementById('selfStart'); if (s && !s.value) s.value = fmt(start);
+    var e = document.getElementById('selfEnd'); if (e && !e.value) e.value = fmt(end);
+  }
+}
+
+
+// /*wrap_self_update*/ keep custom UI in sync on updates
+(function(){
+  var _u = window.updateAll;
+  window.updateAll = function(){
+    if (typeof _u === 'function') _u.apply(this, arguments);
+    try{ toggleSelfCustom(); }catch(e){}
+  };
+})();
+
+
+function openSelfPrevMonth(){
+  try{
+    var currentEmp = (document.getElementById('employeeSelect')||{}).value || null;
+    showPage('self');
+    setTimeout(function(){
+      try{
+        var selfEmpSel = document.getElementById('selfEmployee');
+        if (selfEmpSel && currentEmp) selfEmpSel.value = currentEmp;
+        var p = document.getElementById('selfPeriod');
+        if (p){ p.value = 'prevMonth'; }
+        if (typeof toggleSelfCustom === 'function') toggleSelfCustom();
+        if (typeof renderSelf === 'function') renderSelf();
+      }catch(e){}
+    }, 0);
+  }catch(e){
+    if (typeof showAlert === 'function') showAlert('שגיאה בפתיחת דוח החודש הקודם','error');
+  }
 }
 
 </script>
@@ -3044,6 +3528,52 @@ function ensureDefaultEventDate(){
     }
 }
 
+
+function toggleSelfCustom(){
+  var val = (document.getElementById('selfPeriod')||{}).value;
+  var box = document.getElementById('selfCustomRange');
+  if (!box) return;
+  box.style.display = (val === 'custom') ? 'block' : 'none';
+  if (val === 'custom'){
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), 1);
+    var end = new Date(now.getFullYear(), now.getMonth()+1, 0);
+    var fmt = d => d.toISOString().slice(0,10);
+    var s = document.getElementById('selfStart'); if (s && !s.value) s.value = fmt(start);
+    var e = document.getElementById('selfEnd'); if (e && !e.value) e.value = fmt(end);
+  }
+}
+
+
+// /*wrap_self_update*/ keep custom UI in sync on updates
+(function(){
+  var _u = window.updateAll;
+  window.updateAll = function(){
+    if (typeof _u === 'function') _u.apply(this, arguments);
+    try{ toggleSelfCustom(); }catch(e){}
+  };
+})();
+
+
+function openSelfPrevMonth(){
+  try{
+    var currentEmp = (document.getElementById('employeeSelect')||{}).value || null;
+    showPage('self');
+    setTimeout(function(){
+      try{
+        var selfEmpSel = document.getElementById('selfEmployee');
+        if (selfEmpSel && currentEmp) selfEmpSel.value = currentEmp;
+        var p = document.getElementById('selfPeriod');
+        if (p){ p.value = 'prevMonth'; }
+        if (typeof toggleSelfCustom === 'function') toggleSelfCustom();
+        if (typeof renderSelf === 'function') renderSelf();
+      }catch(e){}
+    }, 0);
+  }catch(e){
+    if (typeof showAlert === 'function') showAlert('שגיאה בפתיחת דוח החודש הקודם','error');
+  }
+}
+
 </script>
 <!-- RB_PATCH: cancel_harden + detailed_open_btn -->
 <script>
@@ -3139,6 +3669,52 @@ function ensureDefaultEventDate(){
     }
 }
 
+
+function toggleSelfCustom(){
+  var val = (document.getElementById('selfPeriod')||{}).value;
+  var box = document.getElementById('selfCustomRange');
+  if (!box) return;
+  box.style.display = (val === 'custom') ? 'block' : 'none';
+  if (val === 'custom'){
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), 1);
+    var end = new Date(now.getFullYear(), now.getMonth()+1, 0);
+    var fmt = d => d.toISOString().slice(0,10);
+    var s = document.getElementById('selfStart'); if (s && !s.value) s.value = fmt(start);
+    var e = document.getElementById('selfEnd'); if (e && !e.value) e.value = fmt(end);
+  }
+}
+
+
+// /*wrap_self_update*/ keep custom UI in sync on updates
+(function(){
+  var _u = window.updateAll;
+  window.updateAll = function(){
+    if (typeof _u === 'function') _u.apply(this, arguments);
+    try{ toggleSelfCustom(); }catch(e){}
+  };
+})();
+
+
+function openSelfPrevMonth(){
+  try{
+    var currentEmp = (document.getElementById('employeeSelect')||{}).value || null;
+    showPage('self');
+    setTimeout(function(){
+      try{
+        var selfEmpSel = document.getElementById('selfEmployee');
+        if (selfEmpSel && currentEmp) selfEmpSel.value = currentEmp;
+        var p = document.getElementById('selfPeriod');
+        if (p){ p.value = 'prevMonth'; }
+        if (typeof toggleSelfCustom === 'function') toggleSelfCustom();
+        if (typeof renderSelf === 'function') renderSelf();
+      }catch(e){}
+    }, 0);
+  }catch(e){
+    if (typeof showAlert === 'function') showAlert('שגיאה בפתיחת דוח החודש הקודם','error');
+  }
+}
+
 </script>
 
 <!-- RB_PATCH: admin_retro_event_only -->
@@ -3220,6 +3796,52 @@ function ensureDefaultEventDate(){
     if (el && !el.value) {
         el.value = getCurrentDate();
     }
+}
+
+
+function toggleSelfCustom(){
+  var val = (document.getElementById('selfPeriod')||{}).value;
+  var box = document.getElementById('selfCustomRange');
+  if (!box) return;
+  box.style.display = (val === 'custom') ? 'block' : 'none';
+  if (val === 'custom'){
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), 1);
+    var end = new Date(now.getFullYear(), now.getMonth()+1, 0);
+    var fmt = d => d.toISOString().slice(0,10);
+    var s = document.getElementById('selfStart'); if (s && !s.value) s.value = fmt(start);
+    var e = document.getElementById('selfEnd'); if (e && !e.value) e.value = fmt(end);
+  }
+}
+
+
+// /*wrap_self_update*/ keep custom UI in sync on updates
+(function(){
+  var _u = window.updateAll;
+  window.updateAll = function(){
+    if (typeof _u === 'function') _u.apply(this, arguments);
+    try{ toggleSelfCustom(); }catch(e){}
+  };
+})();
+
+
+function openSelfPrevMonth(){
+  try{
+    var currentEmp = (document.getElementById('employeeSelect')||{}).value || null;
+    showPage('self');
+    setTimeout(function(){
+      try{
+        var selfEmpSel = document.getElementById('selfEmployee');
+        if (selfEmpSel && currentEmp) selfEmpSel.value = currentEmp;
+        var p = document.getElementById('selfPeriod');
+        if (p){ p.value = 'prevMonth'; }
+        if (typeof toggleSelfCustom === 'function') toggleSelfCustom();
+        if (typeof renderSelf === 'function') renderSelf();
+      }catch(e){}
+    }, 0);
+  }catch(e){
+    if (typeof showAlert === 'function') showAlert('שגיאה בפתיחת דוח החודש הקודם','error');
+  }
 }
 
 </script>
