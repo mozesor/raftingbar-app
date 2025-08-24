@@ -3598,5 +3598,259 @@ if (document.readyState === 'loading'){
 })();
 </script>
 
+
+
+<!-- RB_PATCH: month_nav_prev_next -->
+<script>
+(function(){
+  "use strict";
+  var MONTH_STATE = { offset: 0 };
+
+  function byId(id){ return document.getElementById(id); }
+  function qs(sel, root){ return (root||document).querySelector(sel); }
+
+  function formatHebMonth(d){
+    try { return d.toLocaleDateString('he-IL', { year:'numeric', month:'long' }); }
+    catch(e){ return d.getFullYear() + "-" + (('0'+(d.getMonth()+1)).slice(-2)); }
+  }
+  function yyyymm(d){ var y=d.getFullYear(); var m=('0'+(d.getMonth()+1)).slice(-2); return y+'-'+m; }
+
+  function monthStart(date, offset){
+    var y = date.getFullYear(), m = date.getMonth() + (offset||0);
+    return new Date(y, m, 1);
+  }
+  function monthEnd(date, offset){
+    var y = date.getFullYear(), m = date.getMonth() + (offset||0);
+    var last = new Date(y, m+1, 0);
+    var today = new Date();
+    var isCurrent = (new Date(y, m, 1).getMonth() === today.getMonth()) && (new Date(y, m, 1).getFullYear() === today.getFullYear());
+    return isCurrent ? today : last;
+  }
+
+  function setInputValue(id, date){
+    var el = byId(id);
+    if (!el) return;
+    var iso = new Date(date.getTime() - date.getTimezoneOffset()*60000).toISOString().slice(0,10);
+    el.value = iso;
+  }
+
+  function ensureCustomVisible(){
+    var period = byId('detailedPeriodFilter') || byId('reportsPeriodFilter');
+    if (period){ period.value = 'custom'; }
+    if (typeof toggleDetailedCustomDateRange === 'function'){ try { toggleDetailedCustomDateRange(); } catch(e){} }
+    if (typeof toggleReportsCustomDateRange === 'function'){ try { toggleReportsCustomDateRange(); } catch(e){} }
+  }
+
+  function refreshReports(){
+    var fns = [window.updateDetailedReports, window.updateReportsPage, window.updateReports, window.updateReportsSummary];
+    for (var i=0;i<fns.length;i++){ if (typeof fns[i] === 'function'){ try{ fns[i](); }catch(e){} } }
+  }
+
+  function applyMonth(offset){
+    MONTH_STATE.offset = offset;
+    var base = new Date();
+    var s = monthStart(base, offset);
+    var e = monthEnd(base, offset);
+    ensureCustomVisible();
+    setInputValue('detailedStartDate', s); setInputValue('detailedEndDate', e);
+    setInputValue('reportsStartDate', s);  setInputValue('reportsEndDate', e);
+    var label = byId('rbMonthLabel');
+    if (label){ label.textContent = formatHebMonth(s); }
+    var mp = byId('rbMonthPicker'); if (mp){ mp.value = yyyymm(s); }
+    refreshReports();
+  }
+
+  function diffMonths(target, base){
+    return (target.getFullYear()-base.getFullYear())*12 + (target.getMonth()-base.getMonth());
+  }
+
+  function onPickerChange(){
+    var mp = byId('rbMonthPicker');
+    if (!mp || !mp.value) return;
+    var parts = mp.value.split('-');
+    var y = parseInt(parts[0],10), m = parseInt(parts[1],10)-1;
+    var target = new Date(y, m, 1);
+    var now = new Date();
+    var off = diffMonths(target, new Date(now.getFullYear(), now.getMonth(), 1));
+    applyMonth(off);
+  }
+
+  function shiftMonth(delta){ applyMonth((MONTH_STATE.offset||0) + delta); }
+
+  function findFiltersContainer(){
+    return qs('.detailed-reports-filters')
+        || byId('reportsFilters')
+        || qs('#reportsContent .filters')
+        || qs('#reportsPage .filters')
+        || qs('#reportsContent')
+        || qs('#reportsPage');
+  }
+
+  function ensureMonthNav(){
+    var container = findFiltersContainer();
+    if (!container) return;
+    if (byId('rbMonthNav')) return;
+
+    var row = document.createElement('div');
+    row.className = 'filter-row';
+    row.id = 'rbMonthNav';
+    // max attribute prevents future months
+    var today = new Date();
+    var maxVal = yyyymm(today);
+    row.innerHTML = ''
+      + '<div class="filter-group" style="grid-column: 1 / -1; display:flex; flex-direction:row; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-start;">'
+      + '  <button class="btn" id="rbPrevMonth" type="button">◀️ חודש קודם</button>'
+      + '  <button class="btn" id="rbThisMonth" type="button">⬅️ החודש</button>'
+      + '  <button class="btn" id="rbNextMonth" type="button">חודש הבא ▶️</button>'
+      + '  <input type="month" id="rbMonthPicker" style="padding:8px; border:2px solid #ddd; border-radius:8px; font-size:14px;" />'
+      + '  <span id="rbMonthLabel" style="font-weight:700; padding:6px 10px; background:#f1f5f9; border-radius:8px;"></span>'
+      + '</div>';
+
+    var firstRow = qs('.detailed-reports-filters .filter-row') || qs('#reportsFilters .filter-row') || null;
+    if (firstRow && firstRow.parentNode) { firstRow.parentNode.insertBefore(row, firstRow.nextSibling); }
+    else { container.appendChild(row); }
+
+    byId('rbPrevMonth').addEventListener('click', function(){ shiftMonth(-1); });
+    byId('rbNextMonth').addEventListener('click', function(){ shiftMonth(1); });
+    byId('rbThisMonth').addEventListener('click', function(){ applyMonth(0); });
+
+    var mp = byId('rbMonthPicker');
+    if (mp){ mp.max = maxVal; mp.addEventListener('change', onPickerChange); }
+
+    var start = monthStart(new Date(), 0);
+    var label = byId('rbMonthLabel');
+    if (label) label.textContent = formatHebMonth(start);
+    if (mp) mp.value = yyyymm(start);
+  }
+
+  var _showPage = window.showPage;
+  window.showPage = function(name){
+    if (typeof _showPage === 'function') try { _showPage.apply(this, arguments); } catch(e){}
+    if (name === 'detailedReports' || name === 'detailed' || name === 'reports') {
+      setTimeout(function(){ try{ ensureMonthNav(); }catch(e){} }, 50);
+    }
+  };
+
+  document.addEventListener('DOMContentLoaded', function(){
+    try{ ensureMonthNav(); } catch(e){}
+  });
+})();
+</script>
+
+
+
+
+<!-- RB_PATCH: self_month_nav -->
+<script>
+(function(){
+  "use strict";
+  window.__SELF_MONTH_OFFSET = 0;
+  function byId(id){ return document.getElementById(id); }
+  function qs(sel, root){ return (root||document).querySelector(sel); }
+  function formatHebMonth(d){
+    try { return d.toLocaleDateString('he-IL', { year:'numeric', month:'long' }); }
+    catch(e){ return d.getFullYear() + "-" + (('0'+(d.getMonth()+1)).slice(-2)); }
+  }
+  function yyyymm(d){ var y=d.getFullYear(); var m=('0'+(d.getMonth()+1)).slice(-2); return y+'-'+m; }
+  function monthStart(base, off){ var y=base.getFullYear(), m=base.getMonth()+(off||0); return new Date(y, m, 1,0,0,0,0); }
+  function monthEnd(base, off){
+    var y=base.getFullYear(), m=base.getMonth()+(off||0);
+    var end = new Date(y, m+1, 0, 23,59,59,999);
+    var today = new Date();
+    var curStart = new Date(today.getFullYear(), today.getMonth(), 1,0,0,0,0);
+    if (end >= today && monthStart(base, off).getTime() === curStart.getTime()) end = today;
+    return end;
+  }
+  if (typeof window.selfDateRange === 'function'){
+    var _selfDateRange = window.selfDateRange;
+    window.selfDateRange = function(period){
+      var rng = _selfDateRange(period);
+      if (period === 'month'){
+        var base = new Date();
+        var start = monthStart(base, window.__SELF_MONTH_OFFSET||0);
+        var end   = monthEnd(base, window.__SELF_MONTH_OFFSET||0);
+        return { start:start, end:end };
+      }
+      return rng;
+    };
+  }
+  function updateSelfNav(){
+    var label = byId('selfMonthLabel');
+    var nextBtn = byId('selfNextMonth');
+    var mp = byId('selfMonthPicker');
+    var base = new Date();
+    var start = monthStart(base, window.__SELF_MONTH_OFFSET||0);
+    if (label) label.textContent = formatHebMonth(start);
+    if (mp) mp.value = yyyymm(start);
+    if (nextBtn){
+      nextBtn.disabled = (window.__SELF_MONTH_OFFSET||0) >= 0;
+      nextBtn.style.opacity = nextBtn.disabled ? 0.6 : 1;
+      nextBtn.style.cursor = nextBtn.disabled ? 'not-allowed' : 'pointer';
+    }
+  }
+  function applySelfMonth(offset){
+    window.__SELF_MONTH_OFFSET = offset;
+    var p = byId('selfPeriod'); if (p) p.value = 'month';
+    updateSelfNav();
+    if (typeof window.renderSelf === 'function'){ try { window.renderSelf(); } catch(e){} }
+  }
+  function diffMonths(target, base){
+    return (target.getFullYear()-base.getFullYear())*12 + (target.getMonth()-base.getMonth());
+  }
+  function onSelfPickerChange(){
+    var mp = byId('selfMonthPicker');
+    if (!mp || !mp.value) return;
+    var parts = mp.value.split('-');
+    var y = parseInt(parts[0],10), m = parseInt(parts[1],10)-1;
+    var target = new Date(y, m, 1);
+    var now = new Date();
+    var off = diffMonths(target, new Date(now.getFullYear(), now.getMonth(), 1));
+    applySelfMonth(off);
+  }
+  function shiftSelfMonth(delta){ applySelfMonth((window.__SELF_MONTH_OFFSET||0) + delta); }
+  function ensureSelfMonthNav(){
+    var page = byId('selfPage'); if (!page) return;
+    if (byId('selfMonthNav')) return;
+    var showBtn = qs('#selfPage button[onclick="renderSelf()"]');
+    var holder = document.createElement('div');
+    holder.id = 'selfMonthNav';
+    holder.style.margin = '10px 0';
+    var today = new Date();
+    var maxVal = yyyymm(today);
+    holder.innerHTML = ''
+      + '<div class="filter-group" style="display:flex; flex-direction:row; gap:8px; align-items:center; flex-wrap:wrap;">'
+      + '  <button class="btn" id="selfPrevMonth" type="button">◀️ חודש קודם</button>'
+      + '  <button class="btn" id="selfThisMonth" type="button">⬅️ החודש</button>'
+      + '  <button class="btn" id="selfNextMonth" type="button">חודש הבא ▶️</button>'
+      + '  <input type="month" id="selfMonthPicker" style="padding:8px; border:2px solid #ddd; border-radius:8px; font-size:14px;" />'
+      + '  <span id="selfMonthLabel" style="font-weight:700; padding:6px 10px; background:#f1f5f9; border-radius:8px;"></span>'
+      + '</div>';
+    if (showBtn && showBtn.parentNode){ showBtn.parentNode.insertBefore(holder, showBtn); } else { page.appendChild(holder); }
+    byId('selfPrevMonth').addEventListener('click', function(){ shiftSelfMonth(-1); });
+    byId('selfNextMonth').addEventListener('click', function(){ shiftSelfMonth(1); });
+    byId('selfThisMonth').addEventListener('click', function(){ applySelfMonth(0); });
+    var mp = byId('selfMonthPicker'); if (mp){ mp.max = maxVal; mp.addEventListener('change', onSelfPickerChange); }
+    var periodSel = byId('selfPeriod');
+    function syncVisibility(){
+      var nav = byId('selfMonthNav');
+      if (!nav) return;
+      nav.style.display = (periodSel && periodSel.value === 'month') ? 'block' : 'none';
+    }
+    if (periodSel){
+      periodSel.addEventListener('change', function(){ if (periodSel.value !== 'month') window.__SELF_MONTH_OFFSET = 0; syncVisibility(); });
+      syncVisibility();
+    }
+    updateSelfNav();
+  }
+  var _sp = window.showPage;
+  window.showPage = function(name){
+    if (typeof _sp === 'function') try { _sp.apply(this, arguments); } catch(e){}
+    if (name === 'self'){ setTimeout(function(){ try{ ensureSelfMonthNav(); }catch(e){} }, 50); }
+  };
+  document.addEventListener('DOMContentLoaded', function(){ try{ ensureSelfMonthNav(); }catch(e){} });
+})();
+</script>
+
+
 </body>
 </html>
