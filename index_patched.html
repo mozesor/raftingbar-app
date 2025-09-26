@@ -1,0 +1,3855 @@
+<!DOCTYPE html>
+
+<html dir="rtl" lang="he">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>רפטינג בר - שעון נוכחות</title>
+<meta content="#667eea" name="theme-color"/>
+<meta content="yes" name="mobile-web-app-capable"/>
+<meta content="yes" name="apple-mobile-web-app-capable"/>
+<meta content="default" name="apple-mobile-web-app-status-bar-style"/>
+<meta content="רפטינג בר" name="apple-mobile-web-app-title"/>
+<style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            direction: rtl;
+            overflow-x: hidden;
+            padding-bottom: 90px;
+        }
+
+        .header {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px 15px 15px;
+            text-align: center;
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 1.8em;
+            margin-bottom: 8px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .current-time {
+            font-size: 1.1em;
+            opacity: 0.9;
+            margin-bottom: 8px;
+        }
+
+        .sync-status {
+            font-size: 0.9em;
+            padding: 6px 12px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 15px;
+            display: inline-block;
+            backdrop-filter: blur(5px);
+        }
+
+        .sync-connected { color: #4CAF50; }
+        .sync-error { color: #f44336; }
+        .sync-syncing { color: #ff9800; animation: pulse 1s infinite; }
+
+        .container {
+            padding: 15px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .card h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            text-align: center;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 8px;
+            font-size: 1.1em;
+        }
+
+        .form-group select,
+        .form-group input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            font-size: 16px;
+            background: white;
+            transition: all 0.3s;
+        }
+
+        .form-group select:focus,
+        .form-group input:focus {
+            border-color: #667eea;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-checkin {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-checkout {
+            background: linear-gradient(45deg, #f44336, #da190b);
+            color: white;
+            box-shadow: 0 4px 15px rgba(244, 67, 54, 0.3);
+        }
+
+        .btn-admin {
+            background: linear-gradient(45deg, #2196F3, #1976D2);
+            color: white;
+            box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status-display {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 15px;
+            margin-top: 15px;
+            text-align: center;
+            border-left: 4px solid #667eea;
+        }
+
+        .status-badge {
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+            display: inline-block;
+            margin: 5px 0;
+        }
+
+        .status-in { background: #4CAF50; }
+        .status-out { background: #f44336; }
+
+        .employee-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .employee-card {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            border-left: 4px solid #ddd;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+
+        .employee-card.active {
+            border-left-color: #4CAF50;
+            background: linear-gradient(135deg, #e8f5e8, white);
+        }
+
+        .employee-card.inactive {
+            border-left-color: #f44336;
+            background: linear-gradient(135deg, #ffeaea, white);
+        }
+
+        .employee-name {
+            font-size: 1.1em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .employee-times {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            font-weight: bold;
+            text-align: center;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .navigation {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255,255,255,0.98);
+            backdrop-filter: blur(15px);
+            border-top: 1px solid rgba(0,0,0,0.1);
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 2px;
+            padding: 6px;
+            z-index: 1000;
+            height: 70px;
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            color: #666;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 4px 2px;
+            font-size: 10px;
+            line-height: 1.1;
+        }
+
+        .nav-btn div:first-child {
+            font-size: 16px;
+            margin-bottom: 3px;
+        }
+
+        .nav-btn div:last-child {
+            font-size: 10px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+
+        .nav-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .nav-btn:hover:not(.active) {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .quick-action {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .quick-action:active {
+            transform: scale(0.98);
+        }
+
+        .quick-action-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .quick-action-label {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        /* סגנונות עמוד הדוחות המפורטים */
+        .detailed-reports-filters {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-group label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #555;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .detailed-reports-table {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow-x: auto;
+            clear: both;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .data-table th {
+            background: #f8f9fa;
+            padding: 12px 8px;
+            border-bottom: 2px solid #667eea;
+            text-align: center;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .data-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #eee;
+            text-align: center;
+        }
+
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .overtime-highlight {
+            background: #fff3cd !important;
+            color: #856404;
+            font-weight: bold;
+        }
+
+        .missing-highlight {
+            background: #f8d7da !important;
+            color: #721c24;
+        }
+
+        .chart-container {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px 16px 10px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  position: relative;
+  background-image: linear-gradient(to right, rgba(0,0,0,0.04) 1px, transparent 1px);
+  background-size: 80px 100%;
+}
+
+        .chart-bar {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border-radius: 4px;
+            position: relative;
+            margin-bottom: 8px;
+            min-height: 25px;
+            display: flex;
+            align-items: center;
+            color: white;
+            font-weight: bold;
+            padding: 0 10px;
+            transition: all 0.3s;
+        }
+
+        .chart-bar:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .chart-label { display:none; }
+
+        .export-section {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .export-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .overtime-badge {
+            background: #ff9800;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .missing-badge {
+            background: #f44336;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .perfect-badge {
+            background: #4caf50;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .card {
+                padding: 15px;
+                margin-bottom: 10px;
+            }
+            
+            .btn-group {
+                flex-direction: column;
+            }
+            
+            .btn {
+                margin-bottom: 10px;
+            }
+            
+            .nav-btn {
+                max-width: 50px;
+                font-size: 7px;
+                padding: 3px 1px;
+            }
+            
+            .nav-btn div:first-child {
+                font-size: 12px;
+                margin-bottom: 2px;
+            }
+            
+            .nav-btn div:last-child {
+                font-size: 7px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .filter-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .export-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .data-table {
+                font-size: 12px;
+            }
+            
+            .data-table th,
+            .data-table td {
+                padding: 6px 4px;
+            }
+            
+            .nav-btn {
+                max-width: 55px;
+                font-size: 8px;
+                padding: 4px 2px;
+            }
+            
+            .nav-btn div {
+                margin: 1px 0;
+            }
+        }
+
+        @media (pointer: coarse) {
+            .btn {
+                min-height: 48px;
+            }
+            
+            .nav-btn {
+                min-height: 48px;
+            }
+        }
+    
+/* --- AUTH OVERLAY --- */
+.auth-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(6px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+.auth-card {
+  width: min(420px, 92vw);
+  background: #fff;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  text-align: center;
+}
+.auth-card h2 { margin: 8px 0 12px; }
+.auth-hint { font-size: 13px; color: #666; margin-top: 6px; }
+.auth-actions { display:flex; gap:10px; margin-top:12px; }
+.auth-actions button { flex:1; padding:12px; border:none; border-radius:10px; font-weight:700; }
+.auth-input { width: 100%; padding: 14px; border:2px solid #ddd; border-radius:10px; font-size:16px; }
+
+/* New readable layout */
+.chart-row { display:flex; align-items:center; gap: 10px; margin: 10px 0; }
+.chart-meta { width: 140px; flex-shrink:0; text-align:right; }
+.chart-meta-top { font-weight:800; color:#333; font-size:14px; }
+.chart-meta-sub { color:#777; font-size:12px; }
+.chart-bar { flex:1; position:relative; min-height:34px; border-radius:10px; background: linear-gradient(45deg, #667eea, #764ba2); display:flex; align-items:center; }
+.chart-value { position:absolute; right:10px; font-weight:800; color:#fff; }
+.chart-bar.empty { background:#f1f1f5; }
+
+
+/* Events inline table */
+#eventsInlineTable thead th {
+  position: sticky;
+  top: 0;
+  background: #f7f8ff;
+  border-bottom: 2px solid #667eea;
+  z-index: 1;
+}
+#eventsInlineTable tbody tr:nth-child(even){ background: #fafbff; }
+#eventsInlineTable tbody tr:hover{ background: #f0f3ff; }
+    </style>
+<link href="icon-180x180.png" rel="apple-touch-icon" sizes="180x180"/><link href="icon-167x167.png" rel="apple-touch-icon" sizes="167x167"/><link href="icon-152x152.png" rel="apple-touch-icon" sizes="152x152"/><link href="icon-144x144.png" rel="apple-touch-icon" sizes="144x144"/><style>
+/* Force blue primary look for the detailed reports 'פתח ניהול' button */
+#detailedReportsEnterBtn {
+  background: linear-gradient(90deg, #1ea0ff, #2563eb);
+  color: #fff !important;
+  border: none !important;
+  border-radius: 12px;
+  padding: 12px 16px;
+  
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+}
+#detailedReportsEnterBtn:hover { filter: brightness(1.05); transform: translateY(-1px); }
+#detailedReportsEnterBtn:active { transform: translateY(0); filter: brightness(0.98); }
+</style><style>
+/* Match Admin page CTA style for detailed 'פתח ניהול' */
+#detailedReportsEnterBtn{
+  background: linear-gradient(90deg,#1ea0ff 0%, #1e88ff 40%, #2563eb 100%) !important;
+  color:#fff !important;
+  border:none !important;
+  border-radius:14px !important;
+  padding:14px 18px !important;
+  
+  
+  width:100% !important;
+  box-shadow: 0 8px 24px rgba(37,99,235,.35) !important;
+}
+#detailedReportsEnterBtn:hover{ filter:brightness(1.06); transform:translateY(-1px); }
+#detailedReportsEnterBtn:active{ transform:translateY(0); filter:brightness(.98); }
+</style><style>
+/* RB font fix: match site font on detailed open button */
+#detailedReportsEnterBtn{
+  font: inherit !important;
+  line-height: inherit !important;
+  letter-spacing: inherit !important;
+}
+</style></head>
+<body>
+<div class="header">
+<h1>🏄‍♂️ רפטינג בר</h1>
+<div class="current-time" id="currentTime"></div>
+<div class="sync-status" id="syncStatus">
+<span id="syncIcon">🔄</span>
+<span id="syncText">מתחבר...</span>
+</div>
+</div><div class="auth-overlay" id="authOverlay" style="display:none">
+<div class="auth-card">
+<h2>🔐 כניסה</h2>
+<p class="auth-hint">קבל/י את קוד הגישה מהמנהל</p>
+<input class="auth-input" id="authCodeInput" maxlength="6" placeholder="הזן קוד גישה" type="password"/>
+<div class="auth-actions">
+<button id="authEnterBtn" style="background:#667eea;color:#fff;">כניסה</button>
+<button id="authCancelBtn" style="background:#eee;">ביטול</button>
+</div>
+</div>
+</div>
+<div class="container">
+<div id="alertContainer"></div>
+<!-- עמוד ראשי -->
+<div class="page active" id="mainPage">
+<div class="card">
+<h2>רישום נוכחות</h2>
+<div class="form-group">
+<label for="employeeSelect">בחר עובד:</label>
+<select id="employeeSelect">
+<option value="">-- בחר עובד --</option>
+</select>
+</div>
+<div class="btn-group">
+<button class="btn btn-checkin" id="checkinBtn" onclick="checkIn()">
+                        🟢 כניסה
+                    </button>
+<button class="btn btn-checkout" id="checkoutBtn" onclick="checkOut()">
+                        🔴 יציאה
+                    </button>
+</div>
+<div class="status-display">
+<h3>מצב נוכחי</h3>
+<div id="employeeStatus">בחר עובד לצפייה במצב</div>
+</div>
+<div class="card" id="eventsCard" style="margin-top:10px;">
+<h2>➕ אירוע</h2>
+<div class="form-group">
+<label>תאריך האירוע:</label>
+<input id="eventDate" type="date"/>
+</div>
+<div class="btn-group">
+<button class="btn btn-admin" onclick="addEventForEmployee()">הוסף אירוע</button>
+</div>
+<div class="status-display">
+<div>סה״כ אירועים היום לעובד: <strong id="todayEventsCount">0</strong></div>
+</div>
+</div>
+<div class="quick-actions">
+<div class="quick-action" onclick="showEmployeesStatus()">
+<div class="quick-action-value" id="activeCount">0</div>
+<div class="quick-action-label">עובדים פעילים</div>
+</div>
+<div class="quick-action" onclick="showPage('self')">
+<div class="quick-action-value" id="todayHours">0</div>
+<div class="quick-action-label">שעות היום</div>
+</div>
+</div>
+</div>
+</div>
+<!-- עמוד עובדים -->
+<div class="page" id="employeesPage">
+<div class="card">
+<h2>👥 סטטוס עובדים</h2>
+<div class="employee-grid" id="employeeGrid"></div>
+</div>
+</div>
+</div>
+<!-- עמוד דוח אישי -->
+<div class="page" id="selfPage">
+<div class="card">
+<h2>👤 דוח אישי לעובד</h2>
+<div class="form-group">
+<label>בחר עובד:</label>
+<select id="selfEmployee"></select>
+</div>
+<div class="form-group">
+<label>תקופה:</label>
+<select id="selfPeriod">
+<option selected="" value="month">החודש</option>
+<option value="week">השבוע</option>
+<option value="today">היום</option>
+</select>
+</div>
+<button class="btn btn-admin" onclick="renderSelf()" style="width:100%;">הצג דוח</button>
+<div class="detailed-reports-table" style="margin-top:12px;">
+<table class="data-table" id="selfTable"></table>
+</div>
+</div>
+</div>
+<!-- עמוד דוחות מפורטים -->
+<div class="page" id="detailedReportsPage">
+<!-- מסך נעילה -->
+<div class="card" id="detailedReportsLock" style="display: block;">
+<h2>🔒 דוחות מפורטים מוגנים</h2>
+<p style="text-align: center; color: #666; margin-bottom: 20px;">
+                    הזן קוד גישה לצפייה בדוחות המפורטים
+                </p>
+<div class="form-group">
+<label>קוד גישה:</label>
+<input id="detailedReportsPassword" maxlength="6" placeholder="הזן קוד גישה" type="password"/>
+</div>
+<div style="margin-top: 20px; padding: 15px; background: #e3f2fd; border-radius: 10px; font-size: 14px; color: #1976d2;">
+                    💡 <strong>טיפ:</strong> הקוד ברירת המחדל הוא: <strong>1234</strong><br/>
+                    ניתן לשנות בהגדרות המערכת
+                </div>
+</div>
+<!-- תוכן הדוחות המפורטים -->
+<div id="detailedReportsContent" style="display: block;">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+<h2 style="margin: 0;">📊 דוחות מפורטים</h2>
+<button class="btn" onclick="lockDetailedReports()" style="background: #f44336; color: white; padding: 8px 12px; font-size: 14px;">
+                        🔒 נעל
+                    </button>
+</div>
+<!-- פילטרים -->
+<div class="detailed-reports-filters">
+<div class="filter-row">
+<div class="filter-group">
+<label>תקופה:</label>
+<select id="detailedPeriodFilter">
+<option value="today">היום</option>
+<option value="week">השבוע</option>
+<option selected="" value="month">החודש</option>
+<option value="custom">תקופה מותאמת</option>
+</select>
+</div>
+<div class="filter-group">
+<label>עובד:</label>
+<select id="detailedEmployeeFilter">
+<option value="all">כל העובדים</option>
+</select>
+</div>
+</div>
+<div class="filter-row" id="detailedCustomDateRange" style="display: none;">
+<div class="filter-group">
+<label>מתאריך:</label>
+<input id="detailedStartDate" type="date"/>
+</div>
+<div class="filter-group">
+<label>עד תאריך:</label>
+<input id="detailedEndDate" type="date"/>
+</div>
+</div>
+<button class="btn btn-admin" onclick="updateDetailedReports()" style="width: 100%; margin-top: 10px;">
+                        🔄 עדכן דוחות
+                    </button>
+</div>
+<!-- סטטיסטיקות כלליות -->
+<div class="stats-grid" id="detailedStatsGrid">
+<!-- יתמלא באופן דינמי -->
+</div>
+<!-- גרף שעות יומיות -->
+<div class="chart-container">
+<h3 style="margin-bottom: 15px;">📊 שעות יומיות</h3>
+<div id="detailedHoursChart">
+<!-- יתמלא באופן דינמי -->
+</div>
+</div>
+<!-- טבלת נתונים מפורטת -->
+<div class="detailed-reports-table">
+<h3>📋 נתונים מפורטים</h3>
+<div style="overflow-x: auto;">
+<table class="data-table" id="detailedReportsTable">
+<!-- יתמלא באופן דינמי -->
+</table>
+</div>
+</div>
+<!-- ייצוא דוחות -->
+<div class="export-section">
+<h3 style="margin-bottom: 15px;">📄 ייצא דוחות מתקדמים</h3>
+<div class="export-grid">
+<button class="btn btn-admin" onclick="exportDetailedCurrent()">
+                            📊 ייצא דוח נוכחי
+                        </button>
+<button class="btn btn-admin" onclick="exportDetailedOvertime()">
+                            ⏱️ דוח שעות נוספות
+                        </button>
+<button class="btn btn-admin" onclick="exportDetailedSummary()">
+                            📈 דוח סיכום חודשי
+                        </button>
+<button class="btn btn-admin" onclick="exportDetailedFull()">
+                            📋 דוח מפורט מלא
+                        </button>
+</div>
+<div class="card" id="eventsInlineSection" style="margin-top:16px;"><h2>🗂️ אירועים לפי תאריכים ועובד</h2><div style="color:#555; margin-bottom:8px; font-size:14px;">התצוגה מכבדת את טווח התאריכים והסינון לעובד (אם נבחר).</div><div class="events-table-wrap" style="max-height:340px; overflow:auto; background:#fff; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.06);"><table class="data-table" id="eventsInlineTable" style="width:100%; border-collapse:separate; border-spacing:0;"></table></div></div></div>
+</div>
+</div>
+<!-- עמוד ניהול -->
+
+<!-- ניווט תחתון -->
+<div class="navigation">
+<button class="nav-btn active" onclick="showPage('main')">
+<div>🏠</div>
+<div>בית</div>
+</button>
+<button class="nav-btn" onclick="showPage('employees')">
+<div>👥</div>
+<div>עובדים</div>
+</button>
+<button class="nav-btn" onclick="showPage('self')">
+<div>📊</div>
+<div>דוחות</div>
+</button>
+<button class="nav-btn" onclick="showPage('detailedReports')">
+<div>📈</div>
+<div>מפורט</div>
+</button>
+<button class="nav-btn" onclick="showPage('admin')">
+<div>⚙️</div>
+<div>ניהול</div>
+</button>
+</div>
+<script>
+        // הגדרות קבועות
+        const EMBEDDED_SETTINGS = {
+            apiKey: 'AIzaSyB8MgwEZ7hqS_hiZqTcwzODheuwdBA55j4',
+            sheetId: '1SNSdRdJy-vP--spyKmVwDbnaz808KEwTYSKiLreFn0w', 
+            scriptUrl: 'https://script.google.com/macros/s/AKfycbyP2v0K5VvIjJeRwdIkg2TGP6jP0h2EQQsHQxUxsbXQHpisBcky1-ip7zRDn1r8bEhY/exec'
+        };
+
+        // משתני האפליקציה
+        var employees = [];
+        var attendanceData = {};
+        var currentStatus = {};
+        var adminPassword = '1234';
+        var isAdminUnlocked = false;
+        var isDetailedReportsUnlocked = false;
+        var apiKey = EMBEDDED_SETTINGS.apiKey;
+        var sheetId = EMBEDDED_SETTINGS.sheetId;
+        var scriptUrl = EMBEDDED_SETTINGS.scriptUrl;
+        var isInitialized = false;
+        var pendingSync = [];
+        var lastPasswordSync = 0;
+
+        // פונקציות עזר
+        function getCurrentDate() {
+            var today = new Date();
+            var year = today.getFullYear();
+            var month = String(today.getMonth() + 1).padStart(2, '0');
+            var day = String(today.getDate()).padStart(2, '0');
+            return year + '-' + month + '-' + day;
+        }
+
+        function formatTime(dateString) {
+            if (!dateString) return '-';
+            var date = new Date(dateString);
+            return String(date.getHours()).padStart(2, '0') + ':' + String(date.getMinutes()).padStart(2, '0');
+        }
+
+        function calculateHours(start, end) {
+            if (!start) return 0;
+            
+            var startDate = new Date(start);
+            var endDate = end ? new Date(end) : new Date();
+            
+            if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                return 0;
+            }
+            
+            if (endDate < startDate) {
+                return 0;
+            }
+            
+            var diff = endDate - startDate;
+            var hours = diff / (1000 * 60 * 60);
+            return Math.max(0, Math.round(hours * 100) / 100);
+        }
+
+        function updateCurrentTime() {
+            var now = new Date();
+            document.getElementById('currentTime').textContent = now.toLocaleTimeString('he-IL', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function showAlert(message, type) {
+            var container = document.getElementById('alertContainer');
+            var alert = document.createElement('div');
+            alert.className = 'alert alert-' + type;
+            alert.textContent = message;
+            container.appendChild(alert);
+            
+            setTimeout(function() {
+                if (alert.parentNode) {
+                    alert.parentNode.removeChild(alert);
+                }
+            }, 4000);
+        }
+
+        function updateSyncStatus(icon, text, className) {
+            document.getElementById('syncIcon').textContent = icon;
+            document.getElementById('syncText').textContent = text;
+            var statusEl = document.getElementById('syncStatus');
+            statusEl.className = 'sync-status ' + className;
+        }
+
+        // פונקציות חיבור
+        function testConnection() {
+            if (!apiKey || !sheetId) {
+                updateSyncStatus('⚠️', 'נדרשת הגדרה', 'sync-error');
+                return;
+            }
+            
+            updateSyncStatus('🔍', 'בודק חיבור...', 'sync-syncing');
+            
+            var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?key=' + apiKey;
+            
+            fetch(url)
+                .then(function(response) {
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        throw new Error('HTTP ' + response.status);
+                    }
+                })
+                .then(function(data) {
+                    updateSyncStatus('☁️', 'מחובר לענן', 'sync-connected');
+                    isInitialized = true;
+                    loadDataFromSheet();
+                    showAlert('מחובר לענן ומסנכרן! 🌐', 'success');
+                })
+                .catch(function(error) {
+                    updateSyncStatus('📱', 'עבודה מקומית', 'sync-error');
+                    showAlert('עובד במצב מקומי', 'success');
+                });
+        }
+
+        // טעינת נתונים מהגיליון - עם סנכרון עובדים מלא וסיסמה
+        function loadDataFromSheet() {
+            if (!isInitialized) return;
+            
+            var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '/values/A:F?key=' + apiKey;
+            
+            fetch(url)
+                .then(function(response) {
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        throw new Error('HTTP ' + response.status);
+                    }
+                })
+                .then(function(data) {
+                    var rows = data.values || [];
+                    
+                    var uniqueEmployees = new Set();
+                    var newAttendanceData = {};
+                    var newCurrentStatus = {};
+                    var currentDate = getCurrentDate();
+                    var foundPassword = null;
+                    
+                    // טען עובדים מהגיליון + סיסמה
+                    for (var i = 1; i < rows.length; i++) {
+                        var row = rows[i];
+                        if (row && row[0]) {
+                            // בדיקה אם זה שורת סיסמה
+                            if (row[1] === 'admin_password_change') {
+                                foundPassword = row[0]; // הסיסמה שמורה בעמודה הראשונה
+                                continue;
+                            }
+                            
+                            uniqueEmployees.add(row[0]);
+                            
+                            var employee = row[0];
+                            var action = row[1];
+                            var timestamp = row[2];
+                            var date = row[3];
+                            
+                            if (!newAttendanceData[employee]) {
+                                newAttendanceData[employee] = {};
+                            }
+                            if (!newAttendanceData[employee][date]) {
+                                newAttendanceData[employee][date] = {};
+                            }
+                            
+                            if (action === 'event') {
+                                newAttendanceData[employee][date].events = (newAttendanceData[employee][date].events || 0) + 1;
+                            } else if (action === 'checkin') {
+                                newAttendanceData[employee][date].checkIn = timestamp;
+                                if (date === currentDate) {
+                                    newCurrentStatus[employee] = 'in';
+                                }
+                            } else if (action === 'checkout') {
+                                newAttendanceData[employee][date].checkOut = timestamp;
+                                if (date === currentDate) {
+                                    newCurrentStatus[employee] = 'out';
+                                }
+                            }
+                        }
+                    }
+                    
+                    // עדכן סיסמה אם נמצאה בגיליון
+                    if (foundPassword && foundPassword !== adminPassword) {
+                        adminPassword = foundPassword;
+                        // אל תשמור ב-localStorage כי אנחנו רוצים שיסתנכרן מהגיליון
+                        showAlert('🔐 סיסמת המנהל עודכנה מהענן', 'success');
+                    }
+                    
+                    // סנכרון רשימת עובדים - החלף לחלוטין עם מה שבגיליון
+                    var cloudEmployees = Array.from(uniqueEmployees).sort();
+                    var hasEmployeeChanges = false;
+                    
+                    // בדוק אם יש שינויים ברשימת העובדים
+                    if (employees.length !== cloudEmployees.length) {
+                        hasEmployeeChanges = true;
+                    } else {
+                        for (var i = 0; i < employees.length; i++) {
+                            if (employees[i] !== cloudEmployees[i]) {
+                                hasEmployeeChanges = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // עדכן רשימת עובדים אם יש שינויים
+                    if (hasEmployeeChanges && cloudEmployees.length > 0) {
+                        employees = cloudEmployees;
+                        showAlert('רשימת עובדים עודכנה מהענן 👥', 'success');
+                    }
+                    
+                    attendanceData = newAttendanceData;
+                    currentStatus = newCurrentStatus;
+                    
+                    saveLocalData();
+                    updateAll();
+                })
+                .catch(function(error) {
+                    console.log('שגיאה בטעינת נתונים:', error);
+                });
+        }
+
+        // שליחה לגיליון
+        function recordToSheet(employee, action, timestamp, date, time) {
+            if (!scriptUrl) return Promise.resolve(false);
+            
+            var rowData = [employee, action, timestamp, date, time, 'PWA'];
+            
+            return fetch(scriptUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    values: [rowData]
+                })
+            })
+            .then(function() {
+                return true;
+            })
+            .catch(function(error) {
+                console.log('שגיאה ברישום:', error);
+                return false;
+            });
+        }
+
+        // פונקציות נוכחות
+        function checkIn() {
+            var employeeName = document.getElementById('employeeSelect').value;
+            if (!employeeName) {
+                showAlert('אנא בחר עובד', 'error');
+                return;
+            }
+
+            if (currentStatus[employeeName] === 'in') {
+                showAlert('העובד כבר במשמרת', 'error');
+                return;
+            }
+
+            var now = new Date();
+            var today = getCurrentDate();
+            var timestamp = now.toISOString();
+            var time = now.toLocaleTimeString('he-IL');
+            
+            if (!attendanceData[employeeName]) {
+                attendanceData[employeeName] = {};
+            }
+            if (!attendanceData[employeeName][today]) {
+                attendanceData[employeeName][today] = {};
+            }
+
+            attendanceData[employeeName][today].checkIn = timestamp;
+            currentStatus[employeeName] = 'in';
+            
+            
+            if (isInitialized) {
+                updateSyncStatus('🔄', 'רושם...', 'sync-syncing');
+                recordToSheet(employeeName, 'checkin', timestamp, today, time)
+                    .then(function(success) {
+                        if (success) {
+                            updateSyncStatus('☁️', 'מסונכרן', 'sync-connected');
+                            showAlert(employeeName + ' נרשם לכניסה ✅', 'success');
+                            setTimeout(loadDataFromSheet, 2000);
+                        } else {
+                            pendingSync.push({
+                                employee: employeeName,
+                                action: 'checkin',
+                                timestamp: timestamp,
+                                date: today,
+                                time: time
+                            });
+                            updateSyncStatus('📱', 'ממתין לסנכרון', 'sync-error');
+                            showAlert(employeeName + ' נרשם מקומית', 'success');
+                        }
+                    });
+            } else {
+                showAlert(employeeName + ' נרשם מקומית', 'success');
+            }
+        }
+
+        function checkOut() {
+            var employeeName = document.getElementById('employeeSelect').value;
+            if (!employeeName) {
+                showAlert('אנא בחר עובד', 'error');
+                return;
+            }
+
+            if (currentStatus[employeeName] !== 'in') {
+                showAlert('העובד לא במשמרת', 'error');
+                return;
+            }
+
+            var now = new Date();
+            var today = getCurrentDate();
+            var timestamp = now.toISOString();
+            var time = now.toLocaleTimeString('he-IL');
+            
+            if (attendanceData[employeeName] && attendanceData[employeeName][today]) {
+                attendanceData[employeeName][today].checkOut = timestamp;
+                currentStatus[employeeName] = 'out';
+                
+                var workHours = calculateHours(
+                    attendanceData[employeeName][today].checkIn,
+                    attendanceData[employeeName][today].checkOut
+                );
+                
+                saveLocalData();
+                updateAll();
+                
+                if (isInitialized) {
+                    updateSyncStatus('🔄', 'רושם...', 'sync-syncing');
+                    recordToSheet(employeeName, 'checkout', timestamp, today, time)
+                        .then(function(success) {
+                            if (success) {
+                                updateSyncStatus('☁️', 'מסונכרן', 'sync-connected');
+                                showAlert(employeeName + ' נרשם ליציאה. עבד ' + workHours + ' שעות ✅', 'success');
+                                setTimeout(loadDataFromSheet, 2000);
+                            } else {
+                                pendingSync.push({
+                                    employee: employeeName,
+                                    action: 'checkout',
+                                    timestamp: timestamp,
+                                    date: today,
+                                    time: time
+                                });
+                                updateSyncStatus('📱', 'ממתין לסנכרון', 'sync-error');
+                                showAlert(employeeName + ' נרשם מקומית. עבד ' + workHours + ' שעות', 'success');
+                            }
+                        });
+                } else {
+                    showAlert(employeeName + ' נרשם מקומית. עבד ' + workHours + ' שעות', 'success');
+                }
+            }
+        }
+
+        // פונקציות נעילה לדוחות מפורטים
+        function checkDetailedReportsPassword() {
+            var enteredPassword = document.getElementById('detailedReportsPassword').value;
+            
+            if (enteredPassword === adminPassword) {
+                isDetailedReportsUnlocked = true;
+                document.getElementById('detailedReportsLock').style.display = 'none';
+                document.getElementById('detailedReportsContent').style.display = 'block';
+                document.getElementById('detailedReportsPassword').value = '';
+                setTimeout(function() {
+                    initDetailedReportsPage();
+                }, 100);
+                showAlert('נכנסת לדוחות המפורטים בהצלחה', 'success');
+            } else {
+                document.getElementById('detailedReportsPassword').value = '';
+                document.getElementById('detailedReportsPassword').focus();
+                showAlert('קוד שגוי! נסה שוב', 'error');
+                
+                var lockCard = document.getElementById('detailedReportsLock');
+                lockCard.style.animation = 'shake 0.5s';
+                setTimeout(function() {
+                    lockCard.style.animation = '';
+                }, 500);
+            }
+        }
+
+        function lockDetailedReports() {
+            isDetailedReportsUnlocked = false;
+            document.getElementById('detailedReportsLock').style.display = 'block';
+            document.getElementById('detailedReportsContent').style.display = 'none';
+            showAlert('עמוד הדוחות המפורטים ננעל', 'success');
+        }
+
+        // ניהול עובדים - עם סנכרון מלא
+        function addEmployee() {
+            var name = document.getElementById('newEmployeeName').value.trim();
+            if (!name) {
+                showAlert('אנא הזן שם עובד', 'error');
+                return;
+            }
+            
+            for (var i = 0; i < employees.length; i++) {
+                if (employees[i] === name) {
+                    showAlert('עובד בשם זה כבר קיים', 'error');
+                    return;
+                }
+            }
+            
+            employees.push(name);
+            employees.sort();
+            saveLocalData();
+            updateAll();
+            document.getElementById('newEmployeeName').value = '';
+            
+            // סנכרן עובד לגיליון
+            if (isInitialized) {
+                updateSyncStatus('🔄', 'מסנכרן עובד...', 'sync-syncing');
+                var now = new Date();
+                var today = getCurrentDate();
+                var timestamp = now.toISOString();
+                var time = now.toLocaleTimeString('he-IL');
+                
+                recordToSheet(name, 'employee_added', timestamp, today, time)
+                    .then(function(success) {
+                        if (success) {
+                            updateSyncStatus('☁️', 'מסונכרן', 'sync-connected');
+                            showAlert('העובד ' + name + ' נוסף ויסונכרן לכל המכשירים! 🌐', 'success');
+                            setTimeout(loadDataFromSheet, 2000);
+                        } else {
+                            updateSyncStatus('📱', 'ממתין לסנכרון', 'sync-error');
+                            showAlert('העובד ' + name + ' נוסף מקומית', 'success');
+                        }
+                    });
+            } else {
+                showAlert('העובד ' + name + ' נוסף מקומית', 'success');
+            }
+        }
+
+        function removeEmployee() {
+            var employeeName = document.getElementById('removeEmployeeSelect').value;
+            if (!employeeName) {
+                showAlert('אנא בחר עובד להסרה', 'error');
+                return;
+            }
+            
+            if (confirm('האם אתה בטוח שברצונך להסיר את ' + employeeName + '?')) {
+                for (var i = 0; i < employees.length; i++) {
+                    if (employees[i] === employeeName) {
+                        employees.splice(i, 1);
+                        break;
+                    }
+                }
+                
+                delete attendanceData[employeeName];
+                delete currentStatus[employeeName];
+                
+                saveLocalData();
+                updateAll();
+                showAlert('העובד ' + employeeName + ' הוסר בהצלחה', 'success');
+            }
+        }
+
+        function clearAll() {
+            if (confirm('האם אתה בטוח שברצונך למחוק את כל נתוני הנוכחות?')) {
+                attendanceData = {};
+                currentStatus = {};
+                saveLocalData();
+                updateAll();
+                showAlert('כל נתוני הנוכחות נמחקו', 'success');
+            }
+        }
+
+        // עדכון ממשק
+        function updateEmployeeSelects() {
+            var mainSelect = document.getElementById('employeeSelect');
+            var removeSelect = document.getElementById('removeEmployeeSelect');
+            
+            if (mainSelect) {
+                var mainValue = mainSelect.value;
+                mainSelect.innerHTML = '<option value="">-- בחר עובד --</option>';
+                
+                for (var i = 0; i < employees.length; i++) {
+                    var option = document.createElement('option');
+                    option.value = employees[i];
+                    option.text = employees[i];
+                    mainSelect.appendChild(option);
+                }
+                
+                mainSelect.value = mainValue;
+            }
+            
+            if (removeSelect) {
+                var removeValue = removeSelect.value;
+                removeSelect.innerHTML = '<option value="">-- בחר עובד להסרה --</option>';
+                
+                for (var i = 0; i < employees.length; i++) {
+                    var option = document.createElement('option');
+                    option.value = employees[i];
+                    option.text = employees[i];
+                    removeSelect.appendChild(option);
+                }
+                
+                removeSelect.value = removeValue;
+            }
+        }
+
+        function updateEmployeeGrid() {
+            var grid = document.getElementById('employeeGrid');
+            if (!grid) return;
+            
+            grid.innerHTML = '';
+            
+            var today = getCurrentDate();
+            
+            for (var i = 0; i < employees.length; i++) {
+                var employee = employees[i];
+                var status = currentStatus[employee] || 'out';
+                var todayData = attendanceData[employee] && attendanceData[employee][today];
+                
+                var card = document.createElement('div');
+                card.className = 'employee-card ' + (status === 'in' ? 'active' : 'inactive');
+                
+                var checkInTime = todayData && todayData.checkIn ? formatTime(todayData.checkIn) : '--:--';
+                var checkOutTime = todayData && todayData.checkOut ? formatTime(todayData.checkOut) : '--:--';
+                
+                var workHours = 0;
+                if (todayData && todayData.checkIn) {
+                    if (status === 'in') {
+                        workHours = calculateHours(todayData.checkIn, null);
+                    } else {
+                        workHours = calculateHours(todayData.checkIn, todayData.checkOut);
+                    }
+                }
+                
+                card.innerHTML = 
+                    '<div class="employee-name">' + employee + '</div>' +
+                    '<div class="employee-times">כניסה: ' + checkInTime + ' | יציאה: ' + checkOutTime + '</div>' +
+                    '<div class="employee-times">שעות: ' + workHours + (status === 'in' ? ' (רץ)' : '') + '</div>' +
+                    '<span class="status-badge status-' + (status === 'in' ? 'in' : 'out') + '">' +
+                    (status === 'in' ? 'במשמרת' : 'לא במשמרת') + '</span>';
+                
+                grid.appendChild(card);
+            }
+        }
+
+        function updateEmployeeStatus() {
+            var selectedEmployee = document.getElementById('employeeSelect').value;
+            var statusDiv = document.getElementById('employeeStatus');
+            
+            if (!selectedEmployee) {
+                statusDiv.innerHTML = 'בחר עובד לצפייה במצב';
+                return;
+            }
+            
+            var status = currentStatus[selectedEmployee] || 'out';
+            var today = getCurrentDate();
+            var todayData = attendanceData[selectedEmployee] && attendanceData[selectedEmployee][today];
+            
+            if (status === 'in') {
+                var checkInTime = todayData ? formatTime(todayData.checkIn) : 'לא זמין';
+                var currentHours = todayData ? calculateHours(todayData.checkIn, null) : 0;
+                statusDiv.innerHTML = 
+                    '<strong>' + selectedEmployee + '</strong><br>' +
+                    '<span class="status-badge status-in">במשמרת</span><br>' +
+                    'כניסה: ' + checkInTime + '<br>' +
+                    'שעות נוכחיות: ' + currentHours;
+            } else {
+                var workHours = todayData ? calculateHours(todayData.checkIn, todayData.checkOut) : 0;
+                statusDiv.innerHTML = 
+                    '<strong>' + selectedEmployee + '</strong><br>' +
+                    '<span class="status-badge status-out">לא במשמרת</span><br>' +
+                    'שעות היום: ' + workHours;
+            }
+        }
+
+        function updateQuickStats() {
+            var activeCount = 0;
+            var totalTodayHours = 0;
+            var today = getCurrentDate();
+            
+            for (var i = 0; i < employees.length; i++) {
+                var employee = employees[i];
+                if (currentStatus[employee] === 'in') {
+                    activeCount++;
+                }
+                
+                var todayData = attendanceData[employee] && attendanceData[employee][today];
+                if (todayData && todayData.checkIn) {
+                    var endTime = todayData.checkOut || null;
+                    var hours = calculateHours(todayData.checkIn, endTime);
+                    totalTodayHours += hours;
+                }
+            }
+            
+            document.getElementById('activeCount').textContent = activeCount;
+            document.getElementById('todayHours').textContent = Math.round(totalTodayHours * 10) / 10;
+        }
+
+        function updateAll() {
+            updateEmployeeSelects();
+            updateEmployeeGrid();
+            updateEmployeeStatus();
+            updateQuickStats();
+            
+            // עדכן גם עמוד הדוחות המפורטים אם הוא פעיל
+            var detailedReportsPage = document.getElementById('detailedReportsPage');
+            if (detailedReportsPage && detailedReportsPage.classList.contains('active')) {
+                updateDetailedEmployeeFilterOptions();
+            }
+        }
+
+        // ניווט
+        function showPage(pageName) {
+            document.querySelectorAll('.page').forEach(function(page) {
+                page.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-btn').forEach(function(btn) {
+                btn.classList.remove('active');
+            });
+            
+            document.getElementById(pageName + 'Page').classList.add('active');
+            
+            var navButtons = document.querySelectorAll('.nav-btn');
+            if (pageName === 'main') navButtons[0].classList.add('active');
+            else if (pageName === 'employees') navButtons[1].classList.add('active');
+            else if (pageName === 'reports') navButtons[2].classList.add('active');
+            else if (pageName === 'detailedReports') navButtons[3].classList.add('active');
+            else if (pageName === 'admin') navButtons[4].classList.add('active');
+            
+            if (pageName === 'admin') {
+                if (!isAdminUnlocked) {
+                    document.getElementById('adminLock').style.display = 'block';
+                    document.getElementById('adminContent').style.display = 'none';
+                    setTimeout(function() {
+                        document.getElementById('adminPassword').focus();
+                    }, 100);
+                } else {
+                    document.getElementById('adminLock').style.display = 'none';
+                    document.getElementById('adminContent').style.display = 'block';
+                    updateEmployeeSelects();
+                }
+            } else if (pageName === 'detailedReports') {
+                if (!isDetailedReportsUnlocked) {
+                    document.getElementById('detailedReportsLock').style.display = 'block';
+                    document.getElementById('detailedReportsContent').style.display = 'none';
+                    setTimeout(function() {
+                        document.getElementById('detailedReportsPassword').focus();
+                    }, 100);
+                } else {
+                    document.getElementById('detailedReportsLock').style.display = 'none';
+                    document.getElementById('detailedReportsContent').style.display = 'block';
+                    setTimeout(function() {
+                        initDetailedReportsPage();
+                    }, 100);
+                }
+            }
+        }
+
+        function showEmployeesStatus() {
+            showPage('employees');
+        }
+
+        // ניהול
+        function checkAdminPassword() {
+            var enteredPassword = document.getElementById('adminPassword').value;
+            
+            if (enteredPassword === adminPassword) {
+                isAdminUnlocked = true;
+                document.getElementById('adminLock').style.display = 'none';
+                document.getElementById('adminContent').style.display = 'block';
+                document.getElementById('adminPassword').value = '';
+                updateEmployeeSelects();
+                showAlert('נכנסת לעמוד הניהול בהצלחה', 'success');
+            } else {
+                document.getElementById('adminPassword').value = '';
+                document.getElementById('adminPassword').focus();
+                showAlert('קוד שגוי! נסה שוב', 'error');
+                
+                var lockCard = document.getElementById('adminLock');
+                lockCard.style.animation = 'shake 0.5s';
+                setTimeout(function() {
+                    lockCard.style.animation = '';
+                }, 500);
+            }
+        }
+
+        function lockAdmin() {
+            isAdminUnlocked = false;
+            document.getElementById('adminLock').style.display = 'block';
+            document.getElementById('adminContent').style.display = 'none';
+            showAlert('עמוד הניהול ננעל', 'success');
+        }
+
+        function changeAdminPassword() {
+            var newPassword = document.getElementById('newAdminPassword').value.trim();
+            
+            if (!newPassword) {
+                showAlert('אנא הזן קוד חדש', 'error');
+                return;
+            }
+            
+            if (newPassword.length < 4 || newPassword.length > 6) {
+                showAlert('הקוד חייב להיות 4-6 ספרות', 'error');
+                return;
+            }
+            
+            if (!/^\d+$/.test(newPassword)) {
+                showAlert('הקוד חייב להכיל רק ספרות', 'error');
+                return;
+            }
+            
+            if (confirm('האם אתה בטוח שברצונך לשנות את קוד הגישה ל-' + newPassword + '?\nהקוד יתעדכן בכל המכשירים!')) {
+                adminPassword = newPassword;
+                document.getElementById('newAdminPassword').value = '';
+                
+                // שלח את הסיסמה החדשה לגיליון
+                if (isInitialized) {
+                    updateSyncStatus('🔄', 'מעדכן סיסמה...', 'sync-syncing');
+                    var now = new Date();
+                    var today = getCurrentDate();
+                    var timestamp = now.toISOString();
+                    var time = now.toLocaleTimeString('he-IL');
+                    
+                    recordToSheet(newPassword, 'admin_password_change', timestamp, today, time)
+                        .then(function(success) {
+                            if (success) {
+                                updateSyncStatus('☁️', 'מסונכרן', 'sync-connected');
+                                showAlert('🔐 קוד הגישה שונה ויסונכרן לכל המכשירים!', 'success');
+                                // טען מחדש כדי לוודא סנכרון
+                                setTimeout(loadDataFromSheet, 2000);
+                            } else {
+                                updateSyncStatus('📱', 'שמור מקומית', 'sync-error');
+                                showAlert('⚠️ הקוד שונה מקומית, יסונכרן כשהחיבור יחזור', 'success');
+                            }
+                        });
+                } else {
+                    showAlert('⚠️ הקוד שונה מקומית, יסונכרן כשהחיבור יחזור', 'success');
+                }
+            }
+        }
+
+        // סנכרון
+        function forcSync() {
+            if (!isInitialized) {
+                showAlert('מנסה להתחבר לענן...', 'success');
+                testConnection();
+                return;
+            }
+            
+            updateSyncStatus('🔄', 'מסנכרן...', 'sync-syncing');
+            loadDataFromSheet();
+            showAlert('מבצע סנכרון ידני...', 'success');
+        }
+
+        // דוחות
+        function exportToday() {
+            var today = getCurrentDate();
+            var data = [];
+            
+            data.push(['עובד', 'כניסה', 'יציאה', 'שעות', 'סטטוס']);
+            
+            for (var i = 0; i < employees.length; i++) {
+                var employee = employees[i];
+                var todayData = attendanceData[employee] && attendanceData[employee][today];
+                var status = currentStatus[employee] || 'out';
+                
+                var checkInTime = todayData && todayData.checkIn ? formatTime(todayData.checkIn) : '-';
+                var checkOutTime = todayData && todayData.checkOut ? formatTime(todayData.checkOut) : '-';
+                var workHours = todayData ? calculateHours(todayData.checkIn, todayData.checkOut) : 0;
+                var statusText = status === 'in' ? 'במשמרת' : 'לא במשמרת';
+                var hoursText = workHours > 0 ? workHours + ' שעות' : '-';
+                
+                data.push([employee, checkInTime, checkOutTime, hoursText, statusText]);
+            }
+            
+            downloadCSV(data, 'דוח_יומי_רפטינג_בר_' + today + '.csv');
+        }
+
+        function exportDetailed() {
+            var data = [];
+            var today = new Date();
+            
+            var dates = [];
+            var dateStrings = [];
+            for (var i = 6; i >= 0; i--) {
+                var date = new Date(today);
+                date.setDate(today.getDate() - i);
+                dates.push(date);
+                var year = date.getFullYear();
+                var month = String(date.getMonth() + 1).padStart(2, '0');
+                var day = String(date.getDate()).padStart(2, '0');
+                var dateKey = year + '-' + month + '-' + day;
+                dateStrings.push(dateKey);
+            }
+            
+            var headers = ['עובד'];
+            var dayNames = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+            for (var d = 0; d < dates.length; d++) {
+                var dayName = dayNames[dates[d].getDay()];
+                var dateStr = dates[d].getDate() + '/' + (dates[d].getMonth() + 1);
+                headers.push(dayName + ' ' + dateStr);
+            }
+            headers.push('סה"כ ימי עבודה');
+            headers.push('סה"כ שעות');
+            headers.push('ממוצע יומי');
+            
+            data.push(headers);
+            
+            for (var i = 0; i < employees.length; i++) {
+                var employee = employees[i];
+                var row = [employee];
+                var totalHours = 0;
+                var workDays = 0;
+                
+                for (var d = 0; d < dateStrings.length; d++) {
+                    var dateKey = dateStrings[d];
+                    var dayData = attendanceData[employee] && attendanceData[employee][dateKey];
+                    
+                    if (dayData && dayData.checkIn && dayData.checkOut) {
+                        var hours = calculateHours(dayData.checkIn, dayData.checkOut);
+                        row.push(hours + ' שעות');
+                        totalHours += hours;
+                        workDays++;
+                    } else if (dayData && dayData.checkIn && !dayData.checkOut) {
+                        row.push('לא נסגר');
+                    } else {
+                        row.push('-');
+                    }
+                }
+                
+                row.push(workDays + ' ימים');
+                row.push(Math.round(totalHours * 100) / 100 + ' שעות');
+                var avgHours = workDays > 0 ? Math.round((totalHours / workDays) * 100) / 100 : 0;
+                row.push(avgHours > 0 ? avgHours + ' שעות' : '-');
+                
+                data.push(row);
+            }
+            
+            var todayStr = today.getFullYear() + '_' + (today.getMonth() + 1) + '_' + today.getDate();
+            downloadCSV(data, 'דוח_מפורט_רפטינג_בר_' + todayStr + '.csv');
+        }
+
+        function downloadCSV(data, filename) {
+            var csvContent = '\uFEFF';
+            for (var row = 0; row < data.length; row++) {
+                var rowData = [];
+                for (var col = 0; col < data[row].length; col++) {
+                    rowData.push('"' + data[row][col] + '"');
+                }
+                csvContent += rowData.join(',') + '\r\n';
+            }
+            
+            var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            var link = document.createElement('a');
+            var url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showAlert('הדוח יוצא בהצלחה!', 'success');
+        }
+
+        // שמירה וטעינה
+        function loadLocalData() {
+            try {
+                var savedEmployees = localStorage.getItem('raftingbar_employees');
+                if (savedEmployees) {
+                    employees = JSON.parse(savedEmployees);
+                }
+                
+                var savedAttendance = localStorage.getItem('raftingbar_attendance');
+                if (savedAttendance) {
+                    attendanceData = JSON.parse(savedAttendance);
+                }
+                
+                var savedStatus = localStorage.getItem('raftingbar_status');
+                if (savedStatus) {
+                    currentStatus = JSON.parse(savedStatus);
+                }
+                
+                // אל תטען סיסמה מ-localStorage - רק מהגיליון
+                // var savedAdminPassword = localStorage.getItem('raftingbar_admin_password');
+                // if (savedAdminPassword) {
+                //     adminPassword = savedAdminPassword;
+                // }
+                
+                var savedPending = localStorage.getItem('raftingbar_pending');
+                if (savedPending) {
+                    pendingSync = JSON.parse(savedPending);
+                }
+            } catch (e) {
+                console.log('שגיאה בטעינת נתונים מקומיים:', e);
+            }
+        }
+
+        function saveLocalData() {
+            try {
+                localStorage.setItem('raftingbar_employees', JSON.stringify(employees));
+                localStorage.setItem('raftingbar_attendance', JSON.stringify(attendanceData));
+                localStorage.setItem('raftingbar_status', JSON.stringify(currentStatus));
+                localStorage.setItem('raftingbar_pending', JSON.stringify(pendingSync));
+                // אל תשמור סיסמה ב-localStorage
+                // localStorage.setItem('raftingbar_admin_password', adminPassword);
+            } catch (e) {
+                console.log('שגיאה בשמירת נתונים מקומיים:', e);
+            }
+        }
+
+        // פונקציות עמוד הדוחות המפורטים
+        function initDetailedReportsPage() {
+            updateDetailedEmployeeFilterOptions();
+            setDetailedDefaultDates();
+            updateDetailedReports();
+            
+            // אירועי שינוי
+            var periodFilter = document.getElementById('detailedPeriodFilter');
+            var employeeFilter = document.getElementById('detailedEmployeeFilter');
+            
+            if (periodFilter) {
+                periodFilter.addEventListener('change', function() {
+                    toggleDetailedCustomDateRange();
+                    updateDetailedReports();
+                });
+            }
+            
+            if (employeeFilter) {
+                employeeFilter.addEventListener('change', updateDetailedReports);
+            }
+        }
+
+        function updateDetailedEmployeeFilterOptions() {
+            var employeeFilter = document.getElementById('detailedEmployeeFilter');
+            if (!employeeFilter) return;
+            
+            var currentValue = employeeFilter.value;
+            employeeFilter.innerHTML = '<option value="all">כל העובדים</option>';
+            
+            for (var i = 0; i < employees.length; i++) {
+                var option = document.createElement('option');
+                option.value = employees[i];
+                option.textContent = employees[i];
+                employeeFilter.appendChild(option);
+            }
+            
+            employeeFilter.value = currentValue;
+        }
+
+        function setDetailedDefaultDates() {
+            var today = new Date();
+            var firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            
+            var startDateInput = document.getElementById('detailedStartDate');
+            var endDateInput = document.getElementById('detailedEndDate');
+            
+            if (startDateInput) {
+                startDateInput.value = formatDateForInput(firstDayOfMonth);
+            }
+            if (endDateInput) {
+                endDateInput.value = formatDateForInput(today);
+            }
+        }
+
+        function formatDateForInput(date) {
+            return date.toISOString().split('T')[0];
+        }
+
+        function toggleDetailedCustomDateRange() {
+            var period = document.getElementById('detailedPeriodFilter').value;
+            var customRange = document.getElementById('detailedCustomDateRange');
+            
+            if (customRange) {
+                if (period === 'custom') {
+                    customRange.style.display = 'grid';
+                } else {
+                    customRange.style.display = 'none';
+                }
+            }
+        }
+
+        function getDetailedDateRange() {
+            var period = document.getElementById('detailedPeriodFilter').value;
+            var today = new Date();
+            var startDate, endDate;
+
+            switch (period) {
+                case 'today':
+                    startDate = new Date(today);
+                    endDate = new Date(today);
+                    break;
+                case 'week':
+                    startDate = new Date(today);
+                    startDate.setDate(today.getDate() - 6);
+                    endDate = new Date(today);
+                    break;
+                case 'month':
+                    startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                    endDate = new Date(today);
+                    break;
+                case 'custom':
+                    var startInput = document.getElementById('detailedStartDate');
+                    var endInput = document.getElementById('detailedEndDate');
+                    startDate = startInput ? new Date(startInput.value) : new Date(today);
+                    endDate = endInput ? new Date(endInput.value) : new Date(today);
+                    break;
+                default:
+                    startDate = new Date(today);
+                    endDate = new Date(today);
+            }
+
+            return { startDate: startDate, endDate: endDate };
+        }
+
+        function updateDetailedReports() {
+            var dateRange = getDetailedDateRange();
+            var selectedEmployee = document.getElementById('detailedEmployeeFilter').value;
+            
+            var reportData = generateDetailedReportData(dateRange.startDate, dateRange.endDate, selectedEmployee);
+            
+            updateDetailedStatsGrid(reportData);
+            updateDetailedHoursChart(reportData);
+            updateDetailedReportsTable(reportData);
+        }
+
+        function generateDetailedReportData(startDate, endDate, selectedEmployee) {
+            var data = {
+                totalHours: 0,
+                totalEvents: 0,
+                eventsByDate: {},
+                totalDays: 0,
+                overtimeDays: 0,
+                overtimeHours: 0,
+                missingDays: 0,
+                averageHours: 0,
+                employees: [],
+                dailyData: []
+            };
+
+            var employeeList = selectedEmployee === 'all' ? employees : [selectedEmployee];
+
+            // יצירת מערך תאריכים
+            var dates = [];
+            for (var d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                dates.push(formatDateForStorage(new Date(d)));
+            }
+
+            for (var e = 0; e < employeeList.length; e++) {
+                var employee = employeeList[e];
+                var employeeData = {
+                    name: employee,
+                    totalEvents: 0,
+                    eventDates: [],
+                    totalHours: 0,
+                    workDays: 0,
+                    overtimeDays: 0,
+                    overtimeHours: 0,
+                    missingDays: 0,
+                    dailyHours: []
+                };
+
+                for (var d = 0; d < dates.length; d++) {
+                    var dateStr = dates[d];
+                    var dayData = attendanceData[employee] && attendanceData[employee][dateStr];
+                    if (dayData && dayData.events){ employeeData.totalEvents += (dayData.events||0); data.totalEvents = (data.totalEvents||0) + (dayData.events||0); employeeData.eventDates.push({date: dateStr, count: dayData.events}); }
+                    
+                    if (dayData && dayData.checkIn && dayData.checkOut) {
+                        var hours = calculateHours(dayData.checkIn, dayData.checkOut);
+                        employeeData.totalHours += hours;
+                        employeeData.workDays++;
+                        employeeData.dailyHours.push({ date: dateStr, hours: hours });
+                        
+                        // בדיקת שעות נוספות (מעל 9 שעות)
+                        if (hours > 9) {
+                            employeeData.overtimeDays++;
+                            employeeData.overtimeHours += (hours - 9);
+                        }
+                    } else if (dayData && dayData.checkIn && !dayData.checkOut) {
+                        // יום לא נסגר
+                        employeeData.missingDays++;
+                        employeeData.dailyHours.push({ date: dateStr, hours: 0, incomplete: true });
+                    } else {
+                        // לא עבד
+                        employeeData.dailyHours.push({ date: dateStr, hours: 0 });
+                    }
+                }
+
+                employeeData.averageHours = employeeData.workDays > 0 ? 
+                    Math.round((employeeData.totalHours / employeeData.workDays) * 100) / 100 : 0;
+
+                data.employees.push(employeeData);
+                data.totalHours += employeeData.totalHours;
+                data.totalDays += employeeData.workDays;
+                data.overtimeDays += employeeData.overtimeDays;
+                data.overtimeHours += employeeData.overtimeHours;
+                data.missingDays += employeeData.missingDays;
+            }
+
+            data.averageHours = data.totalDays > 0 ? 
+                Math.round((data.totalHours / data.totalDays) * 100) / 100 : 0;
+
+            // נתונים יומיים מצורפים
+            for (var d = 0; d < dates.length; d++) {
+                var dateStr = dates[d];
+                var dayTotal = 0;
+                var dayWorkers = 0;
+                
+                for (var e = 0; e < employeeList.length; e++) {
+                    var employee = employeeList[e];
+                    var dayData = attendanceData[employee] && attendanceData[employee][dateStr];
+                    if (dayData && dayData.events){ employeeData.totalEvents += (dayData.events||0); data.totalEvents = (data.totalEvents||0) + (dayData.events||0); employeeData.eventDates.push({date: dateStr, count: dayData.events}); }
+                    if (dayData && dayData.checkIn && dayData.checkOut) {
+                        dayTotal += calculateHours(dayData.checkIn, dayData.checkOut);
+                        dayWorkers++;
+                    }
+                }
+                
+                data.dailyData.push({
+                    date: dateStr,
+                    totalHours: dayTotal,
+                    workers: dayWorkers,
+                    average: dayWorkers > 0 ? Math.round((dayTotal / dayWorkers) * 100) / 100 : 0
+                });
+            }
+
+            return data;
+        }
+
+        function formatDateForStorage(date) {
+            var year = date.getFullYear();
+            var month = String(date.getMonth() + 1).padStart(2, '0');
+            var day = String(date.getDate()).padStart(2, '0');
+            return year + '-' + month + '-' + day;
+        }
+
+        function updateDetailedStatsGrid(data) {
+            var statsGrid = document.getElementById('detailedStatsGrid');
+            if (!statsGrid) return;
+            
+            statsGrid.innerHTML = 
+                '<div class="stat-card">' +
+                    '<div class="stat-value">' + (Math.round(data.totalHours * 10) / 10) + '</div>' +
+                    '<div class="stat-label">סה"כ שעות</div>' +
+                '</div>' +
+                '<div class="stat-card">' +
+                    '<div class="stat-value">' + data.totalDays + '</div>' +
+                    '<div class="stat-label">ימי עבודה</div>' +
+                '</div>' +
+                '<div class="stat-card">' +
+                    '<div class="stat-value">' + data.averageHours + '</div>' +
+                    '<div class="stat-label">ממוצע יומי</div>' +
+                '</div>' +
+                '<div class="stat-card">' +
+                    '<div class="stat-value">' + data.overtimeDays + '</div>' +
+                    '<div class="stat-label">ימי שעות נוספות</div>' +
+                '</div>' +
+                '<div class="stat-card">' +
+                    '<div class="stat-value">' + (Math.round(data.overtimeHours * 10) / 10) + '</div>' +
+                    '<div class="stat-label">שעות נוספות</div>' +
+                '</div>' +
+                '<div class="stat-card">' +
+                    '<div class="stat-value">' + data.missingDays + '</div>' +
+                    '<div class="stat-label">ימים לא נסגרו</div>' +
+                '</div>';
+        }
+
+        function updateDetailedHoursChart(data) {
+            var chartDiv = document.getElementById('detailedHoursChart');
+            if (!chartDiv) return;
+            
+            if (data.dailyData.length === 0) {
+                chartDiv.innerHTML = '<p style="text-align: center; color: #666;">אין נתונים להצגה</p>';
+                return;
+            }
+
+            var maxHours = 1;
+            for (var i = 0; i < data.dailyData.length; i++) {
+                if (data.dailyData[i].totalHours > maxHours) {
+                    maxHours = data.dailyData[i].totalHours;
+                }
+            }
+            
+            var chartHtml = '';
+            var recentData = data.dailyData.slice(-14); // 14 ימים אחרונים
+            
+            for (var i = 0; i < recentData.length; i++) {
+                var day = recentData[i];
+                var date = new Date(day.date);
+                var dayNames = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+                var dayName = dayNames[date.getDay()];
+                var dayNum = date.getDate();
+                var width = (day.totalHours / maxHours) * 100;
+                
+                chartHtml += 
+                    '<div class="chart-label">' + dayName + ' ' + dayNum + ' - ' + day.totalHours + 'ש (' + day.workers + ' עובדים)</div>' +
+                    '<div class="chart-bar" style="width: ' + width + '%">' +
+                        (day.totalHours > 0 ? day.totalHours + 'ש' : '') +
+                    '</div>';
+            }
+            
+            chartDiv.innerHTML = chartHtml;
+        }
+
+        function updateDetailedReportsTable(data) {
+            var table = document.getElementById('detailedReportsTable');
+            if (!table) return;
+            
+            if (data.employees.length === 0) {
+                table.innerHTML = '<p style="text-align: center; color: #666;">אין נתונים להצגה</p>';
+                return;
+            }
+
+            var tableHtml = 
+                '<thead>' +
+                    '<tr>' +
+                        '<th>עובד</th>' +
+                        '<th>סה"כ שעות</th>' +
+                        '<th>ימי עבודה</th>' +
+                        '<th>ממוצע יומי</th>' +
+                        '<th>שעות נוספות</th>' +
+                        '<th>ימים לא נסגרו</th>' +
+                        '<th>סטטוס</th>' +
+                    '</tr>' +
+                '</thead>' +
+                '<tbody>';
+
+            for (var i = 0; i < data.employees.length; i++) {
+                var emp = data.employees[i];
+                var statusBadge = '';
+                if (emp.missingDays > 0) {
+                    statusBadge = '<span class="missing-badge">חסרים</span>';
+                } else if (emp.overtimeHours > 0) {
+                    statusBadge = '<span class="overtime-badge">שעות נוספות</span>';
+                } else if (emp.workDays > 0) {
+                    statusBadge = '<span class="perfect-badge">מושלם</span>';
+                }
+
+                var rowClass = emp.missingDays > 0 ? 'missing-highlight' : 
+                               emp.overtimeHours > 5 ? 'overtime-highlight' : '';
+
+                tableHtml += 
+                    '<tr class="' + rowClass + '">' +
+                        '<td><strong>' + emp.name + '</strong></td>' +
+                        '<td>' + (Math.round(emp.totalHours * 10) / 10) + '</td>' +
+                        '<td>' + emp.workDays + '</td>' +
+                        '<td>' + emp.averageHours + '</td>' +
+                        '<td>' + (Math.round(emp.overtimeHours * 10) / 10) + '</td>' +
+                        '<td>' + emp.missingDays + '</td>' +
+                        '<td>' + statusBadge + '</td>' +
+                    '</tr>';
+            }
+
+            tableHtml += '</tbody>';
+            table.innerHTML = tableHtml;
+        }
+
+        // פונקציות ייצוא מפורטות
+        function exportDetailedCurrent() {
+            var dateRange = getDetailedDateRange();
+            var selectedEmployee = document.getElementById('detailedEmployeeFilter').value;
+            var reportData = generateDetailedReportData(dateRange.startDate, dateRange.endDate, selectedEmployee);
+            
+            var data = [
+                ['דוח נוכחות מפורט - רפטינג בר'],
+                ['תקופה: ' + formatDateForDisplay(dateRange.startDate) + ' - ' + formatDateForDisplay(dateRange.endDate)],
+                [''],
+                ['עובד', 'סה"כ שעות', 'ימי עבודה', 'ממוצע יומי', 'שעות נוספות', 'ימים לא נסגרו']
+            ];
+
+            for (var i = 0; i < reportData.employees.length; i++) {
+                var emp = reportData.employees[i];
+                data.push([
+                    emp.name,
+                    Math.round(emp.totalHours * 10) / 10,
+                    emp.workDays,
+                    emp.averageHours,
+                    Math.round(emp.overtimeHours * 10) / 10,
+                    emp.missingDays
+                ]);
+            }
+
+            var filename = 'דוח_מפורט_' + formatDateForFilename(dateRange.startDate) + '_' + formatDateForFilename(dateRange.endDate) + '.csv';
+            downloadCSV(data, filename);
+        }
+
+        function exportDetailedOvertime() {
+            var dateRange = getDetailedDateRange();
+            var selectedEmployee = document.getElementById('detailedEmployeeFilter').value;
+            var reportData = generateDetailedReportData(dateRange.startDate, dateRange.endDate, selectedEmployee);
+            
+            var data = [
+                ['דוח שעות נוספות מפורט - רפטינג בר'],
+                ['תקופה: ' + formatDateForDisplay(dateRange.startDate) + ' - ' + formatDateForDisplay(dateRange.endDate)],
+                [''],
+                ['עובד', 'ימי שעות נוספות', 'סה"כ שעות נוספות', 'ממוצע שעות נוספות יומי']
+            ];
+
+            var hasOvertime = false;
+            for (var i = 0; i < reportData.employees.length; i++) {
+                var emp = reportData.employees[i];
+                if (emp.overtimeHours > 0) {
+                    hasOvertime = true;
+                    var avgOvertime = emp.overtimeDays > 0 ? 
+                        Math.round((emp.overtimeHours / emp.overtimeDays) * 100) / 100 : 0;
+                    
+                    data.push([
+                        emp.name,
+                        emp.overtimeDays,
+                        Math.round(emp.overtimeHours * 10) / 10,
+                        avgOvertime
+                    ]);
+                }
+            }
+
+            if (!hasOvertime) {
+                data.push(['אין שעות נוספות בתקופה זו']);
+            }
+
+            var filename = 'דוח_שעות_נוספות_מפורט_' + formatDateForFilename(dateRange.startDate) + '_' + formatDateForFilename(dateRange.endDate) + '.csv';
+            downloadCSV(data, filename);
+        }
+
+        function exportDetailedSummary() {
+            var dateRange = getDetailedDateRange();
+            var selectedEmployee = document.getElementById('detailedEmployeeFilter').value;
+            var reportData = generateDetailedReportData(dateRange.startDate, dateRange.endDate, selectedEmployee);
+            
+            var data = [
+                ['סיכום מפורט - רפטינג בר'],
+                ['תקופה: ' + formatDateForDisplay(dateRange.startDate) + ' - ' + formatDateForDisplay(dateRange.endDate)],
+                [''],
+                ['סטטיסטיקה', 'ערך'],
+                ['סה"כ שעות עבודה', Math.round(reportData.totalHours * 10) / 10],
+                ['סה"כ ימי עבודה', reportData.totalDays],
+                ['ממוצע שעות יומי', reportData.averageHours],
+                ['סה"כ שעות נוספות', Math.round(reportData.overtimeHours * 10) / 10],
+                ['ימי שעות נוספות', reportData.overtimeDays],
+                ['ימים לא נסגרו', reportData.missingDays],
+                ['מספר עובדים', reportData.employees.length],
+                ['סה\'כ אירועים', (reportData.totalEvents||0)],
+                ['סה\'כ אירועים', reportData.totalEvents],
+                [''],
+                ['עובד מצטיין (הכי הרבה שעות)', ''],
+                ['עובד מצטיין (הכי יציב)', '']
+            ];
+
+            if (reportData.employees.length > 0) {
+                var topHoursEmployee = reportData.employees[0];
+                var mostConsistentEmployee = reportData.employees[0];
+                
+                for (var i = 1; i < reportData.employees.length; i++) {
+                    if (reportData.employees[i].totalHours > topHoursEmployee.totalHours) {
+                        topHoursEmployee = reportData.employees[i];
+                    }
+                    
+                    var current = reportData.employees[i];
+                    if (current.missingDays < mostConsistentEmployee.missingDays || 
+                        (current.missingDays === mostConsistentEmployee.missingDays && current.averageHours > mostConsistentEmployee.averageHours)) {
+                        mostConsistentEmployee = current;
+                    }
+                }
+                
+                data[data.length - 2][1] = topHoursEmployee.name + ' (' + Math.round(topHoursEmployee.totalHours * 10) / 10 + ' שעות)';
+                data[data.length - 1][1] = mostConsistentEmployee.name + ' (' + mostConsistentEmployee.missingDays + ' חסרים)';
+            }
+
+            var filename = 'סיכום_מפורט_' + formatDateForFilename(dateRange.startDate) + '_' + formatDateForFilename(dateRange.endDate) + '.csv';
+            downloadCSV(data, filename);
+        }
+
+        function exportDetailedFull() {
+            var dateRange = getDetailedDateRange();
+            var selectedEmployee = document.getElementById('detailedEmployeeFilter').value;
+            var reportData = generateDetailedReportData(dateRange.startDate, dateRange.endDate, selectedEmployee);
+            
+            // יצירת כותרות עמודות
+            var dates = [];
+            for (var d = new Date(dateRange.startDate); d <= dateRange.endDate; d.setDate(d.getDate() + 1)) {
+                dates.push(formatDateForStorage(new Date(d)));
+            }
+
+            var headers = ['עובד'];
+            for (var i = 0; i < dates.length; i++) {
+                var d = new Date(dates[i]);
+                headers.push(d.getDate() + '/' + (d.getMonth() + 1));
+            }
+            headers.push('סה"כ שעות', 'ימי עבודה', 'שעות נוספות');
+
+            var data = [
+                ['דוח מפורט יומי מלא - רפטינג בר'],
+                ['תקופה: ' + formatDateForDisplay(dateRange.startDate) + ' - ' + formatDateForDisplay(dateRange.endDate)],
+                [''],
+                headers
+            ];
+
+            for (var e = 0; e < reportData.employees.length; e++) {
+                var emp = reportData.employees[e];
+                var row = [emp.name];
+                
+                for (var d = 0; d < dates.length; d++) {
+                    var date = dates[d];
+                    var dayData = null;
+                    
+                    for (var h = 0; h < emp.dailyHours.length; h++) {
+                        if (emp.dailyHours[h].date === date) {
+                            dayData = emp.dailyHours[h];
+                            break;
+                        }
+                    }
+                    
+                    if (dayData) {
+                        if (dayData.incomplete) {
+                            row.push('לא נסגר');
+                        } else if (dayData.hours > 0) {
+                            row.push(Math.round(dayData.hours * 100) / 100);
+                        } else {
+                            row.push('-');
+                        }
+                    } else {
+                        row.push('-');
+                    }
+                }
+                
+                row.push(
+                    Math.round(emp.totalHours * 10) / 10,
+                    emp.workDays,
+                    Math.round(emp.overtimeHours * 10) / 10
+                );
+                
+                data.push(row);
+            }
+
+            var filename = 'דוח_יומי_מלא_' + formatDateForFilename(dateRange.startDate) + '_' + formatDateForFilename(dateRange.endDate) + '.csv';
+            downloadCSV(data, filename);
+        }
+
+        // פונקציות עזר לתאריכים
+        function formatDateForDisplay(date) {
+            return date.toLocaleDateString('he-IL');
+        }
+
+        function formatDateForFilename(date) {
+            var year = date.getFullYear();
+            var month = String(date.getMonth() + 1).padStart(2, '0');
+            var day = String(date.getDate()).padStart(2, '0');
+            return year + '_' + month + '_' + day;
+        }
+
+        // אתחול אפליקציה
+        function initApp() {
+            loadLocalData();
+            
+            updateEmployeeSelects();
+            updateEmployeeGrid();
+            updateEmployeeStatus();
+            updateQuickStats();
+            updateCurrentTime();
+            
+            setInterval(updateCurrentTime, 1000);
+            setInterval(updateQuickStats, 30000);
+            
+            // סנכרון אוטומטי כל 30 שניות (יותר תכוף לסנכרון עובדים)
+            setInterval(function() {
+                if (isInitialized) {
+                    loadDataFromSheet();
+                }
+            }, 30000);
+            
+            testConnection();
+            
+            var employeeSelect = document.getElementById('employeeSelect');
+            if (employeeSelect) {
+                employeeSelect.addEventListener('change', updateEmployeeStatus);
+            }
+            
+            document.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    var activeElement = document.activeElement;
+                    if (activeElement && activeElement.id === 'adminPassword') {
+                        checkAdminPassword();
+                    } else if (activeElement && activeElement.id === 'newAdminPassword') {
+                        changeAdminPassword();
+                    } else if (activeElement && activeElement.id === 'newEmployeeName') {
+                        addEmployee();
+                    } else if (activeElement && activeElement.id === 'detailedReportsPassword') {
+                        checkDetailedReportsPassword();
+                    }
+                }
+            });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
+    </script>
+<script>if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('sw.js', { scope: './' }).catch(function(e){ console.log('SW register failed', e); });
+  });
+}</script>
+<script>
+  // שימוש בקוד מנהל לעמוד "דוחות"
+  function checkReportsPassword(){
+    var entered = String(document.getElementById('reportsPassword')?.value || '').trim();
+    var adminPass = '1986';
+    try { if (typeof adminPassword !== 'undefined' && adminPassword) adminPass = String(adminPassword); } catch(e){}
+    if (entered === adminPass){
+      document.getElementById('reportsLock').style.display = 'none';
+      document.getElementById('reportsContent').style.display = 'block';
+      document.getElementById('reportsPassword').value = '';
+      if (typeof showAlert === 'function') showAlert('נכנסת לדוחות בהצלחה', 'success');
+    } else {
+      document.getElementById('reportsPassword').value = '';
+      if (typeof showAlert === 'function') showAlert('קוד שגוי! נסה שוב', 'error');
+    }
+  }
+  function lockReports(){
+    var lockEl = document.getElementById('reportsLock');
+    var contentEl = document.getElementById('reportsContent');
+    if(lockEl && contentEl){
+      lockEl.style.display = 'block';
+      contentEl.style.display = 'none';
+      if (typeof showAlert === 'function') showAlert('עמוד הדוחות ננעל', 'success');
+    }
+  }
+  (function(){
+    var _s = window.showPage;
+    window.showPage = function(pageName){
+      var ret = _s ? _s(pageName) : null;
+      if(pageName === 'reports'){
+        var lockEl = document.getElementById('reportsLock');
+        var contentEl = document.getElementById('reportsContent');
+        if(lockEl && contentEl){
+          lockEl.style.display = 'block';
+          contentEl.style.display = 'none';
+        }
+      }
+      return ret;
+    };
+  })();
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function(){
+    var logoutBtn = document.getElementById('floatingLogoutBtn');
+    function isLoggedIn(){
+      try {
+        return !!localStorage.getItem('rb_auth_v1');
+      } catch(e){
+        return false;
+      }
+    }
+    if(isLoggedIn()){
+      logoutBtn.style.display = 'block';
+    }
+    logoutBtn.addEventListener('click', function(){
+      try {
+        localStorage.removeItem('rb_auth_v1');
+        localStorage.removeItem('rb_emp_code_v1');
+      } catch(e){}
+      if (typeof showAlert === 'function') showAlert('התנתקת בהצלחה', 'success');
+      setTimeout(function(){
+        location.reload();
+      }, 500);
+    });
+  });
+</script>
+
+<script>
+(function(){
+  const AUTH_KEY = 'rb_auth_v1';
+  const EMP_CODE_KEY = 'rb_emp_code_v1';
+  const DEFAULT_EMPLOYEE_ACCESS_CODE = '97531';
+
+  function getEmployeeCode(){
+    try {
+      const v = localStorage.getItem(EMP_CODE_KEY);
+      return v && v.trim() ? v : DEFAULT_EMPLOYEE_ACCESS_CODE;
+    } catch(e){
+      return DEFAULT_EMPLOYEE_ACCESS_CODE;
+    }
+  }
+
+  function isAuthValid(){
+    try{
+      const raw = localStorage.getItem(AUTH_KEY);
+      if(!raw) return false;
+      const data = JSON.parse(raw);
+      return data && data.ok === true;
+    }catch(e){ return false; }
+  }
+
+  function showOverlay(){
+    var ov = document.getElementById('authOverlay');
+    if (ov) ov.style.display = 'flex';
+  }
+  function hideOverlay(){
+    var ov = document.getElementById('authOverlay');
+    if (ov) ov.style.display = 'none';
+  }
+
+  function handleAuthSubmit(){
+    var input = document.getElementById('authCodeInput');
+    var code = (input && input.value || '').trim();
+    if(!code){
+      if (typeof showAlert === 'function') showAlert('יש להזין קוד', 'error');
+      return;
+    }
+    var emp = getEmployeeCode();
+    if(code === emp){
+      try{
+        localStorage.setItem(AUTH_KEY, JSON.stringify({ok:true, ts: Date.now()}));
+      }catch(e){}
+      hideOverlay();
+      if (typeof showAlert === 'function') showAlert('מחובר לעובדים ✅', 'success');
+      var btn = document.getElementById('floatingLogoutBtn'); if(btn) btn.style.display = 'block';
+    }else{
+      if (typeof showAlert === 'function') showAlert('קוד שגוי', 'error');
+      input.value = ''; input.focus();
+    }
+  }
+
+  function attachOverlayEvents(){
+    var enter = document.getElementById('authEnterBtn');
+    var cancel = document.getElementById('authCancelBtn');
+    var input = document.getElementById('authCodeInput');
+    if(enter) enter.addEventListener('click', handleAuthSubmit);
+    if(cancel) cancel.addEventListener('click', hideOverlay);
+    if(input) input.addEventListener('keydown', function(e){ if(e.key === 'Enter') handleAuthSubmit(); });
+  }
+
+  // Floating logout
+  function setupLogout(){
+    var btn = document.getElementById('floatingLogoutBtn');
+    if(!btn) return;
+    if(isAuthValid()) btn.style.display = 'block';
+    btn.addEventListener('click', function(){
+      try {
+        localStorage.removeItem(AUTH_KEY);
+      } catch(e){}
+      if (typeof showAlert === 'function') showAlert('התנתקת', 'success');
+      setTimeout(function(){ location.reload(); }, 300);
+    });
+  }
+
+  // Reports lock must use adminPassword (already defined elsewhere). We ensure function exists.
+  if (typeof window.checkReportsPassword !== 'function'){
+    window.checkReportsPassword = function(){
+      var entered = String(document.getElementById('reportsPassword')?.value || '').trim();
+      var adminPass = '1986';
+      try { if (typeof adminPassword !== 'undefined' && adminPassword) adminPass = String(adminPassword); } catch(e){}
+      if (entered === adminPass){
+        document.getElementById('reportsLock').style.display = 'none';
+        document.getElementById('reportsContent').style.display = 'block';
+        document.getElementById('reportsPassword').value = '';
+        if (typeof showAlert === 'function') showAlert('נכנסת לדוחות בהצלחה', 'success');
+      } else {
+        document.getElementById('reportsPassword').value = '';
+        if (typeof showAlert === 'function') showAlert('קוד שגוי! נסה שוב', 'error');
+      }
+    };
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    attachOverlayEvents();
+    setupLogout();
+    if(!isAuthValid()){
+      showOverlay();
+      // אופציונלי: מניעת שימוש עד כניסה – אין חסימה נוספת כי זה רק רישום שעות
+    }
+  });
+})();
+</script>
+<script>
+
+// backfill_bulk.js
+// יוצר כרטיס "רישום אחורה (מרוכז)" אוטומטית בעמוד הניהול, בלי לשנות את index.html
+
+(function () {
+  const ID_CARD = "bulk-backfill-card";
+
+  // כלי עזר
+  function byId(id) { return document.getElementById(id); }
+  function el(tag, attrs = {}, children = []) {
+    const e = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === "class") e.className = v;
+      else if (k === "style") e.setAttribute("style", v);
+      else e[k] = v;
+    }
+    for (const c of children) {
+      if (typeof c === "string") e.appendChild(document.createTextNode(c));
+      else if (c) e.appendChild(c);
+    }
+    return e;
+  }
+
+  // ממיר "2025-08-05" ו-"09:00" ל-ISO מקומי
+  function toLocalISO(dateStr, timeStr) {
+    const [y, m, d] = dateStr.split("-").map(Number);
+    const [hh, mm] = timeStr.split(":").map(Number);
+    const dt = new Date(y, (m - 1), d, hh, mm, 0, 0);
+    return dt.toISOString();
+  }
+
+  // בונה/מזריק את הממשק
+  function injectCard() {
+    if (byId(ID_CARD)) return;
+    const adminContent = byId("adminContent");
+    if (!adminContent || adminContent.style.display === "none") return;
+
+    const card = el("div", { class: "card", id: ID_CARD }, [
+      el("h2", {}, [ "🕒 רישום אחורה (מרוכז)" ]),
+      el("div", { style: "background:#e3f2fd;border-radius:8px;padding:10px;margin:10px 0;font-size:13px;color:#1976d2;" },
+        [ "ממלא מספר ימים בבת אחת – לכל יום יווצרו שורות כניסה/יציאה." ]),
+
+      // עובד
+      el("div", { class: "form-group" }, [
+        el("label", {}, [ "עובד:" ]),
+        el("select", { id: "bbEmployee", className: "auth-input", style: "padding:10px;border:2px solid #ddd;border-radius:8px;" })
+      ]),
+
+      // טווח תאריכים
+      el("div", { class: "filter-row" }, [
+        el("div", { class: "filter-group" }, [
+          el("label", {}, [ "מתאריך:" ]),
+          el("input", { id: "bbStart", type: "date" })
+        ]),
+        el("div", { class: "filter-group" }, [
+          el("label", {}, [ "עד תאריך:" ]),
+          el("input", { id: "bbEnd", type: "date" })
+        ])
+      ]),
+
+      // שעות
+      el("div", { class: "filter-row" }, [
+        el("div", { class: "filter-group" }, [
+          el("label", {}, [ "שעת כניסה:" ]),
+          el("input", { id: "bbIn", type: "time", value: "09:00" })
+        ]),
+        el("div", { class: "filter-group" }, [
+          el("label", {}, [ "שעת יציאה:" ]),
+          el("input", { id: "bbOut", type: "time", value: "17:00" })
+        ])
+      ]),
+
+      // ימים בשבוע + אפשרויות
+      el("div", { class: "card", style: "padding:12px;margin:10px 0;" }, [
+        el("div", { style: "display:flex;gap:8px;flex-wrap:wrap;align-items:center;" }, [
+          // ימים א-ש (ישראל: 0=Sunday? ב-JS 0=Sunday)
+          ...["א", "ב", "ג", "ד", "ה", "ו", "ש"].map((lbl, idx) => {
+            const dayIndex = [0,1,2,3,4,5,6][idx]; // JS: 0=Sun ... 6=Sat
+            const id = "bbDay" + dayIndex;
+            return el("label", { style: "display:flex;gap:6px;align-items:center;font-size:13px;" }, [
+              el("input", { type: "checkbox", id, checked: dayIndex <= 4 }), // ברירת מחדל: א-ה
+              document.createTextNode("יום " + lbl)
+            ]);
+          }),
+        ]),
+        el("div", { style: "display:flex;gap:16px;margin-top:8px;align-items:center;flex-wrap:wrap;" }, [
+          el("label", { style: "display:flex;gap:6px;align-items:center;font-size:13px;" }, [
+            el("input", { type: "checkbox", id: "bbSkipExisting", checked: true }),
+            "דלג על ימים שכבר קיימים"
+          ]),
+          el("label", { style: "display:flex;gap:6px;align-items:center;font-size:13px;" }, [
+            el("input", { type: "checkbox", id: "bbWriteToCloud", checked: true }),
+            "סנכרן גם לענן (Sheets)"
+          ]),
+        ])
+      ]),
+
+      // תצוגת ספירה
+      el("div", { id: "bbPreview", style: "background:#f8f9fa;padding:10px;border-radius:8px;border-left:4px solid #667eea;font-size:13px;" },
+        [ "בחר נתונים לקבלת תצוגה מקדימה..." ]),
+
+      // כפתור הרצה
+      el("button", { class: "btn btn-admin", id: "bbRunBtn", style: "width:100%;margin-top:10px;" }, [ "✅ בצע רישום אחורה" ])
+    ]);
+
+    adminContent.appendChild(card);
+
+    // מלא רשימת עובדים
+    try {
+      const sel = byId("bbEmployee");
+      if (sel && Array.isArray(window.employees)) {
+        sel.innerHTML = "";
+        window.employees.forEach((name) => {
+          const opt = document.createElement("option");
+          opt.value = name; opt.textContent = name;
+          sel.appendChild(opt);
+        });
+      }
+    } catch (e) {}
+
+    // ערכי ברירת מחדל: החודש הנוכחי עד היום
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, "0");
+    const d = String(today.getDate()).padStart(2, "0");
+    const firstDay = `${y}-${m}-01`;
+    const todayStr = `${y}-${m}-${d}`;
+    byId("bbStart").value = firstDay;
+    byId("bbEnd").value = todayStr;
+
+    // אירועים
+    ["bbEmployee","bbStart","bbEnd","bbIn","bbOut","bbSkipExisting","bbDay0","bbDay1","bbDay2","bbDay3","bbDay4","bbDay5","bbDay6"]
+      .forEach(id => byId(id)?.addEventListener("change", updatePreview));
+    byId("bbRunBtn").addEventListener("click", runBackfill);
+
+    updatePreview();
+  }
+
+  function iterateDatesInclusive(startStr, endStr) {
+    const arr = [];
+    const s = new Date(startStr);
+    const e = new Date(endStr);
+    if (isNaN(s) || isNaN(e)) return arr;
+    for (let dt = new Date(s); dt <= e; dt.setDate(dt.getDate() + 1)) {
+      const y = dt.getFullYear();
+      const m = String(dt.getMonth() + 1).padStart(2, "0");
+      const d = String(dt.getDate()).padStart(2, "0");
+      arr.push(`${y}-${m}-${d}`);
+    }
+    return arr;
+  }
+
+  function shouldIncludeDay(dateStr) {
+    const dt = new Date(dateStr);
+    const day = dt.getDay(); // 0..6
+    const cb = document.getElementById("bbDay"+day);
+    return !!(cb && cb.checked);
+  }
+
+  function getExistingForDate(emp, dateStr) {
+    try {
+      return window.attendanceData?.[emp]?.[dateStr] || null;
+    } catch (e) { return null; }
+  }
+
+  function updatePreview() {
+    const emp = byId("bbEmployee")?.value;
+    const s = byId("bbStart")?.value;
+    const e = byId("bbEnd")?.value;
+    const skip = byId("bbSkipExisting")?.checked;
+    if (!emp || !s || !e) {
+      byId("bbPreview").textContent = "בחר עובד וטווח תאריכים לקבלת תצוגה מקדימה.";
+      return;
+    }
+    const dates = iterateDatesInclusive(s, e).filter(shouldIncludeDay);
+    let willWrite = 0, skipped = 0;
+    for (const dateStr of dates) {
+      const exist = getExistingForDate(emp, dateStr);
+      if (exist && skip) skipped++; else willWrite++;
+    }
+    byId("bbPreview").textContent =
+      `ימים בטווח: ${dates.length} • יירשמו: ${willWrite} • דילוג על קיימים: ${skipped}`;
+  }
+
+  async function runBackfill() {
+    const emp = byId("bbEmployee")?.value;
+    const s = byId("bbStart")?.value;
+    const e = byId("bbEnd")?.value;
+    const tIn = byId("bbIn")?.value;
+    const tOut = byId("bbOut")?.value;
+    const skip = byId("bbSkipExisting")?.checked;
+    const toCloud = byId("bbWriteToCloud")?.checked;
+
+    if (!emp || !s || !e || !tIn || !tOut) {
+      alert("נא למלא עובד, טווח תאריכים ושעות כניסה/יציאה.");
+      return;
+    }
+
+    const dates = iterateDatesInclusive(s, e).filter(shouldIncludeDay);
+    if (dates.length === 0) {
+      alert("אין ימים לסמן בטווח שנבחר.");
+      return;
+    }
+
+    const makeRecord = (employee, action, timestamp, dateStr) => {
+      // עידכון מבנה הנתונים המקומי
+      window.attendanceData ||= {};
+      window.attendanceData[employee] ||= {};
+      window.attendanceData[employee][dateStr] ||= {};
+      if (action === "checkin") window.attendanceData[employee][dateStr].checkIn = timestamp;
+      if (action === "checkout") window.attendanceData[employee][dateStr].checkOut = timestamp;
+
+      try { window.saveLocalData?.(); } catch(e) {}
+      try { window.updateAll?.(); } catch(e) {}
+
+      // ענן
+      if (toCloud && typeof window.recordToSheet === "function") {
+        const ts = new Date(timestamp);
+        const timeText = ts.toLocaleTimeString?.("he-IL") || "";
+        window.recordToSheet(employee, action, timestamp, dateStr, timeText);
+      }
+    };
+
+    let wrote = 0, skippedCount = 0;
+    for (const dateStr of dates) {
+      const existing = getExistingForDate(emp, dateStr);
+      if (existing && skip) { skippedCount++; continue; }
+
+      const cinISO = toLocalISO(dateStr, tIn);
+      const coutISO = toLocalISO(dateStr, tOut);
+
+      makeRecord(emp, "checkin", cinISO, dateStr);
+      makeRecord(emp, "checkout", coutISO, dateStr);
+
+      wrote++;
+      // הפסקה קצרה כדי לא להציף את ה־Apps Script
+      await new Promise(r => setTimeout(r, 60));
+    }
+
+    // הודעות UI
+    try {
+      if (typeof window.showAlert === "function") {
+        window.showAlert(`הושלם! נרשמו ${wrote} ימים, דולגו ${skippedCount}.`, "success");
+      } else {
+        alert(`הושלם! נרשמו ${wrote} ימים, דולגו ${skippedCount}.`);
+      }
+    } catch (e) {}
+
+    // רענון מצב
+    try { window.updateAll?.(); } catch(e) {}
+  }
+
+  // נסה להזריק מיד, ואם עמוד הניהול נפתח אחרי – נשתמש בצופה
+  const tryInject = () => {
+    try { injectCard(); } catch(e) {}
+  };
+  document.addEventListener("DOMContentLoaded", tryInject);
+
+  // MutationObserver כדי לתפוס פתיחה של עמוד הניהול בעתיד
+  const obs = new MutationObserver(() => {
+    tryInject();
+  });
+  obs.observe(document.documentElement, { childList: true, subtree: true });
+})();
+
+
+/*** Self Report Page ***/
+function selfDateRange(period){
+  var end = new Date(); end.setHours(23,59,59,999);
+  var start = new Date(end);
+  if (period === 'today') start = new Date(end.getFullYear(), end.getMonth(), end.getDate(),0,0,0,0);
+  else if (period === 'week') start.setDate(end.getDate() - 6);
+  else start = new Date(end.getFullYear(), end.getMonth(), 1,0,0,0,0);
+  return {start:start, end:end};
+}
+function fillSelfEmployees(){
+  var sel = document.getElementById('selfEmployee');
+  if(!sel) return;
+  var keep = sel.value;
+  sel.innerHTML='';
+  employees.forEach(function(n){ var o=document.createElement('option'); o.value=n; o.textContent=n; sel.appendChild(o); });
+  if(keep) sel.value = keep;
+}
+function renderSelf(){
+  var emp = (document.getElementById('selfEmployee')||{}).value;
+  if(!emp){ showAlert('בחר עובד', 'error'); return; }
+  var period = (document.getElementById('selfPeriod')||{}).value || 'month';
+  var rng = selfDateRange(period);
+  var rows = [['תאריך','כניסה','יציאה','שעות','אירועים']];
+  var days=0, total=0, eventsTotal=0;
+  for (var d=new Date(rng.start); d<=rng.end; d.setDate(d.getDate()+1)){
+    var y=d.getFullYear(), m=(''+(d.getMonth()+1)).padStart(2,'0'), da=(''+d.getDate()).padStart(2,'0');
+    var key=y+'-'+m+'-'+da;
+    var day=attendanceData[emp] && attendanceData[emp][key];
+    if(!day) continue;
+    var hours=0; if(day.checkIn) hours = calculateHours(day.checkIn, day.checkOut||null);
+    if(day.checkIn || day.checkOut){ days++; total+=hours; }
+    var ev = day.events || 0; eventsTotal += ev;
+    rows.push([da+'/'+(d.getMonth()+1), day.checkIn?formatTime(day.checkIn):'-', day.checkOut?formatTime(day.checkOut):'-', hours||0, ev]);
+  }
+  rows.unshift(['ימי עבודה: '+days, '', 'סה״כ שעות: '+(Math.round(total*10)/10), '', 'סה״כ אירועים: '+eventsTotal]);
+  var table = document.getElementById('selfTable');
+  var htmlRows = rows.map(function(r,i){ var tag = i===0?'th':'td'; return '<tr>'+r.map(function(c){ return '<'+tag+'>'+c+'</'+tag+'>';}).join('')+'</tr>'; }).join('');
+  table.innerHTML = htmlRows;
+}
+(function(){ var _u = updateAll; updateAll = function(){ _u(); fillSelfEmployees(); }; })();
+
+
+/* === EVENTS: add per day + UI counters === */
+function getOrCreateDay(employee, dateKey) {
+  attendanceData[employee] = attendanceData[employee] || {};
+  attendanceData[employee][dateKey] = attendanceData[employee][dateKey] || {};
+  return attendanceData[employee][dateKey];
+}
+function addEventForEmployee() {
+  var employee = document.getElementById('employeeSelect') && document.getElementById('employeeSelect').value;
+  if (!employee) { showAlert('אנא בחר עובד', 'error'); return; }
+  var dateKey = (document.getElementById('eventDate') && document.getElementById('eventDate').value) || getCurrentDate();
+  var day = getOrCreateDay(employee, dateKey);
+  day.events = (day.events || 0) + 1;
+  saveLocalData && saveLocalData();
+  updateAll && updateAll();
+  showAlert('נוסף אירוע ל-' + employee + ' בתאריך ' + dateKey, 'success');
+  if (isInitialized && typeof recordToSheet === 'function') {
+    var now = new Date();
+    recordToSheet(employee, 'event', now.toISOString(), dateKey, now.toLocaleTimeString('he-IL'));
+  }
+}
+function updateTodayEventsUI() {
+  var el = document.getElementById('todayEventsCount');
+  if (!el) return;
+  var employee = document.getElementById('employeeSelect') && document.getElementById('employeeSelect').value;
+  if (!employee) { el.textContent = '0'; return; }
+  var day = attendanceData[employee] && attendanceData[employee][getCurrentDate()];
+  el.textContent = day && day.events ? day.events : 0;
+}
+function setEventDateDefault(){
+  var inp = document.getElementById('eventDate');
+  if (inp && !inp.value) { inp.value = getCurrentDate(); }
+}
+(function(){ var _u = updateAll; updateAll = function(){ _u(); updateTodayEventsUI(); setEventDateDefault(); }; })();
+
+</script><div class="page" id="adminPage">
+<!-- מסך נעילה -->
+<div class="card" id="adminLock" style="display: block;">
+<h2>🔒 עמוד ניהול מוגן</h2>
+<p style="text-align: center; color: #666; margin-bottom: 20px;">
+                    הזן קוד גישה לניהול המערכת
+                </p>
+<div class="form-group">
+<label>קוד גישה:</label>
+<input id="adminPassword" maxlength="6" placeholder="הזן קוד גישה" type="password"/>
+</div>
+<button class="btn btn-admin" onclick="checkAdminPassword()" style="width: 100%;">
+                    🔓 פתח ניהול
+                </button>
+<div style="margin-top: 20px; padding: 15px; background: #e3f2fd; border-radius: 10px; font-size: 14px; color: #1976d2;">
+                    💡 <strong>טיפ:</strong> הקוד ברירת המחדל הוא: <strong>1234</strong><br/>
+                    ניתן לשנות בהגדרות המערכת
+                </div>
+</div>
+<!-- תוכן הניהול -->
+<div id="adminContent" style="display: block;">
+<div class="card">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+<h2 style="margin: 0;">⚙️ ניהול עובדים</h2>
+<button class="btn" onclick="lockAdmin()" style="background: #f44336; color: white; padding: 8px 12px; font-size: 14px;">
+                            🔒 נעל
+                        </button>
+</div>
+<div style="background: #e3f2fd; border-radius: 8px; padding: 10px; margin-bottom: 15px; text-align: center; font-size: 0.9em; color: #1976d2;">
+                        📡 העובדים מסונכרנים אוטומטית בין כל המכשירים
+                    </div>
+<div class="form-group">
+<label>הוסף עובד חדש:</label>
+<input id="newEmployeeName" placeholder="שם העובד החדש" type="text"/>
+</div>
+<button class="btn btn-admin" onclick="addEmployee()" style="width: 100%; margin-bottom: 15px;">
+                        ➕ הוסף עובד
+                    </button>
+<div class="form-group">
+<label>הסר עובד:</label>
+<select id="removeEmployeeSelect">
+<option value="">-- בחר עובד להסרה --</option>
+</select>
+</div>
+<button class="btn btn-checkout" onclick="removeEmployee()" style="width: 100%; margin-bottom: 20px;">
+                        🗑️ הסר עובד
+                    </button>
+<button class="btn btn-checkout" onclick="clearAll()" style="width: 100%;">
+                        🔄 איפוס נתונים
+                    </button>
+</div>
+<div class="card">
+<h2>🔄 סנכרון</h2>
+<p style="text-align: center; color: #666; margin-bottom: 15px;">
+                        עובדים ונתוני נוכחות מסונכרנים בזמן אמת
+                    </p>
+<button class="btn btn-admin" onclick="forcSync()" style="width: 100%;">
+                        ⚡ סנכרון ידני
+                    </button>
+</div>
+<div class="card" id="adminRetroEventCard"><h2>🕒 הוספת אירוע רטרואקטיבית</h2><div class="form-group"><label>בחר עובד:</label><select id="adminEventEmployee"></select></div><div class="form-group"><label>תאריך האירוע:</label><input id="adminEventDate" type="date"/></div><button class="btn btn-admin" onclick="addRetroEvent()" style="width:100%;margin-bottom:15px;">➕ הוסף אירוע ליום שנבחר</button></div><div class="card">
+<h2>🔐 אבטחה</h2>
+<div class="form-group">
+<label>שנה קוד גישה:</label>
+<input id="newAdminPassword" maxlength="6" placeholder="קוד חדש (4-6 ספרות)" type="password"/>
+</div>
+<button class="btn btn-admin" onclick="changeAdminPassword()" style="width: 100%;">
+                        🔑 שנה קוד
+                    </button>
+<div style="margin-top: 15px; padding: 10px; background: #fff3cd; border-radius: 8px; font-size: 13px; color: #856404;">
+                        ⚠️ זכור את הקוד החדש! אין אפשרות לשחזר אותו
+                    </div>
+</div>
+</div>
+</div>
+<script>
+// --- Safe patches: do not change structure, just override behavior ---
+
+// 1) Stable showPage
+window.showPage = function(pageName) {
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.nav-btn').forEach(function(b){ b.classList.remove('active'); });
+  var page = document.getElementById(pageName + 'Page');
+  if (page) page.classList.add('active');
+
+  var navButtons = document.querySelectorAll('.nav-btn');
+  if (navButtons.length >= 5){
+    if (pageName === 'main') navButtons[0].classList.add('active');
+    else if (pageName === 'employees') navButtons[1].classList.add('active');
+    else if (pageName === 'self' || pageName === 'reports') navButtons[2].classList.add('active');
+    else if (pageName === 'detailedReports') navButtons[3].classList.add('active');
+    else if (pageName === 'admin') navButtons[4].classList.add('active');
+  }
+
+  if (pageName === 'admin') {
+    if (!window.isAdminUnlocked) {
+      var l = document.getElementById('adminLock'), c = document.getElementById('adminContent');
+      if (l) l.style.display = 'block';
+      if (c) c.style.display = 'none';
+      setTimeout(function(){ var inp = document.getElementById('adminPassword'); if (inp) inp.focus(); }, 100);
+    } else {
+      var l2 = document.getElementById('adminLock'), c2 = document.getElementById('adminContent');
+      if (l2) l2.style.display = 'none';
+      if (c2) c2.style.display = 'block';
+      if (typeof updateEmployeeSelects === 'function') updateEmployeeSelects();
+    }
+  } else if (pageName === 'detailedReports') {
+    if (!window.isDetailedReportsUnlocked) {
+      var l3 = document.getElementById('detailedReportsLock'), c3 = document.getElementById('detailedReportsContent');
+      if (l3) l3.style.display = 'block';
+      if (c3) c3.style.display = 'none';
+      setTimeout(function(){ var inp = document.getElementById('detailedReportsPassword'); if (inp) inp.focus(); }, 100);
+    } else {
+      var l4 = document.getElementById('detailedReportsLock'), c4 = document.getElementById('detailedReportsContent');
+      if (l4) l4.style.display = 'none';
+      if (c4) c4.style.display = 'block';
+      setTimeout(function(){ if (typeof initDetailedReportsPage==='function') initDetailedReportsPage(); }, 100);
+    }
+  }
+};
+
+// 2) Cancel button should not close auth overlay
+(function(){
+  var cancel = document.getElementById('authCancelBtn');
+  if (cancel){
+    cancel.onclick = function(e){
+      e.preventDefault();
+      var input = document.getElementById('authCodeInput') || document.getElementById('adminPassword') || document.getElementById('detailedReportsPassword');
+      if (input){ input.value=''; input.focus(); }
+      if (typeof showAlert === 'function') showAlert('יש להזין קוד כדי להמשיך', 'warning');
+    };
+  }
+})();
+
+// 3) Admin: populate retroactive event employee list when updating selects
+(function(){
+  var original = window.updateEmployeeSelects;
+  window.updateEmployeeSelects = function(){
+    if (typeof original === 'function') original();
+    try {
+      var adminSelect = document.getElementById('adminEventEmployee');
+      var employees = (window.employees || []);
+      if (adminSelect){
+        var val = adminSelect.value;
+        adminSelect.innerHTML = '<option value="">-- בחר עובד --</option>';
+        for (var i=0;i<employees.length;i++){
+          var opt = document.createElement('option');
+          opt.value = employees[i];
+          opt.text = employees[i];
+          adminSelect.appendChild(opt);
+        }
+        adminSelect.value = val;
+      }
+    } catch(e){}
+  };
+})();
+
+// 4) Main: limit "Add Event" to today only
+(function(){
+  var origAdd = window.addEventForEmployee;
+  window.addEventForEmployee = function(){
+    var today = (typeof getCurrentDate==='function') ? getCurrentDate() : new Date().toISOString().slice(0,10);
+    var evDate = document.getElementById('eventDate');
+    if (evDate){ evDate.value = today; evDate.min = today; evDate.max = today; }
+    if (typeof origAdd === 'function') return origAdd.apply(this, arguments);
+  };
+  window.addEventListener('load', function(){
+    try{
+      var today = (typeof getCurrentDate==='function') ? getCurrentDate() : new Date().toISOString().slice(0,10);
+      var ev = document.getElementById('eventDate');
+      if (ev){ ev.value = today; ev.min = today; ev.max = today; }
+    }catch(e){}
+  });
+})();
+
+// 5) Detailed Reports chart: chronological order + min width + 1 decimal
+
+window.updateDetailedHoursChart = function(data){
+  var chartDiv = document.getElementById('detailedHoursChart');
+  if (!chartDiv) return;
+  if (!data || !data.dailyData || !data.dailyData.length){
+    chartDiv.innerHTML = '<p style="text-align:center;color:#666;">אין נתונים להצגה</p>';
+    return;
+  }
+  // sort by date safely
+  data.dailyData.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+
+  var maxHours = 0;
+  for (var i=0;i<data.dailyData.length;i++){
+    var v = Number(data.dailyData[i].totalHours||0);
+    if (v>maxHours) maxHours = v;
+  }
+  if (maxHours === 0) maxHours = 1;
+
+  function pad2(n){ n = Number(n)||0; return (n<10?'0':'')+n; }
+  var dayNames = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+
+  var html = '';
+  for (var i=0;i<data.dailyData.length;i++){
+    var d = data.dailyData[i];
+    var parts = (d.date||'').split('-'); // YYYY-MM-DD
+    var y = Number(parts[0]||0), m = Number(parts[1]||1), dd = Number(parts[2]||1);
+    // construct date to avoid timezone shifts
+    var dow = new Date(y, m-1, dd).getDay();
+    var dayName = dayNames[dow || 0];
+    var dateDisplay = pad2(dd) + '/' + pad2(m);
+
+    var value = Math.round(Number(d.totalHours||0)*10)/10;
+    var width = value>0 ? (value/maxHours)*100 : 0;
+    if (value>0 && width<6) width = 6;
+
+    var workers = Number(d.workers||0);
+
+    html += '<div class="chart-row">';
+    html +=   '<div class="chart-meta">'
+            +   '<div class="chart-meta-top">' + dayName + ' ' + dateDisplay + '</div>'
+            +   '<div class="chart-meta-sub">' + (workers? ('(' + workers + ' עובדים)') : '&nbsp;') + '</div>'
+            + '</div>';
+    html +=   '<div class="chart-bar' + (value>0?'':' empty') + '" style="width:' + width + '%;">'
+            +   '<span class="chart-value">' + (value>0 ? (value + ' שעות') : '—') + '</span>'
+            + '</div>';
+    html += '</div>';
+  }
+
+  chartDiv.innerHTML = html;
+  chartDiv.scrollTop = 0;
+};
+
+
+// 6) Export (current): include events if present
+(function(){
+  var orig = window.exportDetailedCurrent;
+  window.exportDetailedCurrent = function(){
+    try{
+      var rng = (typeof getDetailedDateRange==='function') ? getDetailedDateRange() : null;
+      var selEmpEl = document.getElementById('detailedEmployeeFilter');
+      var selected = selEmpEl ? selEmpEl.value : '';
+      var rep = (typeof generateDetailedReportData==='function')
+        ? generateDetailedReportData(rng && rng.startDate, rng && rng.endDate, selected)
+        : (orig && orig()) || {employees:[]};
+
+      var rows = rep.employees || [];
+      var headers = ['עובד','סה"כ שעות','ימי עבודה','ממוצע יומי','שעות נוספות','ימים לא נסגרו'];
+      var hasEv = rows.some(function(e){ return e && (e.totalEvents || (e.eventDates && e.eventDates.length)); });
+      if (hasEv) headers = headers.concat(['סה"כ אירועים','תאריכי אירועים']);
+      var out = [headers];
+      for (var i=0;i<rows.length;i++){
+        var e = rows[i] || {};
+        var r = [
+          e.name || '',
+          Math.round(Number(e.totalHours||0)*10)/10,
+          Number(e.workDays||0),
+          Math.round(Number(e.averageHours||0)*10)/10,
+          Math.round(Number(e.overtimeHours||0)*10)/10,
+          Number(e.missingDays||0)
+        ];
+        if (hasEv){
+          var dates = (e.eventDates||[]).map(function(ed){ return (ed.date||'') + (ed.count>1? ' ('+ed.count+')' : ''); }).join(', ');
+          r.push(Number(e.totalEvents||0), dates || '-');
+        }
+        out.push(r);
+      }
+      if (typeof downloadCSV === 'function') downloadCSV(out, 'detailed-current.csv');
+    }catch(err){
+      if (typeof showAlert==='function') showAlert('ייצוא נכשל: '+err, 'error');
+    }
+  };
+})();
+</script>
+<script>
+(function(){
+  function wire(){
+    var btn = document.getElementById('exportEventsBtn');
+    if (btn && typeof window.exportEventsReport === 'function'){
+      btn.addEventListener('click', window.exportEventsReport);
+    }
+  }
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', wire);
+  } else {
+    wire();
+  }
+})();
+</script>
+<script>
+(function(){
+  function wire(){
+    var btn = document.getElementById('exportEventsBtn');
+    if (btn && typeof window.exportEventsReport === 'function' && !btn._wired){
+      btn._wired = true;
+      btn.addEventListener('click', window.exportEventsReport);
+    }
+  }
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', wire);
+  } else {
+    wire();
+  }
+})();
+</script>
+<script>
+function wireExportEventsBtn(){
+  var btn = document.getElementById('exportEventsBtn');
+  if (btn && !btn._wired){
+    btn._wired = true;
+    btn.addEventListener('click', function(ev){
+      try{ ev.preventDefault(); }catch(e){}
+      if (typeof window.exportEventsReport === 'function') window.exportEventsReport();
+    });
+  }
+}
+if (document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', wireExportEventsBtn);
+} else { wireExportEventsBtn(); }
+</script>
+<script>
+(function(){
+  function ddmmyyyy(key){
+    if (!key) return '';
+    var p = key.split('-'); // YYYY-MM-DD
+    var y=p[0]||'', m=p[1]||'', d=p[2]||'';
+    if ((''+m).length===1) m='0'+m;
+    if ((''+d).length===1) d='0'+d;
+    return d + '/' + m + '/' + y;
+  }
+  function getData(){
+    try {
+      if (window.attendanceData && typeof window.attendanceData==='object' && Object.keys(window.attendanceData).length) {
+        return window.attendanceData;
+      }
+      return JSON.parse(localStorage.getItem('attendanceData')||'{}');
+    } catch(e){ return {}; }
+  }
+  function inRange(key, start, end){
+    if (!start && !end) return true;
+    if (start && key < start) return false;
+    if (end && key > end) return false;
+    return true;
+  }
+  function renderEventsInline(){
+    var table = document.getElementById('eventsInlineTable');
+    if (!table) return;
+    var range = (typeof getDetailedDateRange==='function') ? getDetailedDateRange() : null;
+    var start = range && range.startDate ? range.startDate : null;
+    var end   = range && range.endDate ? range.endDate   : null;
+    var selectedEmp = (document.getElementById('detailedEmployeeFilter')||{}).value || '';
+    var data = getData();
+
+    var rows = [];
+    var emps = Object.keys(data||{});
+    for (var e=0;e<emps.length;e++){
+      var emp = emps[e];
+      if (selectedEmp && emp !== selectedEmp) continue;
+      var days = data[emp] || {};
+      var dates = Object.keys(days||{});
+      for (var i=0;i<dates.length;i++){
+        var key = dates[i];
+        if (!inRange(key, start, end)) continue;
+        var day = days[key] || {};
+        var cnt = Number(day.events||0);
+        if (cnt>0){
+          rows.push({date:key, emp:emp, count:cnt});
+        }
+      }
+    }
+    // sort by date asc then emp
+    rows.sort(function(a,b){ if (a.date===b.date) return a.emp.localeCompare(b.emp,'he'); return a.date.localeCompare(b.date); });
+
+    var html = '<thead><tr><th style="width:120px;">תאריך</th><th>עובד</th><th style="width:140px;">אירועים ביום</th></tr></thead><tbody>';
+    if (!rows.length){
+      html += '<tr><td colspan="3" style="text-align:center; color:#666;">אין אירועים להצגה בטווח/סינון הנוכחי</td></tr>';
+    } else {
+      for (var r=0;r<rows.length;r++){
+        var row = rows[r];
+        html += '<tr>' +
+          '<td><strong>' + ddmmyyyy(row.date) + '</strong></td>' +
+          '<td>' + row.emp + '</td>' +
+          '<td>' + row.count + '</td>' +
+        '</tr>';
+      }
+    }
+    html += '</tbody>';
+    table.innerHTML = html;
+  }
+  // expose
+  window.renderEventsInline = renderEventsInline;
+
+  // hook after detailed reports refresh
+  var origInit = window.initDetailedReportsPage;
+  window.initDetailedReportsPage = function(){
+    if (typeof origInit === 'function') origInit();
+    // wire change listeners once
+    if (!window._eventsInlineWired){
+      window._eventsInlineWired = true;
+      ['detailedStartDate','detailedEndDate','detailedEmployeeFilter'].forEach(function(id){
+        var el = document.getElementById(id);
+        if (el){ el.addEventListener('change', renderEventsInline); el.addEventListener('input', renderEventsInline); }
+      });
+    }
+    renderEventsInline();
+  };
+})();
+</script>
+<script>
+// === Ensure employee list populates (bbEmployee & others) ===
+(function(){
+  function normalizeEmployees(arr){
+    if (!Array.isArray(arr)) return [];
+    // Support both array of strings or objects {id,name}
+    return arr.map(function(e){
+      if (typeof e === 'string') return { id: e, name: e };
+      var name = e.name || e.fullName || e.title || e.display || e.employee || e[0];
+      var id = e.id || e.employeeId || e.empId || e.key || name;
+      return { id: String(id||'').trim(), name: String(name||'').trim() };
+    }).filter(function(e){ return e.name; });
+  }
+  function getEmployees(){
+    if (Array.isArray(window.employees) && window.employees.length){
+      return normalizeEmployees(window.employees);
+    }
+    try {
+      var ls = JSON.parse(localStorage.getItem('employees')||'[]');
+      if (ls && ls.length) return normalizeEmployees(ls);
+    }catch(e){}
+    return [];
+  }
+  function fillSelect(select){
+    var list = getEmployees();
+    if (!select) return;
+    var valueBefore = select.value;
+    var html = '<option value="">בחר עובד…</option>';
+    for (var i=0;i<list.length;i++){
+      var e = list[i];
+      html += '<option value="'+(e.id||e.name).replace(/"/g,'&quot;')+'">'+e.name+'</option>';
+    }
+    select.innerHTML = html;
+    select.disabled = (list.length === 0);
+    select.style.pointerEvents = list.length ? 'auto' : 'none';
+    if (valueBefore) select.value = valueBefore;
+  }
+  function refreshEmployeeSelects(){
+    ['bbEmployee','employeeSelect','editEmployee','employeeFilter','eventEmployee'].forEach(function(id){
+      var el = document.getElementById(id);
+      if (el){ el.disabled=false; el.style.pointerEvents='auto'; fillSelect(el); }
+    });
+    document.querySelectorAll('select[data-employee-select], select.employee-select').forEach(function(el){
+      el.disabled=false; el.style.pointerEvents='auto'; fillSelect(el);
+    });
+    // Backfill UI any extra init
+    try{ if (typeof initBackfillUI==='function') initBackfillUI(); }catch(e){}
+  }
+
+  // Hook after cloud load
+  (function(){
+    var orig = window.loadDataFromSheet;
+    if (typeof orig === 'function'){
+      window.loadDataFromSheet = async function(){
+        var res = await orig.apply(this, arguments);
+        try { refreshEmployeeSelects(); } catch(e){ console.warn(e); }
+        return res;
+      };
+    }
+  })();
+
+  // After admin unlock
+  (function(){
+    var orig = window.checkAdminPassword;
+    if (typeof orig === 'function'){
+      window.checkAdminPassword = function(){
+        var r = orig.apply(this, arguments);
+        setTimeout(refreshEmployeeSelects, 200);
+        return r;
+      };
+    }
+  })();
+
+  // On page navigation
+  (function(){
+    var orig = window.showPage;
+    window.showPage = function(name){
+      try{ if (typeof orig === 'function') orig.apply(this, arguments); }catch(e){}
+      if (name === 'admin'){ setTimeout(refreshEmployeeSelects, 150); }
+    };
+  })();
+
+  // Initial attempt (in case employees already cached)
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(refreshEmployeeSelects, 800); });
+  } else {
+    setTimeout(refreshEmployeeSelects, 800);
+  }
+})();
+</script>
+<!-- RB_PATCH: cancel_harden + detailed_open_btn -->
+<script>
+(function () {
+  // 1) הקשחת "ביטול" בחלון קוד כניסה – לא סוגר ולא מכניס
+  function hardenEntryCancel() {
+    var cancel = document.getElementById('authCancelBtn') || document.getElementById('entryCancelBtn');
+    var ov     = document.getElementById('authOverlay')   || document.getElementById('entryOverlay');
+    var input  = document.getElementById('authCodeInput') || document.getElementById('entryCodeInput');
+    if (!cancel) return;
+
+    var clone = cancel.cloneNode(true);
+    clone.id = cancel.id;
+    clone.removeAttribute('onclick');
+    clone.setAttribute('type','button');
+    cancel.parentNode.replaceChild(clone, cancel);
+
+    clone.addEventListener('click', function (ev) {
+      try { ev.preventDefault(); ev.stopPropagation(); ev.stopImmediatePropagation(); } catch(e) {}
+      if (ov) {
+        ov.style.display = 'flex';
+        setTimeout(function(){ ov.style.display = 'flex'; }, 0);
+      }
+      if (input) { input.value = ''; input.focus(); }
+      try {
+        if (typeof showAlert === 'function') showAlert('צריך להזין קוד כדי להמשיך','warning');
+        else alert('צריך להזין קוד כדי להמשיך');
+      } catch(e) {}
+      return false;
+    }, true);
+
+    if (ov && !ov._entryPatch) {
+      ov._entryPatch = true;
+      ov.addEventListener('click', function(e){ try{ e.stopPropagation(); }catch(_){} }, true);
+    }
+  }
+
+  // 2) כפתור "פתח ניהול" + Enter בדוחות מפורטים
+  function ensureDetailedOpenButton() {
+    var lock = document.getElementById('detailedReportsLock');
+    var pwd  = document.getElementById('detailedReportsPassword');
+    if (!lock || !pwd) return;
+
+    if (!document.getElementById('detailedReportsEnterBtn')) {
+      var btn = document.createElement('button');
+      btn.id = 'detailedReportsEnterBtn';
+      btn.className = 'btn';
+      btn.style.cssText='margin-top:10px;width:100%;';
+      btn.textContent = 'פתח ניהול 🔒';
+      btn.onclick = function () {
+        try { return checkDetailedReportsPassword(); }
+        catch (e) { console.error(e); return false; }
+      };
+      (pwd.parentElement || lock).appendChild(btn);
+    }
+
+    if (!pwd._wiredEnter) {
+      pwd._wiredEnter = true;
+      pwd.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          try { return checkDetailedReportsPassword(); }
+          catch (err) { console.error(err); }
+          return false;
+        }
+      });
+    }
+  }
+
+  function init() {
+    hardenEntryCancel();
+    ensureDetailedOpenButton();
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+  var sp = window.showPage;
+  window.showPage = function (name) {
+    try { if (typeof sp === 'function') sp.apply(this, arguments); } catch(e) {}
+    if (name === 'detailedReports' || name === 'detailed' || name === 'reports') {
+      ensureDetailedOpenButton();
+    }
+  };
+})();
+</script>
+
+<!-- RB_PATCH: admin_retro_event_only -->
+<script>
+(function(){
+  function byId(id){ return document.getElementById(id); }
+  function todayStr(){ var d=new Date(),y=d.getFullYear(),m=('0'+(d.getMonth()+1)).slice(-2),dd=('0'+d.getDate()).slice(-2); return y+'-'+m+'-'+dd; }
+
+  function fillAdminEventEmployees(){
+    var sel = byId('adminEventEmployee');
+    if (!sel) return;
+    var current = sel.value;
+    sel.innerHTML = '<option value="">' + '-- בחר עובד --' + '</option>';
+    (window.employees || []).forEach(function(name){
+      var opt = document.createElement('option');
+      opt.value = name; opt.text = name;
+      sel.appendChild(opt);
+    });
+    if (current) sel.value = current;
+  }
+
+  // Public function used by the button
+  window.addRetroEvent = function(){
+    var emp  = (byId('adminEventEmployee')||{}).value;
+    var dateKey = (byId('adminEventDate')||{}).value || todayStr();
+    if (!emp){ try{ showAlert('אנא בחר עובד','error'); }catch(_){ alert('אנא בחר עובד'); } return; }
+    if (!dateKey){ try{ showAlert('אנא בחר תאריך','error'); }catch(_){ alert('אנא בחר תאריך'); } return; }
+
+    try{
+      window.attendanceData = window.attendanceData || {};
+      if (!attendanceData[emp]) attendanceData[emp] = {};
+      if (!attendanceData[emp][dateKey]) attendanceData[emp][dateKey] = {};
+      attendanceData[emp][dateKey].events = (attendanceData[emp][dateKey].events || 0) + 1;
+
+      try{ if (typeof saveLocalData==='function') saveLocalData(); }catch(e){}
+      try{ if (typeof updateAll==='function') updateAll(); }catch(e){}
+
+      try{
+        if (window.isInitialized && typeof recordToSheet==='function'){
+          var now = new Date();
+          recordToSheet(emp, 'event', now.toISOString(), dateKey, now.toLocaleTimeString('he-IL'));
+          setTimeout(function(){ try{ if (typeof loadDataFromSheet==='function') loadDataFromSheet(); }catch(e){} }, 1200);
+        }
+      }catch(e){}
+
+      try{ if (typeof showAlert==='function') showAlert('נוסף אירוע ל-' + emp + ' בתאריך ' + dateKey, 'success'); else alert('נוסף אירוע'); }catch(e){}
+    }catch(err){
+      console.error('addRetroEvent error:', err);
+      try{ if (typeof showAlert==='function') showAlert('שגיאה בשמירה','error'); else alert('שגיאה בשמירה'); }catch(e){}
+    }
+  };
+
+  function initAdminRetro(){
+    try{
+      var d = byId('adminEventDate');
+      if (d && !d.value){ d.value = todayStr(); }
+    }catch(e){}
+    fillAdminEventEmployees();
+  }
+
+  if (document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', initAdminRetro); }
+  else { initAdminRetro(); }
+
+  var _updateEmployeeSelects = window.updateEmployeeSelects;
+  window.updateEmployeeSelects = function(){
+    try{ if (typeof _updateEmployeeSelects==='function') _updateEmployeeSelects(); }catch(e){}
+    fillAdminEventEmployees();
+  };
+
+  var _sp = window.showPage;
+  window.showPage = function(name){
+    try{ if (typeof _sp==='function') _sp.apply(this, arguments); }catch(e){}
+    if (name === 'admin'){ setTimeout(initAdminRetro, 50); }
+  };
+})();
+</script>
+
+
+
+<!-- RB_PATCH: month_nav_prev_next -->
+<script>
+(function(){
+  "use strict";
+  var MONTH_STATE = { offset: 0 };
+
+  function byId(id){ return document.getElementById(id); }
+  function qs(sel, root){ return (root||document).querySelector(sel); }
+
+  function formatHebMonth(d){
+    try { return d.toLocaleDateString('he-IL', { year:'numeric', month:'long' }); }
+    catch(e){ return d.getFullYear() + "-" + (('0'+(d.getMonth()+1)).slice(-2)); }
+  }
+  function yyyymm(d){ var y=d.getFullYear(); var m=('0'+(d.getMonth()+1)).slice(-2); return y+'-'+m; }
+
+  function monthStart(date, offset){
+    var y = date.getFullYear(), m = date.getMonth() + (offset||0);
+    return new Date(y, m, 1);
+  }
+  function monthEnd(date, offset){
+    var y = date.getFullYear(), m = date.getMonth() + (offset||0);
+    var last = new Date(y, m+1, 0);
+    var today = new Date();
+    var isCurrent = (new Date(y, m, 1).getMonth() === today.getMonth()) && (new Date(y, m, 1).getFullYear() === today.getFullYear());
+    return isCurrent ? today : last;
+  }
+
+  function setInputValue(id, date){
+    var el = byId(id);
+    if (!el) return;
+    var iso = new Date(date.getTime() - date.getTimezoneOffset()*60000).toISOString().slice(0,10);
+    el.value = iso;
+  }
+
+  function ensureCustomVisible(){
+    var period = byId('detailedPeriodFilter') || byId('reportsPeriodFilter');
+    if (period){ period.value = 'custom'; }
+    if (typeof toggleDetailedCustomDateRange === 'function'){ try { toggleDetailedCustomDateRange(); } catch(e){} }
+    if (typeof toggleReportsCustomDateRange === 'function'){ try { toggleReportsCustomDateRange(); } catch(e){} }
+  }
+
+  function refreshReports(){
+    var fns = [window.updateDetailedReports, window.updateReportsPage, window.updateReports, window.updateReportsSummary];
+    for (var i=0;i<fns.length;i++){ if (typeof fns[i] === 'function'){ try{ fns[i](); }catch(e){} } }
+  }
+
+  function applyMonth(offset){
+    MONTH_STATE.offset = offset;
+    var base = new Date();
+    var s = monthStart(base, offset);
+    var e = monthEnd(base, offset);
+    ensureCustomVisible();
+    setInputValue('detailedStartDate', s); setInputValue('detailedEndDate', e);
+    setInputValue('reportsStartDate', s);  setInputValue('reportsEndDate', e);
+    var label = byId('rbMonthLabel');
+    if (label){ label.textContent = formatHebMonth(s); }
+    var mp = byId('rbMonthPicker'); if (mp){ mp.value = yyyymm(s); }
+    refreshReports();
+  }
+
+  function diffMonths(target, base){
+    return (target.getFullYear()-base.getFullYear())*12 + (target.getMonth()-base.getMonth());
+  }
+
+  function onPickerChange(){
+    var mp = byId('rbMonthPicker');
+    if (!mp || !mp.value) return;
+    var parts = mp.value.split('-');
+    var y = parseInt(parts[0],10), m = parseInt(parts[1],10)-1;
+    var target = new Date(y, m, 1);
+    var now = new Date();
+    var off = diffMonths(target, new Date(now.getFullYear(), now.getMonth(), 1));
+    applyMonth(off);
+  }
+
+  function shiftMonth(delta){ applyMonth((MONTH_STATE.offset||0) + delta); }
+
+  function findFiltersContainer(){
+    return qs('.detailed-reports-filters')
+        || byId('reportsFilters')
+        || qs('#reportsContent .filters')
+        || qs('#reportsPage .filters')
+        || qs('#reportsContent')
+        || qs('#reportsPage');
+  }
+
+  function ensureMonthNav(){
+    var container = findFiltersContainer();
+    if (!container) return;
+    if (byId('rbMonthNav')) return;
+
+    var row = document.createElement('div');
+    row.className = 'filter-row';
+    row.id = 'rbMonthNav';
+    // max attribute prevents future months
+    var today = new Date();
+    var maxVal = yyyymm(today);
+    row.innerHTML = ''
+      + '<div class="filter-group" style="grid-column: 1 / -1; display:flex; flex-direction:row; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-start;">'
+      + '  <button class="btn" id="rbPrevMonth" type="button">◀️ חודש קודם</button>'
+      + '  <button class="btn" id="rbThisMonth" type="button">⬅️ החודש</button>'
+      + '  <button class="btn" id="rbNextMonth" type="button">חודש הבא ▶️</button>'
+      + '  <input type="month" id="rbMonthPicker" style="padding:8px; border:2px solid #ddd; border-radius:8px; font-size:14px;" />'
+      + '  <span id="rbMonthLabel" style="font-weight:700; padding:6px 10px; background:#f1f5f9; border-radius:8px;"></span>'
+      + '</div>';
+
+    var firstRow = qs('.detailed-reports-filters .filter-row') || qs('#reportsFilters .filter-row') || null;
+    if (firstRow && firstRow.parentNode) { firstRow.parentNode.insertBefore(row, firstRow.nextSibling); }
+    else { container.appendChild(row); }
+
+    byId('rbPrevMonth').addEventListener('click', function(){ shiftMonth(-1); });
+    byId('rbNextMonth').addEventListener('click', function(){ shiftMonth(1); });
+    byId('rbThisMonth').addEventListener('click', function(){ applyMonth(0); });
+
+    var mp = byId('rbMonthPicker');
+    if (mp){ mp.max = maxVal; mp.addEventListener('change', onPickerChange); }
+
+    var start = monthStart(new Date(), 0);
+    var label = byId('rbMonthLabel');
+    if (label) label.textContent = formatHebMonth(start);
+    if (mp) mp.value = yyyymm(start);
+  }
+
+  var _showPage = window.showPage;
+  window.showPage = function(name){
+    if (typeof _showPage === 'function') try { _showPage.apply(this, arguments); } catch(e){}
+    if (name === 'detailedReports' || name === 'detailed' || name === 'reports') {
+      setTimeout(function(){ try{ ensureMonthNav(); }catch(e){} }, 50);
+    }
+  };
+
+  document.addEventListener('DOMContentLoaded', function(){
+    try{ ensureMonthNav(); } catch(e){}
+  });
+})();
+</script>
+
+
+
+
+<!-- RB_PATCH: self_month_nav -->
+<script>
+(function(){
+  "use strict";
+  window.__SELF_MONTH_OFFSET = 0;
+  function byId(id){ return document.getElementById(id); }
+  function qs(sel, root){ return (root||document).querySelector(sel); }
+  function formatHebMonth(d){
+    try { return d.toLocaleDateString('he-IL', { year:'numeric', month:'long' }); }
+    catch(e){ return d.getFullYear() + "-" + (('0'+(d.getMonth()+1)).slice(-2)); }
+  }
+  function yyyymm(d){ var y=d.getFullYear(); var m=('0'+(d.getMonth()+1)).slice(-2); return y+'-'+m; }
+  function monthStart(base, off){ var y=base.getFullYear(), m=base.getMonth()+(off||0); return new Date(y, m, 1,0,0,0,0); }
+  function monthEnd(base, off){
+    var y=base.getFullYear(), m=base.getMonth()+(off||0);
+    var end = new Date(y, m+1, 0, 23,59,59,999);
+    var today = new Date();
+    var curStart = new Date(today.getFullYear(), today.getMonth(), 1,0,0,0,0);
+    if (end >= today && monthStart(base, off).getTime() === curStart.getTime()) end = today;
+    return end;
+  }
+  if (typeof window.selfDateRange === 'function'){
+    var _selfDateRange = window.selfDateRange;
+    window.selfDateRange = function(period){
+      var rng = _selfDateRange(period);
+      if (period === 'month'){
+        var base = new Date();
+        var start = monthStart(base, window.__SELF_MONTH_OFFSET||0);
+        var end   = monthEnd(base, window.__SELF_MONTH_OFFSET||0);
+        return { start:start, end:end };
+      }
+      return rng;
+    };
+  }
+  function updateSelfNav(){
+    var label = byId('selfMonthLabel');
+    var nextBtn = byId('selfNextMonth');
+    var mp = byId('selfMonthPicker');
+    var base = new Date();
+    var start = monthStart(base, window.__SELF_MONTH_OFFSET||0);
+    if (label) label.textContent = formatHebMonth(start);
+    if (mp) mp.value = yyyymm(start);
+    if (nextBtn){
+      nextBtn.disabled = (window.__SELF_MONTH_OFFSET||0) >= 0;
+      nextBtn.style.opacity = nextBtn.disabled ? 0.6 : 1;
+      nextBtn.style.cursor = nextBtn.disabled ? 'not-allowed' : 'pointer';
+    }
+  }
+  function applySelfMonth(offset){
+    window.__SELF_MONTH_OFFSET = offset;
+    var p = byId('selfPeriod'); if (p) p.value = 'month';
+    updateSelfNav();
+    if (typeof window.renderSelf === 'function'){ try { window.renderSelf(); } catch(e){} }
+  }
+  function diffMonths(target, base){
+    return (target.getFullYear()-base.getFullYear())*12 + (target.getMonth()-base.getMonth());
+  }
+  function onSelfPickerChange(){
+    var mp = byId('selfMonthPicker');
+    if (!mp || !mp.value) return;
+    var parts = mp.value.split('-');
+    var y = parseInt(parts[0],10), m = parseInt(parts[1],10)-1;
+    var target = new Date(y, m, 1);
+    var now = new Date();
+    var off = diffMonths(target, new Date(now.getFullYear(), now.getMonth(), 1));
+    applySelfMonth(off);
+  }
+  function shiftSelfMonth(delta){ applySelfMonth((window.__SELF_MONTH_OFFSET||0) + delta); }
+  function ensureSelfMonthNav(){
+    var page = byId('selfPage'); if (!page) return;
+    if (byId('selfMonthNav')) return;
+    var showBtn = qs('#selfPage button[onclick="renderSelf()"]');
+    var holder = document.createElement('div');
+    holder.id = 'selfMonthNav';
+    holder.style.margin = '10px 0';
+    var today = new Date();
+    var maxVal = yyyymm(today);
+    holder.innerHTML = ''
+      + '<div class="filter-group" style="display:flex; flex-direction:row; gap:8px; align-items:center; flex-wrap:wrap;">'
+      + '  <button class="btn" id="selfPrevMonth" type="button">◀️ חודש קודם</button>'
+      + '  <button class="btn" id="selfThisMonth" type="button">⬅️ החודש</button>'
+      + '  <button class="btn" id="selfNextMonth" type="button">חודש הבא ▶️</button>'
+      + '  <input type="month" id="selfMonthPicker" style="padding:8px; border:2px solid #ddd; border-radius:8px; font-size:14px;" />'
+      + '  <span id="selfMonthLabel" style="font-weight:700; padding:6px 10px; background:#f1f5f9; border-radius:8px;"></span>'
+      + '</div>';
+    if (showBtn && showBtn.parentNode){ showBtn.parentNode.insertBefore(holder, showBtn); } else { page.appendChild(holder); }
+    byId('selfPrevMonth').addEventListener('click', function(){ shiftSelfMonth(-1); });
+    byId('selfNextMonth').addEventListener('click', function(){ shiftSelfMonth(1); });
+    byId('selfThisMonth').addEventListener('click', function(){ applySelfMonth(0); });
+    var mp = byId('selfMonthPicker'); if (mp){ mp.max = maxVal; mp.addEventListener('change', onSelfPickerChange); }
+    var periodSel = byId('selfPeriod');
+    function syncVisibility(){
+      var nav = byId('selfMonthNav');
+      if (!nav) return;
+      nav.style.display = (periodSel && periodSel.value === 'month') ? 'block' : 'none';
+    }
+    if (periodSel){
+      periodSel.addEventListener('change', function(){ if (periodSel.value !== 'month') window.__SELF_MONTH_OFFSET = 0; syncVisibility(); });
+      syncVisibility();
+    }
+    updateSelfNav();
+  }
+  var _sp = window.showPage;
+  window.showPage = function(name){
+    if (typeof _sp === 'function') try { _sp.apply(this, arguments); } catch(e){}
+    if (name === 'self'){ setTimeout(function(){ try{ ensureSelfMonthNav(); }catch(e){} }, 50); }
+  };
+  document.addEventListener('DOMContentLoaded', function(){ try{ ensureSelfMonthNav(); }catch(e){} });
+})();
+</script>
+
+
+<div id="floatingLogoutBtn" style="display:none; position:fixed; top:10px; right:10px; z-index:2500; background:none; border:none; font-size:26px; cursor:pointer; line-height:1;" title="התנתק">
+  🚪
+</div>
+</body>
+</html>
