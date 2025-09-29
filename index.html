@@ -1053,6 +1053,7 @@ function ymd(d){
                     updateSyncStatus('☁️', 'מחובר לענן', 'sync-connected');
                     isInitialized = true;
                     loadDataFromSheet();
+                    try{ fillSelfEmployees(); }catch(e){}
                     showAlert('מחובר לענן ומסנכרן! 🌐', 'success');
                 })
                 .catch(function(error) {
@@ -1065,7 +1066,7 @@ function ymd(d){
         function loadDataFromSheet() {
             if (!isInitialized) return;
             
-            var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '/values/A:F?key=' + apiKey;
+            var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:F?key=' + apiKey;
             
             fetch(url)
                 .then(function(response) {
@@ -1151,6 +1152,8 @@ function ymd(d){
                     if (hasEmployeeChanges && cloudEmployees.length > 0) {
                         employees = cloudEmployees;
                         showAlert('רשימת עובדים עודכנה מהענן 👥', 'success');
+                        try{ fillSelfEmployees(); }catch(e){}
+                        try{ updateEmployeeSelects(); }catch(e){}
                     }
                     
                     attendanceData = newAttendanceData;
@@ -2435,12 +2438,16 @@ function ymd(d){
         } else {
             initApp();
         }
-    </script>
+    
+try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
+</script>
 <script>if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('sw.js', { scope: './' }).catch(function(e){ console.log('SW register failed', e); });
   });
-}</script>
+}
+try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
+</script>
 <script>
   // שימוש בקוד מנהל לעמוד "דוחות"
   function checkReportsPassword(){
@@ -2481,6 +2488,8 @@ function ymd(d){
       return ret;
     };
   })();
+
+try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
 </script>
 
 <script>
@@ -2507,6 +2516,8 @@ function ymd(d){
       }, 500);
     });
   });
+
+try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
 </script>
 
 <script>
@@ -2613,6 +2624,8 @@ function ymd(d){
     }
   });
 })();
+
+try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
 </script>
 <script>
 
@@ -2990,6 +3003,8 @@ function setEventDateDefault(){
 }
 (function(){ var _u = updateAll; updateAll = function(){ _u(); updateTodayEventsUI(); setEventDateDefault(); }; })();
 
+
+try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
 </script><div class="page" id="adminPage">
 <!-- מסך נעילה -->
 <div class="card" id="adminLock" style="display: block;">
@@ -3258,6 +3273,8 @@ window.updateDetailedHoursChart = function(data){
     }
   };
 })();
+
+try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
 </script>
 <script>
 (function(){
@@ -3273,6 +3290,8 @@ window.updateDetailedHoursChart = function(data){
     wire();
   }
 })();
+
+try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
 </script>
 <script>
 (function(){
@@ -3289,6 +3308,8 @@ window.updateDetailedHoursChart = function(data){
     wire();
   }
 })();
+
+try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
 </script>
 <script>
 function wireExportEventsBtn(){
@@ -3304,6 +3325,8 @@ function wireExportEventsBtn(){
 if (document.readyState === 'loading'){
   document.addEventListener('DOMContentLoaded', wireExportEventsBtn);
 } else { wireExportEventsBtn(); }
+
+try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
 </script>
 <script>
 (function(){
@@ -3392,6 +3415,8 @@ if (document.readyState === 'loading'){
     renderEventsInline();
   };
 })();
+
+try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
 </script>
 <script>
 // === Ensure employee list populates (bbEmployee & others) ===
@@ -3482,6 +3507,8 @@ if (document.readyState === 'loading'){
     setTimeout(refreshEmployeeSelects, 800);
   }
 })();
+
+try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
 </script>
 <!-- RB_PATCH: cancel_harden + detailed_open_btn -->
 <script>
@@ -3569,6 +3596,8 @@ if (document.readyState === 'loading'){
     }
   };
 })();
+
+try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
 </script>
 
 <!-- RB_PATCH: admin_retro_event_only -->
@@ -3644,6 +3673,8 @@ if (document.readyState === 'loading'){
     if (name === 'admin'){ setTimeout(initAdminRetro, 50); }
   };
 })();
+
+try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
 </script>
 
 
@@ -3783,6 +3814,8 @@ if (document.readyState === 'loading'){
     try{ ensureMonthNav(); } catch(e){}
   });
 })();
+
+try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
 </script>
 
 
@@ -3897,6 +3930,8 @@ if (document.readyState === 'loading'){
   };
   document.addEventListener('DOMContentLoaded', function(){ try{ ensureSelfMonthNav(); }catch(e){} });
 })();
+
+try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
 </script>
 
 
