@@ -2443,7 +2443,7 @@ try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(functi
 </script>
 <script>if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    navigator.serviceWorker.register('sw.js', { scope: './' }).catch(function(e){ console.log('SW register failed', e); });
+    navigator.serviceWorker.register('sw.js?v=rb-20250929-2').catch(function(e){ console.log('SW register failed', e); });
   });
 }
 try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
@@ -2912,8 +2912,40 @@ function fillSelfEmployees(){
   if(keep) sel.value = keep;
 }
 
+
 function renderSelf(){
   var emp = (document.getElementById('selfEmployee')||{}).value;
+  if(!emp){ showAlert('בחר עובד', 'error'); return; }
+  var period = (document.getElementById('selfPeriod')||{}).value || 'month';
+  var end = new Date(); end.setHours(23,59,59,999);
+  var start = new Date(end);
+  if (period === 'today') start.setHours(0,0,0,0);
+  else if (period === 'week') start.setDate(end.getDate() - 6);
+  else { start.setDate(1); }
+  var from = ymd(start), to = ymd(end);
+  loadReport(emp, from, to).then(function(data){
+    var rows = [['תאריך','כניסה','יציאה','שעות','אירועים']];
+    var days = 0, total = Number(data.totalHours || 0), eventsTotal = 0;
+    (data.daily || []).forEach(function(item){
+      var parts = (item.date || '').split('-');
+      var dd = (parts.length===3? parts[2]+'/'+parseInt(parts[1],10) : item.date);
+      rows.push([dd, '-', '-', Number(item.hours||0), 0]);
+      if (item.hours>0) days++;
+    });
+    rows.unshift(['ימי עבודה: '+days, '', 'סה״כ שעות: '+(Math.round(total*100)/100), '', 'סה״כ אירועים: '+eventsTotal]);
+    var table = document.getElementById('selfTable');
+    if (table){
+      var htmlRows = rows.map(function(r,i){ var tag = i===0?'th':'td'; return '<tr>'+r.map(function(c){return '<'+tag+'>'+c+'</'+tag+'>';}).join('')+'</tr>'; }).join('');
+      table.innerHTML = htmlRows;
+    }
+    var badge = document.getElementById('calcModeBadge');
+    if (badge) badge.textContent = data.mode || 'sum';
+  }).catch(function(err){
+    console.error('Report API error:', err);
+    showAlert('שגיאה בטעינת הדוח מהשרת', 'error');
+  });
+}
+).value;
   if(!emp){ showAlert('בחר עובד', 'error'); return; }
   var period = (document.getElementById('selfPeriod')||{}).value || 'month';
   var rng = selfDateRange(period);
