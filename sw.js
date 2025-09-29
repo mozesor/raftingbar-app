@@ -1,11 +1,9 @@
-// רפטינג בר - Service Worker
-// גרסה 1.0.2 (network-first for navigations + safer caching)
+// Rafting Bar – Service Worker (safe, network-first for pages)
+const VERSION = 'rb-20250929-2';
+const STATIC = `rb-static-${VERSION}`;
+const DYNAMIC = `rb-dyn-${VERSION}`;
 
-const VERSION = 'v1.0.2';
-const STATIC_CACHE_NAME = `raftingbar-static-${VERSION}`;
-const DYNAMIC_CACHE_NAME = `raftingbar-dynamic-${VERSION}`;
-
-// קבצים סטטיים למטמון (בלי index.html כדי למנוע "נעילה" על גרסאות ישנות)
+// אל תשמור index.html במטמון כדי לא "לנעול" גרסאות
 const STATIC_FILES = [
   './',
   './manifest.json',
@@ -13,116 +11,96 @@ const STATIC_FILES = [
   './icon-512x512.png'
 ];
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(STATIC_CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_FILES.map(url => new Request(url, { cache: 'reload' })));
-    }).then(() => self.skipWaiting())
+self.addEventListener('install', (e) => {
+  e.waitUntil(
+    caches.open(STATIC).then(c => c.addAll(STATIC_FILES)).then(() => self.skipWaiting())
   );
 });
 
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((names) => Promise.all(
-      names
-        .filter(n => (n !== STATIC_CACHE_NAME && n !== DYNAMIC_CACHE_NAME) && n.startsWith('raftingbar-'))
-        .map(n => caches.delete(n))
+self.addEventListener('activate', (e) => {
+  e.waitUntil(
+    caches.keys().then(keys => Promise.all(
+      keys.filter(k => k.startsWith('rb-') && k !== STATIC && k !== DYNAMIC).map(k => caches.delete(k))
     )).then(() => self.clients.claim())
   );
 });
 
-self.addEventListener('fetch', (event) => {
-  const req = event.request;
+self.addEventListener('fetch', (e) => {
+  const req = e.request;
   const url = new URL(req.url);
 
-  // הורדות קבצים - אל תתערב
-  if (req.method === 'GET' &&
-      (url.pathname.endsWith('.csv') || req.headers.get('content-disposition'))) {
-    return;
-  }
+  // קבצי הורדה—לא לגעת
+  if (req.method === 'GET' && (url.pathname.endsWith('.csv') || req.headers.get('content-disposition'))) return;
 
-  // 1) עמודים (ניווטים) - אסטרטגיית Network First
+  // 1) דפי ניווט: Network-first, עם נפילה למטמון
   if (req.mode === 'navigate') {
-    event.respondWith(
-      fetch(req, { cache: 'no-store' })
-        .then((res) => {
-          const clone = res.clone();
-          caches.open(DYNAMIC_CACHE_NAME).then((cache) => cache.put(req, clone));
-          return res;
-        })
-        .catch(() => caches.match(req).then((cached) => cached || caches.match('./')))
-    );
+    e.respondWith((async () => {
+      try {
+        const net = await fetch(req, { cache: 'no-store' });
+        const forCache = net.clone();
+        caches.open(DYNAMIC).then(c => c.put(req, forCache));
+        return net; // מחזיר את המקור – לא משכפל שוב
+      } catch {
+        const cached = await caches.match(req);
+        return cached || caches.match('./');
+      }
+    })());
     return;
   }
 
-  // 2) קבצים סטטיים (css/js/png וכו') - Cache First
-  if (req.method === 'GET' &&
-      (url.origin === location.origin ||
-       url.pathname.match(/\.(png|jpg|jpeg|webp|gif|svg|css|js|woff2?)$/i))) {
-    event.respondWith(
-      caches.match(req).then((cached) => {
-        if (cached) {
-          // עדכון ברקע
-          fetch(req).then((net) => {
-            if (net && net.status === 200) {
-              caches.open(DYNAMIC_CACHE_NAME).then((cache) => cache.put(req, net.clone()));
-            }
-          }).catch(() => {});
-          return cached;
-        }
-        return fetch(req).then((net) => {
-          if (net && net.status === 200) {
-            caches.open(DYNAMIC_CACHE_NAME).then((cache) => cache.put(req, net.clone()));
+  // 2) סטטי (css/js/img): Cache-first עם עדכון ברקע
+  if (req.method === 'GET' && (url.origin === location.origin ||
+      url.pathname.match(/\.(png|jpg|jpeg|webp|gif|svg|css|js|woff2?)$/i))) {
+    e.respondWith((async () => {
+      const cached = await caches.match(req);
+      if (cached) {
+        // עדכן ברקע – לא קוראים שוב את ה־cached
+        fetch(req).then(net => {
+          if (net && net.ok && net.type !== 'opaque') {
+            caches.open(DYNAMIC).then(c => c.put(req, net.clone()));
           }
-          return net;
-        });
-      })
-    );
+        }).catch(()=>{});
+        return cached;
+      }
+      const net = await fetch(req);
+      if (net && net.ok && net.type !== 'opaque') {
+        caches.open(DYNAMIC).then(c => c.put(req, net.clone()));
+      }
+      return net;
+    })());
     return;
   }
 
-  // 3) APIs של Google - Network First עם נפילה למטמון
+  // 3) קריאות API (Google וכו'): Network-first עם נפילה למטמון
   if (req.method === 'GET' &&
       (url.hostname.includes('googleapis.com') || url.hostname.includes('google.com'))) {
-    event.respondWith(
-      fetch(req, { signal: AbortSignal.timeout(8000) })
-        .then((net) => {
-          if (net && net.status === 200) {
-            caches.open(DYNAMIC_CACHE_NAME).then((cache) => cache.put(req, net.clone()));
-          }
-          return net;
-        })
-        .catch(() => caches.match(req))
-    );
+    e.respondWith((async () => {
+      try {
+        const net = await fetch(req); // בלי AbortSignal.timeout – לא נתמך בכל הדפדפנים
+        if (net && net.ok && net.type !== 'opaque') {
+          caches.open(DYNAMIC).then(c => c.put(req, net.clone()));
+        }
+        return net;
+      } catch {
+        return caches.match(req);
+      }
+    })());
     return;
   }
 
-  // POST - רשת בלבד
-  if (req.method === 'POST') {
-    event.respondWith(fetch(req).catch(() => {
-      return new Response(JSON.stringify({
-        success: false,
-        offline: true,
-        message: 'נתונים נשמרו מקומית ויסונכרנו כשהחיבור יחזור'
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-    }));
-    return;
-  }
-
-  // ברירת מחדל
-  event.respondWith(fetch(req));
+  // ברירת מחדל: רשת בלבד
+  e.respondWith(fetch(req));
 });
 
-// הודעות מהאפליקציה
+// הודעות מהעמוד (אופציונלי)
 self.addEventListener('message', (event) => {
   const { type } = event.data || {};
   if (type === 'SKIP_WAITING') self.skipWaiting();
   if (type === 'CLEAR_CACHE') {
-    Promise.all([
-      caches.delete(DYNAMIC_CACHE_NAME),
-      caches.open(DYNAMIC_CACHE_NAME)
-    ]).then(() => event.ports[0]?.postMessage?.({ success: true }));
+    Promise.all([caches.delete(DYNAMIC), caches.open(DYNAMIC)]).then(() => {
+      event.ports[0]?.postMessage?.({ success: true });
+    });
   }
 });
 
-console.log('🏄‍♂️ Service Worker של רפטינג בר מוכן! גרסה', VERSION);
+console.log('🏄 SW ready:', VERSION);
