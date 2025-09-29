@@ -931,27 +931,8 @@
         const EMBEDDED_SETTINGS = {
             apiKey: 'AIzaSyB8MgwEZ7hqS_hiZqTcwzODheuwdBA55j4',
             sheetId: '1SNSdRdJy-vP--spyKmVwDbnaz808KEwTYSKiLreFn0w', 
-            scriptUrl: 'https://script.google.com/macros/s/AKfycbxnOmMFcMd1eGuP9-ZjcCHMcfr6JSI4K3bVcUpFo5IfcVdYNVkPgCi8c4-QFSjN9LEx/exec'
+            scriptUrl: 'https://script.google.com/macros/s/AKfycbzOv6CoZz3kSRlOIWIDbSH52AVeA_vRVtKjmgNt2ghYn2vqNDOazHGEyBdWSWvUGVoZ/exec'
         };
-
-/*** === Report API integration (sum/span per-employee) === ***/
-async function loadReport(employee, fromYmd, toYmd, overrideMode){
-  const base = (typeof EMBEDDED_SETTINGS !== 'undefined' && EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl)
-    ? EMBEDDED_SETTINGS.scriptUrl
-    : (typeof scriptUrl !== 'undefined' ? scriptUrl : '');
-  if (!base){ console.warn('scriptUrl missing'); return {daily:[], totalHours:0, mode:'sum'}; }
-  const url = `${base}?report=summary&employee=${encodeURIComponent(employee)}&from=${fromYmd}&to=${toYmd}` + (overrideMode ? `&calcMode=${overrideMode}` : '');
-  const res = await fetch(url, { cache: 'no-store' });
-  if (!res.ok) throw new Error('Report API HTTP '+res.status);
-  return await res.json();
-}
-function ymd(d){
-  const y=d.getFullYear();
-  const m=String(d.getMonth()+1).padStart(2,'0');
-  const da=String(d.getDate()).padStart(2,'0');
-  return `${y}-${m}-${da}`;
-}
-
 
         // משתני האפליקציה
         var employees = [];
@@ -1053,7 +1034,6 @@ function ymd(d){
                     updateSyncStatus('☁️', 'מחובר לענן', 'sync-connected');
                     isInitialized = true;
                     loadDataFromSheet();
-                    try{ fillSelfEmployees(); }catch(e){}
                     showAlert('מחובר לענן ומסנכרן! 🌐', 'success');
                 })
                 .catch(function(error) {
@@ -1066,7 +1046,7 @@ function ymd(d){
         function loadDataFromSheet() {
             if (!isInitialized) return;
             
-            var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:F?key=' + apiKey;
+            var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '/values/A:F?key=' + apiKey;
             
             fetch(url)
                 .then(function(response) {
@@ -1152,8 +1132,6 @@ function ymd(d){
                     if (hasEmployeeChanges && cloudEmployees.length > 0) {
                         employees = cloudEmployees;
                         showAlert('רשימת עובדים עודכנה מהענן 👥', 'success');
-                        try{ fillSelfEmployees(); }catch(e){}
-                        try{ updateEmployeeSelects(); }catch(e){}
                     }
                     
                     attendanceData = newAttendanceData;
@@ -2439,67 +2417,49 @@ function ymd(d){
             initApp();
         }
     
-try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
+// --- Robust hook for the "הצג דוח" button and table bootstrap ---
+document.addEventListener('DOMContentLoaded', function(){
+  // Ensure results table exists
+  (function ensureTable(){
+    try{
+      var tbl = document.getElementById('selfTable');
+      if (!tbl){
+        var host = document.getElementById('reportsContent') || document.querySelector('[data-section="reports"]') || document.body;
+        var wrapper = document.createElement('div');
+        wrapper.id = 'selfTableWrapper';
+        wrapper.style.overflowX = 'auto';
+        tbl = document.createElement('table');
+        tbl.id = 'selfTable';
+        tbl.style.width = '100%';
+        tbl.style.borderCollapse = 'collapse';
+        tbl.style.direction = 'rtl';
+        tbl.innerHTML = '<tr><th>תאריך</th><th>כניסה</th><th>יציאה</th><th>שעות</th><th>אירועים</th></tr>';
+        wrapper.appendChild(tbl);
+        host.appendChild(wrapper);
+      }
+    }catch(e){ console.warn('ensureTable failed', e); }
+  })();
 
-/*** === Employees list (Webhook first, fallback to Sheets) === ***/
-async function fetchEmployeesList() {
-  try { // webhook first
-    const base = (EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || '';
-    if (base) {
-      const r = await fetch(base + '?report=employees', { cache:'no-store' });
-      const j = await r.json();
-      if (j && j.ok && Array.isArray(j.employees) && j.employees.length) return j.employees;
-    }
-  } catch (e) {}
-  try { // sheets fallback
-    const sheetId = EMBEDDED_SETTINGS.sheetId, key = EMBEDDED_SETTINGS.apiKey;
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:A?key=${key}`;
-    const r = await fetch(url, { cache:'no-store' }); const j = await r.json();
-    const s = new Set(); (j.values||[]).forEach((row,i)=>{ if(i>0 && row[0]) s.add(row[0].trim()); });
-    return Array.from(s).sort((a,b)=>a.localeCompare(b,'he'));
-  } catch (e) { return []; }
-}
-async function fillSelfEmployees(){
-  const sel = document.getElementById('selfEmployee'); if(!sel) return;
-  const list = await fetchEmployeesList();
-  sel.innerHTML = '<option value=""></option>' + list.map(n=>`<option value="${n}">${n}</option>`).join('');
-}
-document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ fillSelfEmployees(); }, 300); });
+  // Delegate click on the primary report button by text
+  document.addEventListener('click', function(ev){
+    try{
+      var btn = ev.target.closest('button, a');
+      if (!btn) return;
+      var txt = (btn.textContent||'').trim();
+      if (txt === 'הצג דוח' || txt.indexOf('הצג דוח') !== -1){
+        ev.preventDefault();
+        if (typeof renderSelf === 'function') renderSelf();
+      }
+    }catch(e){}
+  }, true);
+});
 
 </script>
 <script>if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    navigator.serviceWorker.register('sw.js?v=rb-20250929-3').catch(function(e){ console.log('SW register failed', e); });
+    navigator.serviceWorker.register('sw.js', { scope: './' }).catch(function(e){ console.log('SW register failed', e); });
   });
-}
-try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
-
-/*** === Employees list (Webhook first, fallback to Sheets) === ***/
-async function fetchEmployeesList() {
-  try { // webhook first
-    const base = (EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || '';
-    if (base) {
-      const r = await fetch(base + '?report=employees', { cache:'no-store' });
-      const j = await r.json();
-      if (j && j.ok && Array.isArray(j.employees) && j.employees.length) return j.employees;
-    }
-  } catch (e) {}
-  try { // sheets fallback
-    const sheetId = EMBEDDED_SETTINGS.sheetId, key = EMBEDDED_SETTINGS.apiKey;
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:A?key=${key}`;
-    const r = await fetch(url, { cache:'no-store' }); const j = await r.json();
-    const s = new Set(); (j.values||[]).forEach((row,i)=>{ if(i>0 && row[0]) s.add(row[0].trim()); });
-    return Array.from(s).sort((a,b)=>a.localeCompare(b,'he'));
-  } catch (e) { return []; }
-}
-async function fillSelfEmployees(){
-  const sel = document.getElementById('selfEmployee'); if(!sel) return;
-  const list = await fetchEmployeesList();
-  sel.innerHTML = '<option value=""></option>' + list.map(n=>`<option value="${n}">${n}</option>`).join('');
-}
-document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ fillSelfEmployees(); }, 300); });
-
-</script>
+}</script>
 <script>
   // שימוש בקוד מנהל לעמוד "דוחות"
   function checkReportsPassword(){
@@ -2540,34 +2500,6 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       return ret;
     };
   })();
-
-try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
-
-/*** === Employees list (Webhook first, fallback to Sheets) === ***/
-async function fetchEmployeesList() {
-  try { // webhook first
-    const base = (EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || '';
-    if (base) {
-      const r = await fetch(base + '?report=employees', { cache:'no-store' });
-      const j = await r.json();
-      if (j && j.ok && Array.isArray(j.employees) && j.employees.length) return j.employees;
-    }
-  } catch (e) {}
-  try { // sheets fallback
-    const sheetId = EMBEDDED_SETTINGS.sheetId, key = EMBEDDED_SETTINGS.apiKey;
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:A?key=${key}`;
-    const r = await fetch(url, { cache:'no-store' }); const j = await r.json();
-    const s = new Set(); (j.values||[]).forEach((row,i)=>{ if(i>0 && row[0]) s.add(row[0].trim()); });
-    return Array.from(s).sort((a,b)=>a.localeCompare(b,'he'));
-  } catch (e) { return []; }
-}
-async function fillSelfEmployees(){
-  const sel = document.getElementById('selfEmployee'); if(!sel) return;
-  const list = await fetchEmployeesList();
-  sel.innerHTML = '<option value=""></option>' + list.map(n=>`<option value="${n}">${n}</option>`).join('');
-}
-document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ fillSelfEmployees(); }, 300); });
-
 </script>
 
 <script>
@@ -2594,34 +2526,6 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       }, 500);
     });
   });
-
-try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
-
-/*** === Employees list (Webhook first, fallback to Sheets) === ***/
-async function fetchEmployeesList() {
-  try { // webhook first
-    const base = (EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || '';
-    if (base) {
-      const r = await fetch(base + '?report=employees', { cache:'no-store' });
-      const j = await r.json();
-      if (j && j.ok && Array.isArray(j.employees) && j.employees.length) return j.employees;
-    }
-  } catch (e) {}
-  try { // sheets fallback
-    const sheetId = EMBEDDED_SETTINGS.sheetId, key = EMBEDDED_SETTINGS.apiKey;
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:A?key=${key}`;
-    const r = await fetch(url, { cache:'no-store' }); const j = await r.json();
-    const s = new Set(); (j.values||[]).forEach((row,i)=>{ if(i>0 && row[0]) s.add(row[0].trim()); });
-    return Array.from(s).sort((a,b)=>a.localeCompare(b,'he'));
-  } catch (e) { return []; }
-}
-async function fillSelfEmployees(){
-  const sel = document.getElementById('selfEmployee'); if(!sel) return;
-  const list = await fetchEmployeesList();
-  sel.innerHTML = '<option value=""></option>' + list.map(n=>`<option value="${n}">${n}</option>`).join('');
-}
-document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ fillSelfEmployees(); }, 300); });
-
 </script>
 
 <script>
@@ -2728,34 +2632,6 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     }
   });
 })();
-
-try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
-
-/*** === Employees list (Webhook first, fallback to Sheets) === ***/
-async function fetchEmployeesList() {
-  try { // webhook first
-    const base = (EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || '';
-    if (base) {
-      const r = await fetch(base + '?report=employees', { cache:'no-store' });
-      const j = await r.json();
-      if (j && j.ok && Array.isArray(j.employees) && j.employees.length) return j.employees;
-    }
-  } catch (e) {}
-  try { // sheets fallback
-    const sheetId = EMBEDDED_SETTINGS.sheetId, key = EMBEDDED_SETTINGS.apiKey;
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:A?key=${key}`;
-    const r = await fetch(url, { cache:'no-store' }); const j = await r.json();
-    const s = new Set(); (j.values||[]).forEach((row,i)=>{ if(i>0 && row[0]) s.add(row[0].trim()); });
-    return Array.from(s).sort((a,b)=>a.localeCompare(b,'he'));
-  } catch (e) { return []; }
-}
-async function fillSelfEmployees(){
-  const sel = document.getElementById('selfEmployee'); if(!sel) return;
-  const list = await fetchEmployeesList();
-  sel.innerHTML = '<option value=""></option>' + list.map(n=>`<option value="${n}">${n}</option>`).join('');
-}
-document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ fillSelfEmployees(); }, 300); });
-
 </script>
 <script>
 
@@ -3041,72 +2917,8 @@ function fillSelfEmployees(){
   employees.forEach(function(n){ var o=document.createElement('option'); o.value=n; o.textContent=n; sel.appendChild(o); });
   if(keep) sel.value = keep;
 }
-
-
 function renderSelf(){
   var emp = (document.getElementById('selfEmployee')||{}).value;
-  if(!emp){ showAlert && showAlert('בחר עובד', 'error'); return; }
-  var period = (document.getElementById('selfPeriod')||{}).value || 'month';
-  var end = new Date(); end.setHours(23,59,59,999);
-  var start = new Date(end);
-  if (period === 'today') start.setHours(0,0,0,0);
-  else if (period === 'week') start.setDate(end.getDate() - 6);
-  else start.setDate(1);
-  var from = ymd(start), to = ymd(end);
-  loadReport(emp, from, to).then(function(data){
-    var rows = [['תאריך','כניסה','יציאה','שעות','אירועים']];
-    var days = 0, total = Number(data.totalHours || 0), eventsTotal = 0;
-    (data.daily || []).forEach(function(item){
-      var parts = (item.date || '').split('-');
-      var dd = (parts.length===3? parts[2]+'/'+parseInt(parts[1],10) : item.date);
-      rows.push([dd, '-', '-', Number(item.hours||0), 0]);
-      if (item.hours>0) days++;
-    });
-    rows.unshift(['ימי עבודה: '+days, '', 'סה״כ שעות: '+(Math.round(total*100)/100), '', 'סה״כ אירועים: '+eventsTotal]);
-    var table = document.getElementById('selfTable');
-    if (table){
-      var htmlRows = rows.map(function(r,i){ var tag = i===0?'th':'td'; return '<tr>'+r.map(function(c){return '<'+tag+'>'+c+'</'+tag+'>';}).join('')+'</tr>'; }).join('');
-      table.innerHTML = htmlRows;
-    }
-    var badge = document.getElementById('calcModeBadge'); if (badge) badge.textContent = data.mode || 'sum';
-  }).catch(function(err){
-    console.error('Report API error:', err);
-    showAlert && showAlert('שגיאה בטעינת הדוח מהשרת', 'error');
-  });
-}
-).value;
-  if(!emp){ showAlert('בחר עובד', 'error'); return; }
-  var period = (document.getElementById('selfPeriod')||{}).value || 'month';
-  var rng = selfDateRange(period);
-  var from = ymd(rng.start), to = ymd(rng.end);
-
-  loadReport(emp, from, to).then(function(data){
-    var rows = [['תאריך','כניסה','יציאה','שעות','אירועים']];
-    var days = 0, total = Number(data.totalHours || 0), eventsTotal = 0;
-
-    (data.daily || []).forEach(function(item){
-      var parts = (item.date || '').split('-'); // yyyy-mm-dd
-      var dd = (parts.length===3? parts[2]+'/'+parseInt(parts[1],10) : item.date);
-      rows.push([dd, '-', '-', Number(item.hours||0), 0]);
-      if (item.hours>0) days++;
-    });
-
-    rows.unshift(['ימי עבודה: '+days, '', 'סה״כ שעות: '+(Math.round(total*100)/100), '', 'סה״כ אירועים: '+eventsTotal]);
-
-    var table = document.getElementById('selfTable');
-    if (table){
-      var htmlRows = rows.map(function(r,i){ var tag = i===0?'th':'td'; return '<tr>'+r.map(function(c){return '<'+tag+'>'+c+'</'+tag+'>';}).join('')+'</tr>'; }).join('');
-      table.innerHTML = htmlRows;
-    }
-
-    var badge = document.getElementById('calcModeBadge');
-    if (badge) badge.textContent = data.mode || 'sum';
-  }).catch(function(err){
-    console.error('Report API error:', err);
-    showAlert('שגיאה בטעינת הדוח מהשרת', 'error');
-  });
-}
-).value;
   if(!emp){ showAlert('בחר עובד', 'error'); return; }
   var period = (document.getElementById('selfPeriod')||{}).value || 'month';
   var rng = selfDateRange(period);
@@ -3163,34 +2975,6 @@ function setEventDateDefault(){
   if (inp && !inp.value) { inp.value = getCurrentDate(); }
 }
 (function(){ var _u = updateAll; updateAll = function(){ _u(); updateTodayEventsUI(); setEventDateDefault(); }; })();
-
-
-try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
-
-/*** === Employees list (Webhook first, fallback to Sheets) === ***/
-async function fetchEmployeesList() {
-  try { // webhook first
-    const base = (EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || '';
-    if (base) {
-      const r = await fetch(base + '?report=employees', { cache:'no-store' });
-      const j = await r.json();
-      if (j && j.ok && Array.isArray(j.employees) && j.employees.length) return j.employees;
-    }
-  } catch (e) {}
-  try { // sheets fallback
-    const sheetId = EMBEDDED_SETTINGS.sheetId, key = EMBEDDED_SETTINGS.apiKey;
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:A?key=${key}`;
-    const r = await fetch(url, { cache:'no-store' }); const j = await r.json();
-    const s = new Set(); (j.values||[]).forEach((row,i)=>{ if(i>0 && row[0]) s.add(row[0].trim()); });
-    return Array.from(s).sort((a,b)=>a.localeCompare(b,'he'));
-  } catch (e) { return []; }
-}
-async function fillSelfEmployees(){
-  const sel = document.getElementById('selfEmployee'); if(!sel) return;
-  const list = await fetchEmployeesList();
-  sel.innerHTML = '<option value=""></option>' + list.map(n=>`<option value="${n}">${n}</option>`).join('');
-}
-document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ fillSelfEmployees(); }, 300); });
 
 </script><div class="page" id="adminPage">
 <!-- מסך נעילה -->
@@ -3460,34 +3244,6 @@ window.updateDetailedHoursChart = function(data){
     }
   };
 })();
-
-try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
-
-/*** === Employees list (Webhook first, fallback to Sheets) === ***/
-async function fetchEmployeesList() {
-  try { // webhook first
-    const base = (EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || '';
-    if (base) {
-      const r = await fetch(base + '?report=employees', { cache:'no-store' });
-      const j = await r.json();
-      if (j && j.ok && Array.isArray(j.employees) && j.employees.length) return j.employees;
-    }
-  } catch (e) {}
-  try { // sheets fallback
-    const sheetId = EMBEDDED_SETTINGS.sheetId, key = EMBEDDED_SETTINGS.apiKey;
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:A?key=${key}`;
-    const r = await fetch(url, { cache:'no-store' }); const j = await r.json();
-    const s = new Set(); (j.values||[]).forEach((row,i)=>{ if(i>0 && row[0]) s.add(row[0].trim()); });
-    return Array.from(s).sort((a,b)=>a.localeCompare(b,'he'));
-  } catch (e) { return []; }
-}
-async function fillSelfEmployees(){
-  const sel = document.getElementById('selfEmployee'); if(!sel) return;
-  const list = await fetchEmployeesList();
-  sel.innerHTML = '<option value=""></option>' + list.map(n=>`<option value="${n}">${n}</option>`).join('');
-}
-document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ fillSelfEmployees(); }, 300); });
-
 </script>
 <script>
 (function(){
@@ -3503,34 +3259,6 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     wire();
   }
 })();
-
-try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
-
-/*** === Employees list (Webhook first, fallback to Sheets) === ***/
-async function fetchEmployeesList() {
-  try { // webhook first
-    const base = (EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || '';
-    if (base) {
-      const r = await fetch(base + '?report=employees', { cache:'no-store' });
-      const j = await r.json();
-      if (j && j.ok && Array.isArray(j.employees) && j.employees.length) return j.employees;
-    }
-  } catch (e) {}
-  try { // sheets fallback
-    const sheetId = EMBEDDED_SETTINGS.sheetId, key = EMBEDDED_SETTINGS.apiKey;
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:A?key=${key}`;
-    const r = await fetch(url, { cache:'no-store' }); const j = await r.json();
-    const s = new Set(); (j.values||[]).forEach((row,i)=>{ if(i>0 && row[0]) s.add(row[0].trim()); });
-    return Array.from(s).sort((a,b)=>a.localeCompare(b,'he'));
-  } catch (e) { return []; }
-}
-async function fillSelfEmployees(){
-  const sel = document.getElementById('selfEmployee'); if(!sel) return;
-  const list = await fetchEmployeesList();
-  sel.innerHTML = '<option value=""></option>' + list.map(n=>`<option value="${n}">${n}</option>`).join('');
-}
-document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ fillSelfEmployees(); }, 300); });
-
 </script>
 <script>
 (function(){
@@ -3547,34 +3275,6 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     wire();
   }
 })();
-
-try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
-
-/*** === Employees list (Webhook first, fallback to Sheets) === ***/
-async function fetchEmployeesList() {
-  try { // webhook first
-    const base = (EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || '';
-    if (base) {
-      const r = await fetch(base + '?report=employees', { cache:'no-store' });
-      const j = await r.json();
-      if (j && j.ok && Array.isArray(j.employees) && j.employees.length) return j.employees;
-    }
-  } catch (e) {}
-  try { // sheets fallback
-    const sheetId = EMBEDDED_SETTINGS.sheetId, key = EMBEDDED_SETTINGS.apiKey;
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:A?key=${key}`;
-    const r = await fetch(url, { cache:'no-store' }); const j = await r.json();
-    const s = new Set(); (j.values||[]).forEach((row,i)=>{ if(i>0 && row[0]) s.add(row[0].trim()); });
-    return Array.from(s).sort((a,b)=>a.localeCompare(b,'he'));
-  } catch (e) { return []; }
-}
-async function fillSelfEmployees(){
-  const sel = document.getElementById('selfEmployee'); if(!sel) return;
-  const list = await fetchEmployeesList();
-  sel.innerHTML = '<option value=""></option>' + list.map(n=>`<option value="${n}">${n}</option>`).join('');
-}
-document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ fillSelfEmployees(); }, 300); });
-
 </script>
 <script>
 function wireExportEventsBtn(){
@@ -3590,34 +3290,6 @@ function wireExportEventsBtn(){
 if (document.readyState === 'loading'){
   document.addEventListener('DOMContentLoaded', wireExportEventsBtn);
 } else { wireExportEventsBtn(); }
-
-try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
-
-/*** === Employees list (Webhook first, fallback to Sheets) === ***/
-async function fetchEmployeesList() {
-  try { // webhook first
-    const base = (EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || '';
-    if (base) {
-      const r = await fetch(base + '?report=employees', { cache:'no-store' });
-      const j = await r.json();
-      if (j && j.ok && Array.isArray(j.employees) && j.employees.length) return j.employees;
-    }
-  } catch (e) {}
-  try { // sheets fallback
-    const sheetId = EMBEDDED_SETTINGS.sheetId, key = EMBEDDED_SETTINGS.apiKey;
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:A?key=${key}`;
-    const r = await fetch(url, { cache:'no-store' }); const j = await r.json();
-    const s = new Set(); (j.values||[]).forEach((row,i)=>{ if(i>0 && row[0]) s.add(row[0].trim()); });
-    return Array.from(s).sort((a,b)=>a.localeCompare(b,'he'));
-  } catch (e) { return []; }
-}
-async function fillSelfEmployees(){
-  const sel = document.getElementById('selfEmployee'); if(!sel) return;
-  const list = await fetchEmployeesList();
-  sel.innerHTML = '<option value=""></option>' + list.map(n=>`<option value="${n}">${n}</option>`).join('');
-}
-document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ fillSelfEmployees(); }, 300); });
-
 </script>
 <script>
 (function(){
@@ -3706,34 +3378,6 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     renderEventsInline();
   };
 })();
-
-try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
-
-/*** === Employees list (Webhook first, fallback to Sheets) === ***/
-async function fetchEmployeesList() {
-  try { // webhook first
-    const base = (EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || '';
-    if (base) {
-      const r = await fetch(base + '?report=employees', { cache:'no-store' });
-      const j = await r.json();
-      if (j && j.ok && Array.isArray(j.employees) && j.employees.length) return j.employees;
-    }
-  } catch (e) {}
-  try { // sheets fallback
-    const sheetId = EMBEDDED_SETTINGS.sheetId, key = EMBEDDED_SETTINGS.apiKey;
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:A?key=${key}`;
-    const r = await fetch(url, { cache:'no-store' }); const j = await r.json();
-    const s = new Set(); (j.values||[]).forEach((row,i)=>{ if(i>0 && row[0]) s.add(row[0].trim()); });
-    return Array.from(s).sort((a,b)=>a.localeCompare(b,'he'));
-  } catch (e) { return []; }
-}
-async function fillSelfEmployees(){
-  const sel = document.getElementById('selfEmployee'); if(!sel) return;
-  const list = await fetchEmployeesList();
-  sel.innerHTML = '<option value=""></option>' + list.map(n=>`<option value="${n}">${n}</option>`).join('');
-}
-document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ fillSelfEmployees(); }, 300); });
-
 </script>
 <script>
 // === Ensure employee list populates (bbEmployee & others) ===
@@ -3824,34 +3468,6 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     setTimeout(refreshEmployeeSelects, 800);
   }
 })();
-
-try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
-
-/*** === Employees list (Webhook first, fallback to Sheets) === ***/
-async function fetchEmployeesList() {
-  try { // webhook first
-    const base = (EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || '';
-    if (base) {
-      const r = await fetch(base + '?report=employees', { cache:'no-store' });
-      const j = await r.json();
-      if (j && j.ok && Array.isArray(j.employees) && j.employees.length) return j.employees;
-    }
-  } catch (e) {}
-  try { // sheets fallback
-    const sheetId = EMBEDDED_SETTINGS.sheetId, key = EMBEDDED_SETTINGS.apiKey;
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:A?key=${key}`;
-    const r = await fetch(url, { cache:'no-store' }); const j = await r.json();
-    const s = new Set(); (j.values||[]).forEach((row,i)=>{ if(i>0 && row[0]) s.add(row[0].trim()); });
-    return Array.from(s).sort((a,b)=>a.localeCompare(b,'he'));
-  } catch (e) { return []; }
-}
-async function fillSelfEmployees(){
-  const sel = document.getElementById('selfEmployee'); if(!sel) return;
-  const list = await fetchEmployeesList();
-  sel.innerHTML = '<option value=""></option>' + list.map(n=>`<option value="${n}">${n}</option>`).join('');
-}
-document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ fillSelfEmployees(); }, 300); });
-
 </script>
 <!-- RB_PATCH: cancel_harden + detailed_open_btn -->
 <script>
@@ -3939,34 +3555,6 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     }
   };
 })();
-
-try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
-
-/*** === Employees list (Webhook first, fallback to Sheets) === ***/
-async function fetchEmployeesList() {
-  try { // webhook first
-    const base = (EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || '';
-    if (base) {
-      const r = await fetch(base + '?report=employees', { cache:'no-store' });
-      const j = await r.json();
-      if (j && j.ok && Array.isArray(j.employees) && j.employees.length) return j.employees;
-    }
-  } catch (e) {}
-  try { // sheets fallback
-    const sheetId = EMBEDDED_SETTINGS.sheetId, key = EMBEDDED_SETTINGS.apiKey;
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:A?key=${key}`;
-    const r = await fetch(url, { cache:'no-store' }); const j = await r.json();
-    const s = new Set(); (j.values||[]).forEach((row,i)=>{ if(i>0 && row[0]) s.add(row[0].trim()); });
-    return Array.from(s).sort((a,b)=>a.localeCompare(b,'he'));
-  } catch (e) { return []; }
-}
-async function fillSelfEmployees(){
-  const sel = document.getElementById('selfEmployee'); if(!sel) return;
-  const list = await fetchEmployeesList();
-  sel.innerHTML = '<option value=""></option>' + list.map(n=>`<option value="${n}">${n}</option>`).join('');
-}
-document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ fillSelfEmployees(); }, 300); });
-
 </script>
 
 <!-- RB_PATCH: admin_retro_event_only -->
@@ -4042,34 +3630,6 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     if (name === 'admin'){ setTimeout(initAdminRetro, 50); }
   };
 })();
-
-try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
-
-/*** === Employees list (Webhook first, fallback to Sheets) === ***/
-async function fetchEmployeesList() {
-  try { // webhook first
-    const base = (EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || '';
-    if (base) {
-      const r = await fetch(base + '?report=employees', { cache:'no-store' });
-      const j = await r.json();
-      if (j && j.ok && Array.isArray(j.employees) && j.employees.length) return j.employees;
-    }
-  } catch (e) {}
-  try { // sheets fallback
-    const sheetId = EMBEDDED_SETTINGS.sheetId, key = EMBEDDED_SETTINGS.apiKey;
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:A?key=${key}`;
-    const r = await fetch(url, { cache:'no-store' }); const j = await r.json();
-    const s = new Set(); (j.values||[]).forEach((row,i)=>{ if(i>0 && row[0]) s.add(row[0].trim()); });
-    return Array.from(s).sort((a,b)=>a.localeCompare(b,'he'));
-  } catch (e) { return []; }
-}
-async function fillSelfEmployees(){
-  const sel = document.getElementById('selfEmployee'); if(!sel) return;
-  const list = await fetchEmployeesList();
-  sel.innerHTML = '<option value=""></option>' + list.map(n=>`<option value="${n}">${n}</option>`).join('');
-}
-document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ fillSelfEmployees(); }, 300); });
-
 </script>
 
 
@@ -4209,34 +3769,6 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     try{ ensureMonthNav(); } catch(e){}
   });
 })();
-
-try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
-
-/*** === Employees list (Webhook first, fallback to Sheets) === ***/
-async function fetchEmployeesList() {
-  try { // webhook first
-    const base = (EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || '';
-    if (base) {
-      const r = await fetch(base + '?report=employees', { cache:'no-store' });
-      const j = await r.json();
-      if (j && j.ok && Array.isArray(j.employees) && j.employees.length) return j.employees;
-    }
-  } catch (e) {}
-  try { // sheets fallback
-    const sheetId = EMBEDDED_SETTINGS.sheetId, key = EMBEDDED_SETTINGS.apiKey;
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:A?key=${key}`;
-    const r = await fetch(url, { cache:'no-store' }); const j = await r.json();
-    const s = new Set(); (j.values||[]).forEach((row,i)=>{ if(i>0 && row[0]) s.add(row[0].trim()); });
-    return Array.from(s).sort((a,b)=>a.localeCompare(b,'he'));
-  } catch (e) { return []; }
-}
-async function fillSelfEmployees(){
-  const sel = document.getElementById('selfEmployee'); if(!sel) return;
-  const list = await fetchEmployeesList();
-  sel.innerHTML = '<option value=""></option>' + list.map(n=>`<option value="${n}">${n}</option>`).join('');
-}
-document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ fillSelfEmployees(); }, 300); });
-
 </script>
 
 
@@ -4351,34 +3883,6 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
   };
   document.addEventListener('DOMContentLoaded', function(){ try{ ensureSelfMonthNav(); }catch(e){} });
 })();
-
-try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
-
-/*** === Employees list (Webhook first, fallback to Sheets) === ***/
-async function fetchEmployeesList() {
-  try { // webhook first
-    const base = (EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || '';
-    if (base) {
-      const r = await fetch(base + '?report=employees', { cache:'no-store' });
-      const j = await r.json();
-      if (j && j.ok && Array.isArray(j.employees) && j.employees.length) return j.employees;
-    }
-  } catch (e) {}
-  try { // sheets fallback
-    const sheetId = EMBEDDED_SETTINGS.sheetId, key = EMBEDDED_SETTINGS.apiKey;
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:A?key=${key}`;
-    const r = await fetch(url, { cache:'no-store' }); const j = await r.json();
-    const s = new Set(); (j.values||[]).forEach((row,i)=>{ if(i>0 && row[0]) s.add(row[0].trim()); });
-    return Array.from(s).sort((a,b)=>a.localeCompare(b,'he'));
-  } catch (e) { return []; }
-}
-async function fillSelfEmployees(){
-  const sel = document.getElementById('selfEmployee'); if(!sel) return;
-  const list = await fetchEmployeesList();
-  sel.innerHTML = '<option value=""></option>' + list.map(n=>`<option value="${n}">${n}</option>`).join('');
-}
-document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ fillSelfEmployees(); }, 300); });
-
 </script>
 
 
