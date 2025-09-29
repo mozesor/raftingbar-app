@@ -2440,13 +2440,65 @@ function ymd(d){
         }
     
 try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
+
+/*** === Employees list (Webhook first, fallback to Sheets) === ***/
+async function fetchEmployeesList() {
+  try { // webhook first
+    const base = (EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || '';
+    if (base) {
+      const r = await fetch(base + '?report=employees', { cache:'no-store' });
+      const j = await r.json();
+      if (j && j.ok && Array.isArray(j.employees) && j.employees.length) return j.employees;
+    }
+  } catch (e) {}
+  try { // sheets fallback
+    const sheetId = EMBEDDED_SETTINGS.sheetId, key = EMBEDDED_SETTINGS.apiKey;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:A?key=${key}`;
+    const r = await fetch(url, { cache:'no-store' }); const j = await r.json();
+    const s = new Set(); (j.values||[]).forEach((row,i)=>{ if(i>0 && row[0]) s.add(row[0].trim()); });
+    return Array.from(s).sort((a,b)=>a.localeCompare(b,'he'));
+  } catch (e) { return []; }
+}
+async function fillSelfEmployees(){
+  const sel = document.getElementById('selfEmployee'); if(!sel) return;
+  const list = await fetchEmployeesList();
+  sel.innerHTML = '<option value=""></option>' + list.map(n=>`<option value="${n}">${n}</option>`).join('');
+}
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ fillSelfEmployees(); }, 300); });
+
 </script>
 <script>if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    navigator.serviceWorker.register('sw.js?v=rb-20250929-2').catch(function(e){ console.log('SW register failed', e); });
+    navigator.serviceWorker.register('sw.js?v=rb-20250929-3').catch(function(e){ console.log('SW register failed', e); });
   });
 }
 try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
+
+/*** === Employees list (Webhook first, fallback to Sheets) === ***/
+async function fetchEmployeesList() {
+  try { // webhook first
+    const base = (EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || '';
+    if (base) {
+      const r = await fetch(base + '?report=employees', { cache:'no-store' });
+      const j = await r.json();
+      if (j && j.ok && Array.isArray(j.employees) && j.employees.length) return j.employees;
+    }
+  } catch (e) {}
+  try { // sheets fallback
+    const sheetId = EMBEDDED_SETTINGS.sheetId, key = EMBEDDED_SETTINGS.apiKey;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:A?key=${key}`;
+    const r = await fetch(url, { cache:'no-store' }); const j = await r.json();
+    const s = new Set(); (j.values||[]).forEach((row,i)=>{ if(i>0 && row[0]) s.add(row[0].trim()); });
+    return Array.from(s).sort((a,b)=>a.localeCompare(b,'he'));
+  } catch (e) { return []; }
+}
+async function fillSelfEmployees(){
+  const sel = document.getElementById('selfEmployee'); if(!sel) return;
+  const list = await fetchEmployeesList();
+  sel.innerHTML = '<option value=""></option>' + list.map(n=>`<option value="${n}">${n}</option>`).join('');
+}
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ fillSelfEmployees(); }, 300); });
+
 </script>
 <script>
   // שימוש בקוד מנהל לעמוד "דוחות"
@@ -2490,6 +2542,32 @@ try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(functi
   })();
 
 try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
+
+/*** === Employees list (Webhook first, fallback to Sheets) === ***/
+async function fetchEmployeesList() {
+  try { // webhook first
+    const base = (EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || '';
+    if (base) {
+      const r = await fetch(base + '?report=employees', { cache:'no-store' });
+      const j = await r.json();
+      if (j && j.ok && Array.isArray(j.employees) && j.employees.length) return j.employees;
+    }
+  } catch (e) {}
+  try { // sheets fallback
+    const sheetId = EMBEDDED_SETTINGS.sheetId, key = EMBEDDED_SETTINGS.apiKey;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:A?key=${key}`;
+    const r = await fetch(url, { cache:'no-store' }); const j = await r.json();
+    const s = new Set(); (j.values||[]).forEach((row,i)=>{ if(i>0 && row[0]) s.add(row[0].trim()); });
+    return Array.from(s).sort((a,b)=>a.localeCompare(b,'he'));
+  } catch (e) { return []; }
+}
+async function fillSelfEmployees(){
+  const sel = document.getElementById('selfEmployee'); if(!sel) return;
+  const list = await fetchEmployeesList();
+  sel.innerHTML = '<option value=""></option>' + list.map(n=>`<option value="${n}">${n}</option>`).join('');
+}
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ fillSelfEmployees(); }, 300); });
+
 </script>
 
 <script>
@@ -2518,6 +2596,32 @@ try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(functi
   });
 
 try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
+
+/*** === Employees list (Webhook first, fallback to Sheets) === ***/
+async function fetchEmployeesList() {
+  try { // webhook first
+    const base = (EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || '';
+    if (base) {
+      const r = await fetch(base + '?report=employees', { cache:'no-store' });
+      const j = await r.json();
+      if (j && j.ok && Array.isArray(j.employees) && j.employees.length) return j.employees;
+    }
+  } catch (e) {}
+  try { // sheets fallback
+    const sheetId = EMBEDDED_SETTINGS.sheetId, key = EMBEDDED_SETTINGS.apiKey;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:A?key=${key}`;
+    const r = await fetch(url, { cache:'no-store' }); const j = await r.json();
+    const s = new Set(); (j.values||[]).forEach((row,i)=>{ if(i>0 && row[0]) s.add(row[0].trim()); });
+    return Array.from(s).sort((a,b)=>a.localeCompare(b,'he'));
+  } catch (e) { return []; }
+}
+async function fillSelfEmployees(){
+  const sel = document.getElementById('selfEmployee'); if(!sel) return;
+  const list = await fetchEmployeesList();
+  sel.innerHTML = '<option value=""></option>' + list.map(n=>`<option value="${n}">${n}</option>`).join('');
+}
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ fillSelfEmployees(); }, 300); });
+
 </script>
 
 <script>
@@ -2626,6 +2730,32 @@ try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(functi
 })();
 
 try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
+
+/*** === Employees list (Webhook first, fallback to Sheets) === ***/
+async function fetchEmployeesList() {
+  try { // webhook first
+    const base = (EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || '';
+    if (base) {
+      const r = await fetch(base + '?report=employees', { cache:'no-store' });
+      const j = await r.json();
+      if (j && j.ok && Array.isArray(j.employees) && j.employees.length) return j.employees;
+    }
+  } catch (e) {}
+  try { // sheets fallback
+    const sheetId = EMBEDDED_SETTINGS.sheetId, key = EMBEDDED_SETTINGS.apiKey;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:A?key=${key}`;
+    const r = await fetch(url, { cache:'no-store' }); const j = await r.json();
+    const s = new Set(); (j.values||[]).forEach((row,i)=>{ if(i>0 && row[0]) s.add(row[0].trim()); });
+    return Array.from(s).sort((a,b)=>a.localeCompare(b,'he'));
+  } catch (e) { return []; }
+}
+async function fillSelfEmployees(){
+  const sel = document.getElementById('selfEmployee'); if(!sel) return;
+  const list = await fetchEmployeesList();
+  sel.innerHTML = '<option value=""></option>' + list.map(n=>`<option value="${n}">${n}</option>`).join('');
+}
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ fillSelfEmployees(); }, 300); });
+
 </script>
 <script>
 
@@ -2915,13 +3045,13 @@ function fillSelfEmployees(){
 
 function renderSelf(){
   var emp = (document.getElementById('selfEmployee')||{}).value;
-  if(!emp){ showAlert('בחר עובד', 'error'); return; }
+  if(!emp){ showAlert && showAlert('בחר עובד', 'error'); return; }
   var period = (document.getElementById('selfPeriod')||{}).value || 'month';
   var end = new Date(); end.setHours(23,59,59,999);
   var start = new Date(end);
   if (period === 'today') start.setHours(0,0,0,0);
   else if (period === 'week') start.setDate(end.getDate() - 6);
-  else { start.setDate(1); }
+  else start.setDate(1);
   var from = ymd(start), to = ymd(end);
   loadReport(emp, from, to).then(function(data){
     var rows = [['תאריך','כניסה','יציאה','שעות','אירועים']];
@@ -2938,11 +3068,10 @@ function renderSelf(){
       var htmlRows = rows.map(function(r,i){ var tag = i===0?'th':'td'; return '<tr>'+r.map(function(c){return '<'+tag+'>'+c+'</'+tag+'>';}).join('')+'</tr>'; }).join('');
       table.innerHTML = htmlRows;
     }
-    var badge = document.getElementById('calcModeBadge');
-    if (badge) badge.textContent = data.mode || 'sum';
+    var badge = document.getElementById('calcModeBadge'); if (badge) badge.textContent = data.mode || 'sum';
   }).catch(function(err){
     console.error('Report API error:', err);
-    showAlert('שגיאה בטעינת הדוח מהשרת', 'error');
+    showAlert && showAlert('שגיאה בטעינת הדוח מהשרת', 'error');
   });
 }
 ).value;
@@ -3037,6 +3166,32 @@ function setEventDateDefault(){
 
 
 try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
+
+/*** === Employees list (Webhook first, fallback to Sheets) === ***/
+async function fetchEmployeesList() {
+  try { // webhook first
+    const base = (EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || '';
+    if (base) {
+      const r = await fetch(base + '?report=employees', { cache:'no-store' });
+      const j = await r.json();
+      if (j && j.ok && Array.isArray(j.employees) && j.employees.length) return j.employees;
+    }
+  } catch (e) {}
+  try { // sheets fallback
+    const sheetId = EMBEDDED_SETTINGS.sheetId, key = EMBEDDED_SETTINGS.apiKey;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:A?key=${key}`;
+    const r = await fetch(url, { cache:'no-store' }); const j = await r.json();
+    const s = new Set(); (j.values||[]).forEach((row,i)=>{ if(i>0 && row[0]) s.add(row[0].trim()); });
+    return Array.from(s).sort((a,b)=>a.localeCompare(b,'he'));
+  } catch (e) { return []; }
+}
+async function fillSelfEmployees(){
+  const sel = document.getElementById('selfEmployee'); if(!sel) return;
+  const list = await fetchEmployeesList();
+  sel.innerHTML = '<option value=""></option>' + list.map(n=>`<option value="${n}">${n}</option>`).join('');
+}
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ fillSelfEmployees(); }, 300); });
+
 </script><div class="page" id="adminPage">
 <!-- מסך נעילה -->
 <div class="card" id="adminLock" style="display: block;">
@@ -3307,6 +3462,32 @@ window.updateDetailedHoursChart = function(data){
 })();
 
 try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
+
+/*** === Employees list (Webhook first, fallback to Sheets) === ***/
+async function fetchEmployeesList() {
+  try { // webhook first
+    const base = (EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || '';
+    if (base) {
+      const r = await fetch(base + '?report=employees', { cache:'no-store' });
+      const j = await r.json();
+      if (j && j.ok && Array.isArray(j.employees) && j.employees.length) return j.employees;
+    }
+  } catch (e) {}
+  try { // sheets fallback
+    const sheetId = EMBEDDED_SETTINGS.sheetId, key = EMBEDDED_SETTINGS.apiKey;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:A?key=${key}`;
+    const r = await fetch(url, { cache:'no-store' }); const j = await r.json();
+    const s = new Set(); (j.values||[]).forEach((row,i)=>{ if(i>0 && row[0]) s.add(row[0].trim()); });
+    return Array.from(s).sort((a,b)=>a.localeCompare(b,'he'));
+  } catch (e) { return []; }
+}
+async function fillSelfEmployees(){
+  const sel = document.getElementById('selfEmployee'); if(!sel) return;
+  const list = await fetchEmployeesList();
+  sel.innerHTML = '<option value=""></option>' + list.map(n=>`<option value="${n}">${n}</option>`).join('');
+}
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ fillSelfEmployees(); }, 300); });
+
 </script>
 <script>
 (function(){
@@ -3324,6 +3505,32 @@ try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(functi
 })();
 
 try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
+
+/*** === Employees list (Webhook first, fallback to Sheets) === ***/
+async function fetchEmployeesList() {
+  try { // webhook first
+    const base = (EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || '';
+    if (base) {
+      const r = await fetch(base + '?report=employees', { cache:'no-store' });
+      const j = await r.json();
+      if (j && j.ok && Array.isArray(j.employees) && j.employees.length) return j.employees;
+    }
+  } catch (e) {}
+  try { // sheets fallback
+    const sheetId = EMBEDDED_SETTINGS.sheetId, key = EMBEDDED_SETTINGS.apiKey;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:A?key=${key}`;
+    const r = await fetch(url, { cache:'no-store' }); const j = await r.json();
+    const s = new Set(); (j.values||[]).forEach((row,i)=>{ if(i>0 && row[0]) s.add(row[0].trim()); });
+    return Array.from(s).sort((a,b)=>a.localeCompare(b,'he'));
+  } catch (e) { return []; }
+}
+async function fillSelfEmployees(){
+  const sel = document.getElementById('selfEmployee'); if(!sel) return;
+  const list = await fetchEmployeesList();
+  sel.innerHTML = '<option value=""></option>' + list.map(n=>`<option value="${n}">${n}</option>`).join('');
+}
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ fillSelfEmployees(); }, 300); });
+
 </script>
 <script>
 (function(){
@@ -3342,6 +3549,32 @@ try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(functi
 })();
 
 try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
+
+/*** === Employees list (Webhook first, fallback to Sheets) === ***/
+async function fetchEmployeesList() {
+  try { // webhook first
+    const base = (EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || '';
+    if (base) {
+      const r = await fetch(base + '?report=employees', { cache:'no-store' });
+      const j = await r.json();
+      if (j && j.ok && Array.isArray(j.employees) && j.employees.length) return j.employees;
+    }
+  } catch (e) {}
+  try { // sheets fallback
+    const sheetId = EMBEDDED_SETTINGS.sheetId, key = EMBEDDED_SETTINGS.apiKey;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:A?key=${key}`;
+    const r = await fetch(url, { cache:'no-store' }); const j = await r.json();
+    const s = new Set(); (j.values||[]).forEach((row,i)=>{ if(i>0 && row[0]) s.add(row[0].trim()); });
+    return Array.from(s).sort((a,b)=>a.localeCompare(b,'he'));
+  } catch (e) { return []; }
+}
+async function fillSelfEmployees(){
+  const sel = document.getElementById('selfEmployee'); if(!sel) return;
+  const list = await fetchEmployeesList();
+  sel.innerHTML = '<option value=""></option>' + list.map(n=>`<option value="${n}">${n}</option>`).join('');
+}
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ fillSelfEmployees(); }, 300); });
+
 </script>
 <script>
 function wireExportEventsBtn(){
@@ -3359,6 +3592,32 @@ if (document.readyState === 'loading'){
 } else { wireExportEventsBtn(); }
 
 try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
+
+/*** === Employees list (Webhook first, fallback to Sheets) === ***/
+async function fetchEmployeesList() {
+  try { // webhook first
+    const base = (EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || '';
+    if (base) {
+      const r = await fetch(base + '?report=employees', { cache:'no-store' });
+      const j = await r.json();
+      if (j && j.ok && Array.isArray(j.employees) && j.employees.length) return j.employees;
+    }
+  } catch (e) {}
+  try { // sheets fallback
+    const sheetId = EMBEDDED_SETTINGS.sheetId, key = EMBEDDED_SETTINGS.apiKey;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:A?key=${key}`;
+    const r = await fetch(url, { cache:'no-store' }); const j = await r.json();
+    const s = new Set(); (j.values||[]).forEach((row,i)=>{ if(i>0 && row[0]) s.add(row[0].trim()); });
+    return Array.from(s).sort((a,b)=>a.localeCompare(b,'he'));
+  } catch (e) { return []; }
+}
+async function fillSelfEmployees(){
+  const sel = document.getElementById('selfEmployee'); if(!sel) return;
+  const list = await fetchEmployeesList();
+  sel.innerHTML = '<option value=""></option>' + list.map(n=>`<option value="${n}">${n}</option>`).join('');
+}
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ fillSelfEmployees(); }, 300); });
+
 </script>
 <script>
 (function(){
@@ -3449,6 +3708,32 @@ try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(functi
 })();
 
 try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
+
+/*** === Employees list (Webhook first, fallback to Sheets) === ***/
+async function fetchEmployeesList() {
+  try { // webhook first
+    const base = (EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || '';
+    if (base) {
+      const r = await fetch(base + '?report=employees', { cache:'no-store' });
+      const j = await r.json();
+      if (j && j.ok && Array.isArray(j.employees) && j.employees.length) return j.employees;
+    }
+  } catch (e) {}
+  try { // sheets fallback
+    const sheetId = EMBEDDED_SETTINGS.sheetId, key = EMBEDDED_SETTINGS.apiKey;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:A?key=${key}`;
+    const r = await fetch(url, { cache:'no-store' }); const j = await r.json();
+    const s = new Set(); (j.values||[]).forEach((row,i)=>{ if(i>0 && row[0]) s.add(row[0].trim()); });
+    return Array.from(s).sort((a,b)=>a.localeCompare(b,'he'));
+  } catch (e) { return []; }
+}
+async function fillSelfEmployees(){
+  const sel = document.getElementById('selfEmployee'); if(!sel) return;
+  const list = await fetchEmployeesList();
+  sel.innerHTML = '<option value=""></option>' + list.map(n=>`<option value="${n}">${n}</option>`).join('');
+}
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ fillSelfEmployees(); }, 300); });
+
 </script>
 <script>
 // === Ensure employee list populates (bbEmployee & others) ===
@@ -3541,6 +3826,32 @@ try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(functi
 })();
 
 try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
+
+/*** === Employees list (Webhook first, fallback to Sheets) === ***/
+async function fetchEmployeesList() {
+  try { // webhook first
+    const base = (EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || '';
+    if (base) {
+      const r = await fetch(base + '?report=employees', { cache:'no-store' });
+      const j = await r.json();
+      if (j && j.ok && Array.isArray(j.employees) && j.employees.length) return j.employees;
+    }
+  } catch (e) {}
+  try { // sheets fallback
+    const sheetId = EMBEDDED_SETTINGS.sheetId, key = EMBEDDED_SETTINGS.apiKey;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:A?key=${key}`;
+    const r = await fetch(url, { cache:'no-store' }); const j = await r.json();
+    const s = new Set(); (j.values||[]).forEach((row,i)=>{ if(i>0 && row[0]) s.add(row[0].trim()); });
+    return Array.from(s).sort((a,b)=>a.localeCompare(b,'he'));
+  } catch (e) { return []; }
+}
+async function fillSelfEmployees(){
+  const sel = document.getElementById('selfEmployee'); if(!sel) return;
+  const list = await fetchEmployeesList();
+  sel.innerHTML = '<option value=""></option>' + list.map(n=>`<option value="${n}">${n}</option>`).join('');
+}
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ fillSelfEmployees(); }, 300); });
+
 </script>
 <!-- RB_PATCH: cancel_harden + detailed_open_btn -->
 <script>
@@ -3630,6 +3941,32 @@ try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(functi
 })();
 
 try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
+
+/*** === Employees list (Webhook first, fallback to Sheets) === ***/
+async function fetchEmployeesList() {
+  try { // webhook first
+    const base = (EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || '';
+    if (base) {
+      const r = await fetch(base + '?report=employees', { cache:'no-store' });
+      const j = await r.json();
+      if (j && j.ok && Array.isArray(j.employees) && j.employees.length) return j.employees;
+    }
+  } catch (e) {}
+  try { // sheets fallback
+    const sheetId = EMBEDDED_SETTINGS.sheetId, key = EMBEDDED_SETTINGS.apiKey;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:A?key=${key}`;
+    const r = await fetch(url, { cache:'no-store' }); const j = await r.json();
+    const s = new Set(); (j.values||[]).forEach((row,i)=>{ if(i>0 && row[0]) s.add(row[0].trim()); });
+    return Array.from(s).sort((a,b)=>a.localeCompare(b,'he'));
+  } catch (e) { return []; }
+}
+async function fillSelfEmployees(){
+  const sel = document.getElementById('selfEmployee'); if(!sel) return;
+  const list = await fetchEmployeesList();
+  sel.innerHTML = '<option value=""></option>' + list.map(n=>`<option value="${n}">${n}</option>`).join('');
+}
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ fillSelfEmployees(); }, 300); });
+
 </script>
 
 <!-- RB_PATCH: admin_retro_event_only -->
@@ -3707,6 +4044,32 @@ try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(functi
 })();
 
 try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
+
+/*** === Employees list (Webhook first, fallback to Sheets) === ***/
+async function fetchEmployeesList() {
+  try { // webhook first
+    const base = (EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || '';
+    if (base) {
+      const r = await fetch(base + '?report=employees', { cache:'no-store' });
+      const j = await r.json();
+      if (j && j.ok && Array.isArray(j.employees) && j.employees.length) return j.employees;
+    }
+  } catch (e) {}
+  try { // sheets fallback
+    const sheetId = EMBEDDED_SETTINGS.sheetId, key = EMBEDDED_SETTINGS.apiKey;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:A?key=${key}`;
+    const r = await fetch(url, { cache:'no-store' }); const j = await r.json();
+    const s = new Set(); (j.values||[]).forEach((row,i)=>{ if(i>0 && row[0]) s.add(row[0].trim()); });
+    return Array.from(s).sort((a,b)=>a.localeCompare(b,'he'));
+  } catch (e) { return []; }
+}
+async function fillSelfEmployees(){
+  const sel = document.getElementById('selfEmployee'); if(!sel) return;
+  const list = await fetchEmployeesList();
+  sel.innerHTML = '<option value=""></option>' + list.map(n=>`<option value="${n}">${n}</option>`).join('');
+}
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ fillSelfEmployees(); }, 300); });
+
 </script>
 
 
@@ -3848,6 +4211,32 @@ try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(functi
 })();
 
 try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
+
+/*** === Employees list (Webhook first, fallback to Sheets) === ***/
+async function fetchEmployeesList() {
+  try { // webhook first
+    const base = (EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || '';
+    if (base) {
+      const r = await fetch(base + '?report=employees', { cache:'no-store' });
+      const j = await r.json();
+      if (j && j.ok && Array.isArray(j.employees) && j.employees.length) return j.employees;
+    }
+  } catch (e) {}
+  try { // sheets fallback
+    const sheetId = EMBEDDED_SETTINGS.sheetId, key = EMBEDDED_SETTINGS.apiKey;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:A?key=${key}`;
+    const r = await fetch(url, { cache:'no-store' }); const j = await r.json();
+    const s = new Set(); (j.values||[]).forEach((row,i)=>{ if(i>0 && row[0]) s.add(row[0].trim()); });
+    return Array.from(s).sort((a,b)=>a.localeCompare(b,'he'));
+  } catch (e) { return []; }
+}
+async function fillSelfEmployees(){
+  const sel = document.getElementById('selfEmployee'); if(!sel) return;
+  const list = await fetchEmployeesList();
+  sel.innerHTML = '<option value=""></option>' + list.map(n=>`<option value="${n}">${n}</option>`).join('');
+}
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ fillSelfEmployees(); }, 300); });
+
 </script>
 
 
@@ -3964,6 +4353,32 @@ try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(functi
 })();
 
 try{ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ fillSelfEmployees(); }catch(e){} }, 300); }); }catch(e){}
+
+/*** === Employees list (Webhook first, fallback to Sheets) === ***/
+async function fetchEmployeesList() {
+  try { // webhook first
+    const base = (EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || '';
+    if (base) {
+      const r = await fetch(base + '?report=employees', { cache:'no-store' });
+      const j = await r.json();
+      if (j && j.ok && Array.isArray(j.employees) && j.employees.length) return j.employees;
+    }
+  } catch (e) {}
+  try { // sheets fallback
+    const sheetId = EMBEDDED_SETTINGS.sheetId, key = EMBEDDED_SETTINGS.apiKey;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/%D7%92%D7%99%D7%9C%D7%99%D7%95%D7%9F1!A:A?key=${key}`;
+    const r = await fetch(url, { cache:'no-store' }); const j = await r.json();
+    const s = new Set(); (j.values||[]).forEach((row,i)=>{ if(i>0 && row[0]) s.add(row[0].trim()); });
+    return Array.from(s).sort((a,b)=>a.localeCompare(b,'he'));
+  } catch (e) { return []; }
+}
+async function fillSelfEmployees(){
+  const sel = document.getElementById('selfEmployee'); if(!sel) return;
+  const list = await fetchEmployeesList();
+  sel.innerHTML = '<option value=""></option>' + list.map(n=>`<option value="${n}">${n}</option>`).join('');
+}
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ fillSelfEmployees(); }, 300); });
+
 </script>
 
 
