@@ -931,7 +931,7 @@
         const EMBEDDED_SETTINGS = {
             apiKey: 'AIzaSyB8MgwEZ7hqS_hiZqTcwzODheuwdBA55j4',
             sheetId: '1SNSdRdJy-vP--spyKmVwDbnaz808KEwTYSKiLreFn0w', 
-            scriptUrl: 'https://script.google.com/macros/s/AKfycbxnOmMFcMd1eGuP9-ZjcCHMcfr6JSI4K3bVcUpFo5IfcVdYNVkPgCi8c4-QFSjN9LEx/exec'
+            scriptUrl: 'https://script.google.com/macros/s/AKfycbzOv6CoZz3kSRlOIWIDbSH52AVeA_vRVtKjmgNt2ghYn2vqNDOazHGEyBdWSWvUGVoZ/exec'
         };
 
         // משתני האפליקציה
@@ -2417,41 +2417,60 @@
             initApp();
         }
     
-// --- Robust hook for the "הצג דוח" button and table bootstrap ---
+// === Calc-mode selector UI + Save default ===
 document.addEventListener('DOMContentLoaded', function(){
-  // Ensure results table exists
-  (function ensureTable(){
-    try{
-      var tbl = document.getElementById('selfTable');
-      if (!tbl){
-        var host = document.getElementById('reportsContent') || document.querySelector('[data-section="reports"]') || document.body;
-        var wrapper = document.createElement('div');
-        wrapper.id = 'selfTableWrapper';
-        wrapper.style.overflowX = 'auto';
-        tbl = document.createElement('table');
-        tbl.id = 'selfTable';
-        tbl.style.width = '100%';
-        tbl.style.borderCollapse = 'collapse';
-        tbl.style.direction = 'rtl';
-        tbl.innerHTML = '<tr><th>תאריך</th><th>כניסה</th><th>יציאה</th><th>שעות</th><th>אירועים</th></tr>';
-        wrapper.appendChild(tbl);
-        host.appendChild(wrapper);
-      }
-    }catch(e){ console.warn('ensureTable failed', e); }
-  })();
+  try{
+    var container = document.getElementById('calcModeContainer');
+    if (!container){
+      var anchor = document.getElementById('selfPeriod') || document.querySelector('[name="selfPeriod"]') || document.querySelector('#reportsContent') || document.body;
+      container = document.createElement('div');
+      container.id = 'calcModeContainer';
+      container.style.margin = '10px 0';
+      container.style.direction = 'rtl';
+      container.innerHTML = [
+        '<label style="margin-inline-end:8px;">מצב חישוב:</label>',
+        '<select id="calcModeSelect" style="margin-inline-end:8px;">',
+        '<option value="auto">אוטומטי (לפי הגדרות העובד)</option>',
+        '<option value="sum">סכימה של זוגות IN→OUT</option>',
+        '<option value="span">מהכניסה הראשונה עד היציאה האחרונה</option>',
+        '</select>',
+        '<button id="saveCalcModeBtn" type="button">שמור כברירת מחדל לעובד</button>',
+        '<small id="calcModeHint" style="margin-inline-start:8px;color:#666"></small>'
+      ].join('');
+      anchor.parentNode.insertBefore(container, anchor.nextSibling);
+    }
 
-  // Delegate click on the primary report button by text
-  document.addEventListener('click', function(ev){
-    try{
-      var btn = ev.target.closest('button, a');
-      if (!btn) return;
-      var txt = (btn.textContent||'').trim();
-      if (txt === 'הצג דוח' || txt.indexOf('הצג דוח') !== -1){
-        ev.preventDefault();
-        if (typeof renderSelf === 'function') renderSelf();
-      }
-    }catch(e){}
-  }, true);
+    var _origRenderSelf = (typeof renderSelf === 'function') ? renderSelf : null;
+    window.renderSelf = function(){
+      var sel = document.getElementById('calcModeSelect');
+      var override = sel && sel.value !== 'auto' ? sel.value : null;
+      window.__overrideCalcMode = override || null;
+      if (_origRenderSelf) return _origRenderSelf();
+    };
+
+    document.getElementById('saveCalcModeBtn').addEventListener('click', async function(){
+      try{
+        var emp = (document.getElementById('selfEmployee')||{}).value || '';
+        var sel = document.getElementById('calcModeSelect');
+        var mode = sel ? sel.value : 'auto';
+        if (!emp){ return alert('בחר עובד'); }
+        if (mode === 'auto'){ return alert('בחר מצב מפורש (sum/span) כדי לשמור כברירת מחדל'); }
+        var passEl = document.getElementById('reportsPassword');
+        var admin = passEl ? (passEl.value||'').trim() : (prompt('סיסמת מנהל?')||'').trim();
+        if (!admin){ return; }
+        var base = (window.EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || window.scriptUrl || '';
+        if (!base){ return alert('כתובת השרת (scriptUrl) לא מוגדרת'); }
+        const url = base + '?report=setmode&employee=' + encodeURIComponent(emp) + '&mode=' + encodeURIComponent(mode) + '&admin=' + encodeURIComponent(admin);
+        const r = await fetch(url, { method:'GET', cache:'no-store' });
+        const j = await r.json();
+        if (j && j.ok){ alert('עודכן: ' + emp + ' ← ' + mode); }
+        else { alert('נכשל לעדכן: ' + (j && j.error || 'שגיאה')); }
+      }catch(e){ alert('שגיאה: ' + e); }
+    });
+
+    var hint = document.getElementById('calcModeHint');
+    if (hint) hint.textContent = 'Auto = לפי Settings; ניתן לעקוף בדוח או לשמור כברירת מחדל.';
+  }catch(e){ console.warn('calc-mode UI error', e); }
 });
 
 </script>
