@@ -4029,3 +4029,96 @@ function recordToSheet(employee, action, timestamp){
   }
 })();
 </script>
+
+
+<!-- === Injected Fixes V2 (2025-10-04) === -->
+<script>
+(function(){
+  window.scriptUrl = window.scriptUrl || localStorage.getItem('scriptUrl') || "";
+  function normalizeAction(action){
+    if(!action) return '';
+    const a = String(action).toLowerCase();
+    if(['in','checkin','check-in','enter','start','begin','arrival'].includes(a)) return 'checkin';
+    if(['out','checkout','check-out','leave','end','finish','exit'].includes(a)) return 'checkout';
+    if(a.includes('כניסה') || a.includes('כניס') || a.includes('להכנס')) return 'checkin';
+    if(a.includes('יציאה') || a.includes('יציא') || a.includes('לצאת')) return 'checkout';
+    return a;
+  }
+  window.recordToSheet = function recordToSheet(employee, action, timestamp){
+    try{
+      if(!window.scriptUrl){
+        alert("לא הוגדר scriptUrl של ה-Web App");
+        return Promise.resolve(false);
+      }
+      const norm = normalizeAction(action);
+      const payload = {
+        secret: "Ms7692016",
+        event: norm,
+        name: employee || "",
+        timestamp: timestamp || new Date().toISOString(),
+        source: "pwa"
+      };
+      return fetch(window.scriptUrl, {
+        method: "POST",
+        mode: "no-cors",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify(payload)
+      }).then(()=>true).catch(()=>false);
+    }catch(e){
+      console.error(e);
+      return Promise.resolve(false);
+    }
+  };
+  if(typeof window.renderSelf !== 'function'){
+    window.__overrideCalcMode = window.__overrideCalcMode || 'auto';
+    window.renderSelf = function(){
+      const empEl = document.getElementById('selfEmployee') || document.querySelector('[data-employee]');
+      if(!empEl){ return; }
+      const emp = ('value' in empEl ? empEl.value : empEl.getAttribute('data-value')) || "";
+      if(!emp){ try{alert("בחר עובד");}catch{} return; }
+      const periodEl = document.getElementById('selfPeriod') || document.querySelector('[data-period]');
+      const period = (periodEl && ('value' in periodEl ? periodEl.value : periodEl.getAttribute('data-value'))) || 'week';
+      function range(period){
+        const now = new Date();
+        const s = new Date(now), e = new Date(now);
+        if(period==='week'){
+          const d = (now.getDay()+6)%7; s.setDate(now.getDate()-d);
+          s.setHours(0,0,0,0); e.setHours(23,59,59,999);
+        }else if(period==='month'){
+          s.setDate(1); s.setHours(0,0,0,0);
+          e.setMonth(e.getMonth()+1); e.setDate(0); e.setHours(23,59,59,999);
+        }else{
+          const d = (now.getDay()+6)%7; s.setDate(now.getDate()-d);
+          s.setHours(0,0,0,0); e.setHours(23,59,59,999);
+        }
+        return {s,e};
+      }
+      const r = range(period);
+      const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      const from = ymd(r.s), to = ymd(r.e);
+      const override = window.__overrideCalcMode || 'auto';
+      if(!window.scriptUrl) return;
+      let url = `${window.scriptUrl}?report=summary&employee=${encodeURIComponent(emp)}&from=${from}&to=${to}`;
+      if(override && override!=='auto') url += `&calcMode=${encodeURIComponent(override)}`;
+      const table = document.getElementById('selfTable') || document.querySelector('[data-table]');
+      const summary = document.getElementById('summary') || document.querySelector('[data-summary]');
+      fetch(url, {cache:"no-store"}).then(r=>r.json()).then(j=>{
+        if(!j || !j.ok) throw new Error(j && j.error || "שגיאה בדוח");
+        let html = `<tr><th>תאריך</th><th>כניסה</th><th>יציאה</th><th>שעות</th><th>אירועים</th></tr>`;
+        let days=0, ev=0;
+        (j.daily||[]).forEach(d=>{
+          days += (d.hours||0)>0 ? 1 : 0; ev += d.events||0;
+          const date = d.date.split("-").reverse().slice(0,2).join("/");
+          html += `<tr><td>${date}</td><td>${d.firstIn||"-"}</td><td>${d.lastOut||"-"}</td><td>${(d.hours||0).toFixed(2)}</td><td>${d.events||0}</td></tr>`;
+        });
+        if(table) table.innerHTML = html;
+        if(summary) summary.textContent = `ימי עבודה: ${days} • סה״כ שעות: ${j.totalHours.toFixed(2)} • סה״כ אירועים: ${ev}`;
+      }).catch(err=>{
+        console.error(err);
+        if(table) table.innerHTML = "";
+        if(summary) summary.textContent = "שגיאה בחישוב דוח.";
+      });
+    };
+  }
+})();
+</script>
