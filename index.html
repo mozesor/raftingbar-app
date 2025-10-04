@@ -4109,5 +4109,98 @@ if (document.readyState === 'loading'){
 })();
 </script>
 
+
+<!-- === PATCH v2: בעמוד הדוחות – מציג גם 'כניסה' ו'יציאה' לצד 'שעות' === -->
+<script>
+(function(){
+  function toDate(s){ const d=new Date(s); return isNaN(+d)?null:d; }
+  function hoursBetween(a,b){ if(!a||!b) return 0; const ms=b-a; return ms>0? ms/36e5 : 0; }
+  function hhmm(d){ return d ? String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0') : '-'; }
+
+  // מחושב גם לזוגות וגם לטווח כולל, ומחזיר כניסה/יציאה
+  window.__calcDayPlus = function(rawList, mode){
+    const arr = (rawList||[]).slice().sort((a,b)=>String(a.ts||'').localeCompare(String(b.ts||'')));
+    let firstIn=null, lastOut=null;
+    let open=null, sum=0;
+
+    for (const ev of arr){
+      if (ev.action==='checkin'){
+        if (!firstIn) firstIn = toDate(ev.ts);
+        if (!open) open = toDate(ev.ts);
+      } else if (ev.action==='checkout'){
+        lastOut = toDate(ev.ts);
+        const end = toDate(ev.ts);
+        if (open && end){ sum += hoursBetween(open,end); open=null; }
+      }
+    }
+
+    let hours=0, incomplete=false;
+    if ((window.__calcMode||'pair') === 'span'){
+      hours = hoursBetween(firstIn, lastOut);
+      incomplete = !(firstIn && lastOut);
+    } else {
+      hours = sum;
+      incomplete = !!open;
+    }
+
+    return {hours: Math.round(hours*100)/100, firstIn, lastOut, incomplete};
+  };
+
+  // מחליף את העדכון של דוח "עמוד הדוחות" כדי להציג גם כניסה/יציאה
+  window.updateSelfReport = async function(){
+    const qs = s=>document.querySelector(s);
+    // עובד
+    const empEl = qs('#selfEmployee') || qs('#employee') || qs('input[list="empList"]');
+    const emp = empEl ? empEl.value : '';
+    if (!emp){ try{ if (window.showAlert) showAlert('בחר עובד לדוח','warning'); }catch(_){ } }
+
+    // טען RAW אם חסר
+    if (!window.attendanceRaw && typeof window._ensureRaw === 'function'){ await window._ensureRaw(); }
+
+    // טווח
+    function ymd(d){ const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), da=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${da}`; }
+    const periodEl = qs('#selfPeriod');
+    const fromEl = qs('#fromDate');
+    const toEl = qs('#toDate');
+    const now = new Date();
+    let start,end;
+    if (periodEl && periodEl.value==='week'){
+      const day = (now.getDay()+6)%7; start = new Date(now); start.setDate(now.getDate()-day); start.setHours(0,0,0,0);
+      end = new Date(now); end.setHours(23,59,59,999);
+    } else if (periodEl && periodEl.value==='custom' && fromEl && toEl && fromEl.value && toEl.value){
+      start = new Date(fromEl.value+'T00:00:00'); end = new Date(toEl.value+'T23:59:59');
+    } else {
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+      end = new Date(now.getFullYear(), now.getMonth()+1, 0, 23,59,59,999);
+    }
+    const dates=[]; for (let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){ dates.push( ymd(d) ); }
+
+    const mode = window.__calcMode || 'pair';
+    const tableEl = qs('#selfTable') || (function(){ const t=document.createElement('table'); (qs('.reports')||document.body).appendChild(t); t.id='selfTable'; return t; })();
+    const summaryEl = qs('#summary') || (function(){ const d=document.createElement('div'); d.id='summary'; (qs('.reports')||document.body).appendChild(d); return d; })();
+
+    let total=0, days=0;
+    const rows = [`<tr><th>תאריך</th><th>כניסה</th><th>יציאה</th><th>שעות</th></tr>`];
+
+    for (const dateKey of dates){
+      const rawList = window.attendanceRaw && emp && window.attendanceRaw[emp] && window.attendanceRaw[emp][dateKey];
+      const res = window.__calcDayPlus(rawList, mode);
+      const h = Number(res.hours||0);
+      if (h>0){ days++; total+=h; }
+      rows.push(`<tr><td>${dateKey.split('-').reverse().join('/')}</td><td>${hhmm(res.firstIn)}</td><td>${hhmm(res.lastOut)}</td><td>${h.toFixed(2)}</td></tr>`);
+    }
+
+    tableEl.innerHTML = rows.join('');
+    summaryEl.textContent = `סה״כ שעות: ${total.toFixed(2)} • ימי עבודה: ${days} • מצב חישוב: ${mode==='pair'?'זוגות':'מכניסה ראשונה'}`;
+  };
+
+  // חיבור ל"כפתור הצג דוח" אם יש
+  (function(){
+    const btn = document.getElementById('btnShow');
+    if (btn) btn.addEventListener('click', function(){ setTimeout(window.updateSelfReport, 0); });
+  })();
+})();
+</script>
+
 </body>
 </html>
