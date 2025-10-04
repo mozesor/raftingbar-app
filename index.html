@@ -3910,3 +3910,122 @@ if (document.readyState === 'loading'){
 </div>
 </body>
 </html>
+
+
+<!-- === Injected Fixes (2025-10-04) === -->
+<script>
+/* ===== CONFIG ===== */
+// אם כבר יש לך scriptUrl גלובלי – לא נוגעים. אחרת ניתן להגדיר פה/בלוקלי.
+window.scriptUrl = window.scriptUrl || localStorage.getItem('scriptUrl') || "";
+
+// שליחת כניסה/יציאה ידנית בפורמט שהשרת מצפה לו
+function recordToSheet(employee, action, timestamp){
+  try{
+    if(!window.scriptUrl){ alert("לא הוגדר scriptUrl של ה-Web App"); return Promise.resolve(false); }
+    const payload = {
+      secret: "Ms7692016",
+      event: (action||'').toLowerCase(),   // 'checkin' | 'checkout' | 'in' | 'out'
+      name: employee,
+      timestamp: timestamp || new Date().toISOString(),
+      source: "pwa"
+    };
+    return fetch(window.scriptUrl, {
+      method: "POST",
+      mode: "no-cors",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(payload)
+    }).then(()=>true).catch(()=>false);
+  }catch(e){
+    console.error(e);
+    return Promise.resolve(false);
+  }
+}
+
+// חישוב דוח דרך השרת (?report=summary) עם תמיכה ב-calcMode
+(function(){
+  // אם אין אלמנטים רלוונטיים בדף – לא מתערבים
+  const empSel = document.getElementById('selfEmployee') || document.querySelector('[data-employee]');
+  if(!empSel) return;
+
+  window.__overrideCalcMode = window.__overrideCalcMode || 'auto';
+
+  window.renderSelf = function renderSelf(){
+    const getVal = (el) => el && ('value' in el ? el.value : el.getAttribute('data-value'));
+    const emp   = getVal(document.getElementById('selfEmployee')) || getVal(document.querySelector('[data-employee]')) || "";
+    if(!emp){ try{alert("בחר עובד");}catch{} return; }
+
+    const periodSel = document.getElementById('selfPeriod') || document.querySelector('[data-period]');
+    const period = getVal(periodSel) || 'month';
+
+    function selfDateRange(period){
+      const now = new Date();
+      const start = new Date(now), end = new Date(now);
+      if(period==='week'){
+        const day = (now.getDay()+6)%7; start.setDate(now.getDate()-day);
+        start.setHours(0,0,0,0); end.setHours(23,59,59,999);
+      }else if(period==='month'){
+        start.setDate(1); start.setHours(0,0,0,0);
+        end.setMonth(end.getMonth()+1); end.setDate(0); end.setHours(23,59,59,999);
+      }else{
+        const day = (now.getDay()+6)%7; start.setDate(now.getDate()-day);
+        start.setHours(0,0,0,0); end.setHours(23,59,59,999);
+      }
+      return {start, end};
+    }
+    const rng = selfDateRange(period);
+    const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const from = ymd(rng.start), to = ymd(rng.end);
+    const override = window.__overrideCalcMode || 'auto';
+
+    if(!window.scriptUrl){
+      const el = document.getElementById('summary') || document.querySelector('[data-summary]');
+      if(el) el.textContent = "לא הוגדר scriptUrl – לא ניתן לשלוף דוח.";
+      return;
+    }
+    let url = `${window.scriptUrl}?report=summary&employee=${encodeURIComponent(emp)}&from=${from}&to=${to}`;
+    if(override && override!=='auto') url += `&calcMode=${encodeURIComponent(override)}`;
+
+    const meta = document.getElementById('meta') || document.querySelector('[data-meta]');
+    if(meta) meta.textContent = `טווח: ${from} → ${to} | מצב חישוב: ${override}`;
+
+    fetch(url, {cache:'no-store'})
+      .then(r => r.json())
+      .then(j => {
+        if(!j || !j.ok) throw new Error(j && j.error || 'שגיאה בדוח');
+        const table = document.getElementById('selfTable') || document.querySelector('[data-table]');
+        const summary = document.getElementById('summary') || document.querySelector('[data-summary]');
+        if(table){
+          let html = `<tr><th>תאריך</th><th>כניסה</th><th>יציאה</th><th>שעות</th><th>אירועים</th></tr>`;
+          let days=0, eventsTotal=0;
+          (j.daily||[]).forEach(d => {
+            days += (d.hours||0)>0 ? 1 : 0;
+            eventsTotal += d.events||0;
+            const date = d.date.split("-").reverse().slice(0,2).join("/");
+            html += `<tr><td>${date}</td><td>${d.firstIn||"-"}</td><td>${d.lastOut||"-"}</td><td>${(d.hours||0).toFixed(2)}</td><td>${d.events||0}</td></tr>`;
+          });
+          table.innerHTML = html;
+          if(summary){
+            summary.textContent = `ימי עבודה: ${days} • סה״כ שעות: ${j.totalHours.toFixed(2)} • סה״כ אירועים: ${eventsTotal}`;
+          }
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        const summary = document.getElementById('summary') || document.querySelector('[data-summary]');
+        const table = document.getElementById('selfTable') || document.querySelector('[data-table]');
+        if(summary) summary.textContent = 'שגיאה בחישוב דוח.';
+        if(table) table.innerHTML = '';
+      });
+  };
+
+  // חיבור כפתור "הצג דוח" אם קיים
+  const btnShow = document.getElementById('btnShow') || document.querySelector('[data-show-report]');
+  if(btnShow){
+    btnShow.addEventListener('click', () => {
+      const calcSel = document.getElementById('calcMode') || document.querySelector('[data-calc-mode]');
+      window.__overrideCalcMode = (calcSel && (calcSel.value || calcSel.getAttribute('data-value'))) || 'auto';
+      window.renderSelf();
+    });
+  }
+})();
+</script>
