@@ -931,7 +931,7 @@
         const EMBEDDED_SETTINGS = {
             apiKey: 'AIzaSyB8MgwEZ7hqS_hiZqTcwzODheuwdBA55j4',
             sheetId: '1SNSdRdJy-vP--spyKmVwDbnaz808KEwTYSKiLreFn0w', 
-            scriptUrl: 'https://script.google.com/macros/s/AKfycbx_UMxeN_-dYeiR4xQa4HzT9ogZPv8BeYkRuUg0BOeEobOQZJVvj7gZU-2U_5LrxEtK/exec'
+            scriptUrl: 'https://script.google.com/macros/s/AKfycby6lA2XbijQFLMVt4dbKnfimjZGnYkiqMTVrhbMXX_MF6XiGJ9EbBQYi8ncHVBSSv9g/exec'
         };
 
         // משתני האפליקציה
@@ -2416,7 +2416,64 @@
         } else {
             initApp();
         }
-    </script>
+    
+// === Calc-mode selector UI + Save default ===
+document.addEventListener('DOMContentLoaded', function(){
+  try{
+    var container = document.getElementById('calcModeContainer');
+    if (!container){
+      var anchor = document.getElementById('selfPeriod') || document.querySelector('[name="selfPeriod"]') || document.querySelector('#reportsContent') || document.body;
+      container = document.createElement('div');
+      container.id = 'calcModeContainer';
+      container.style.margin = '10px 0';
+      container.style.direction = 'rtl';
+      container.innerHTML = [
+        '<label style="margin-inline-end:8px;">מצב חישוב:</label>',
+        '<select id="calcModeSelect" style="margin-inline-end:8px;">',
+        '<option value="auto">אוטומטי (לפי הגדרות העובד)</option>',
+        '<option value="sum">סכימה של זוגות IN→OUT</option>',
+        '<option value="span">מהכניסה הראשונה עד היציאה האחרונה</option>',
+        '</select>',
+        '<button id="saveCalcModeBtn" type="button">שמור כברירת מחדל לעובד</button>',
+        '<small id="calcModeHint" style="margin-inline-start:8px;color:#666"></small>'
+      ].join('');
+      anchor.parentNode.insertBefore(container, anchor.nextSibling);
+    }
+
+    var _origRenderSelf = (typeof renderSelf === 'function') ? renderSelf : null;
+    window.renderSelf = function(){
+      var sel = document.getElementById('calcModeSelect');
+      var override = sel && sel.value !== 'auto' ? sel.value : null;
+      window.__overrideCalcMode = override || null;
+      if (_origRenderSelf) return _origRenderSelf();
+    };
+
+    document.getElementById('saveCalcModeBtn').addEventListener('click', async function(){
+      try{
+        var emp = (document.getElementById('selfEmployee')||{}).value || '';
+        var sel = document.getElementById('calcModeSelect');
+        var mode = sel ? sel.value : 'auto';
+        if (!emp){ return alert('בחר עובד'); }
+        if (mode === 'auto'){ return alert('בחר מצב מפורש (sum/span) כדי לשמור כברירת מחדל'); }
+        var passEl = document.getElementById('reportsPassword');
+        var admin = passEl ? (passEl.value||'').trim() : (prompt('סיסמת מנהל?')||'').trim();
+        if (!admin){ return; }
+        var base = (window.EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || window.scriptUrl || '';
+        if (!base){ return alert('כתובת השרת (scriptUrl) לא מוגדרת'); }
+        const url = base + '?report=setmode&employee=' + encodeURIComponent(emp) + '&mode=' + encodeURIComponent(mode) + '&admin=' + encodeURIComponent(admin);
+        const r = await fetch(url, { method:'GET', cache:'no-store' });
+        const j = await r.json();
+        if (j && j.ok){ alert('עודכן: ' + emp + ' ← ' + mode); }
+        else { alert('נכשל לעדכן: ' + (j && j.error || 'שגיאה')); }
+      }catch(e){ alert('שגיאה: ' + e); }
+    });
+
+    var hint = document.getElementById('calcModeHint');
+    if (hint) hint.textContent = 'Auto = לפי Settings; ניתן לעקוף בדוח או לשמור כברירת מחדל.';
+  }catch(e){ console.warn('calc-mode UI error', e); }
+});
+
+</script>
 <script>if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('sw.js', { scope: './' }).catch(function(e){ console.log('SW register failed', e); });
@@ -2463,9 +2520,7 @@
     };
   })();
 </script>
-<div id="floatingLogoutBtn" style="display:none; position:fixed; top:10px; right:10px; z-index:9999; background:none; border:none; font-size:26px; cursor:pointer; line-height:1;" title="התנתק">
-  🚪
-</div>
+
 <script>
   document.addEventListener('DOMContentLoaded', function(){
     var logoutBtn = document.getElementById('floatingLogoutBtn');
@@ -2491,9 +2546,7 @@
     });
   });
 </script>
-<div id="floatingLogoutBtn" style="display:none; position:fixed; top:10px; right:10px; z-index:2500; background:none; border:none; font-size:26px; cursor:pointer; line-height:1;" title="התנתק">
-  🚪
-</div>
+
 <script>
 (function(){
   const AUTH_KEY = 'rb_auth_v1';
@@ -3852,33 +3905,40 @@ if (document.readyState === 'loading'){
 </script>
 
 
+<div id="floatingLogoutBtn" style="display:none; position:fixed; top:10px; right:10px; z-index:2500; background:none; border:none; font-size:26px; cursor:pointer; line-height:1;" title="התנתק">
+  🚪
+</div>
 
-<!-- === PATCH: Reports calc mode (Pair vs First→Last) + robust table-based calculation === -->
+<!-- === PATCH: עמוד הדוחות – כפתורי מצב חישוב (זוגות/מכניסה-ראשונה) + חישוב ישיר מהטבלה === -->
 <style>
-  .mode-btn{padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;cursor:pointer;margin-inline-start:8px}
+  .calc-mode-bar{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .mode-btn{padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;cursor:pointer}
   .mode-btn.active{background:#2563eb;color:#fff;border-color:#2563eb}
 </style>
 <script>
 (function(){
-  // Global calc mode (pair | span)
-  window.__calcMode = window.__calcMode || 'pair';
+  // ======== מצב חישוב גלובלי לדוחות (pair | span) ========
+  window.__calcMode = localStorage.getItem('calcMode') || 'pair';
 
-  // Inject two buttons near report controls (non-destructive to your UI)
-  function injectModeButtons(){
-    var anchor = document.getElementById('btnShow');
-    if(!anchor){
-      anchor = document.querySelector('.toolbar') || document.querySelector('#reportControls') || document.body;
-    }
-    // avoid duplicate
-    if(document.getElementById('modePairBtn')) return;
+  function qs(sel){ return document.querySelector(sel); }
+
+  // ======== הזרקת הכפתורים ב"עמוד הדוחות" ========
+  function injectModeButtonsForSelf(){
+    // ננסה למצוא עוגן באזור הפילטרים של הדוח (קיימים ברוב הגרסאות)
+    var anchor = qs('#btnShow') || qs('#selfPeriod') || qs('#calcMode') || qs('.reports-filters') || qs('.toolbar');
+    if(!anchor) return; // לא מצאנו לאן להדביק
+    if (document.getElementById('modePairBtnSelf')) return; // כבר הוזרק
+
+    var bar = document.createElement('div');
+    bar.className = 'calc-mode-bar';
 
     var pairBtn = document.createElement('button');
-    pairBtn.id = 'modePairBtn';
+    pairBtn.id = 'modePairBtnSelf';
     pairBtn.className = 'mode-btn';
-    pairBtn.textContent = 'חישוב: כניסות ויציאות (זוגות)';
+    pairBtn.textContent = 'חישוב: כניסות↔︎יציאות (זוגות)';
 
     var spanBtn = document.createElement('button');
-    spanBtn.id = 'modeSpanBtn';
+    spanBtn.id = 'modeSpanBtnSelf';
     spanBtn.className = 'mode-btn';
     spanBtn.textContent = 'חישוב: מכניסה ראשונה עד יציאה אחרונה';
 
@@ -3889,212 +3949,163 @@ if (document.readyState === 'loading'){
 
     pairBtn.addEventListener('click', function(){
       window.__calcMode = 'pair';
+      localStorage.setItem('calcMode','pair');
       paint();
-      rerenderReports();
+      tryUpdateSelfReport();
     });
     spanBtn.addEventListener('click', function(){
       window.__calcMode = 'span';
+      localStorage.setItem('calcMode','span');
       paint();
-      rerenderReports();
+      tryUpdateSelfReport();
     });
 
-    anchor.parentNode.insertBefore(pairBtn, anchor.nextSibling);
-    anchor.parentNode.insertBefore(spanBtn, pairBtn.nextSibling);
+    // נכניס אחרי הכפתור אם קיים, אחרת אחרי האלמנט שמצאנו
+    if (anchor.parentNode){
+      anchor.parentNode.insertBefore(bar, anchor.nextSibling);
+    } else {
+      (qs('#selfPeriod')?.parentNode || document.body).appendChild(bar);
+    }
+    bar.appendChild(pairBtn);
+    bar.appendChild(spanBtn);
     paint();
   }
 
-  function rerenderReports(){
-    // Try to trigger your existing render function
-    if (typeof window.updateDetailedReport === 'function') return window.updateDetailedReport();
-    if (typeof window.renderSelf === 'function') return window.renderSelf();
-    // Fallback: click the "show" button if exists
-    var btn = document.getElementById('btnShow');
-    if (btn) btn.click();
-  }
-
-  // Normalize action
+  // ======== טעינת נתונים גולמיים מהטבלה ========
   function normEvent(a){
     a = String(a||'').toLowerCase();
-    if (!a) return '';
-    if (['in','checkin','check-in','enter','start','arrival','connected','online','join'].indexOf(a)>-1) return 'checkin';
-    if (['out','checkout','check-out','leave','end','exit','disconnect','offline','left'].indexOf(a)>-1) return 'checkout';
-    if (a.indexOf('כניסה')>-1 || a.indexOf('כניס')>-1) return 'checkin';
-    if (a.indexOf('יציאה')>-1 || a.indexOf('יציא')>-1) return 'checkout';
+    if (['in','checkin','check-in','enter','start','arrival','connected','online','join'].includes(a)) return 'checkin';
+    if (['out','checkout','check-out','leave','end','exit','disconnect','offline','left'].includes(a)) return 'checkout';
+    if (a.indexOf('כניס')>-1) return 'checkin';
+    if (a.indexOf('יציא')>-1) return 'checkout';
     return a;
   }
 
-  // Override loadDataFromSheet to capture raw rows for pairing/span
-  var _origLoad = window.loadDataFromSheet;
-  window.loadDataFromSheet = function(){
-    if (!window.isInitialized) { if (typeof _origLoad==='function') return _origLoad(); }
-    var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + window.sheetId + '/values/A:F?key=' + window.apiKey;
-    fetch(url)
-      .then(function(r){ if(r.ok) return r.json(); throw new Error('HTTP '+r.status); })
-      .then(function(data){
-        var rows = data.values || [];
-        var employees = new Set();
-        var agg = {};
-        var raw = {}; // emp -> date -> [{action, ts}]
-        var currentDate = (typeof getCurrentDate==='function') ? getCurrentDate() : (new Date().toISOString().slice(0,10));
-        var adminPw = null;
-
-        for (var i=1;i<rows.length;i++){
-          var row = rows[i];
-          if (!row) continue;
-          var emp  = row[0] || '';
-          var act  = row[1] || '';
-          var iso  = row[2] || '';
-          var date = row[3] || '';
-
-          // admin password marker
-          if (act === 'admin_password_change'){
-            adminPw = emp || row[0];
-            continue;
-          }
-          if (!emp) continue;
-
-          employees.add(emp);
-          agg[emp] = agg[emp] || {};
-          agg[emp][date] = agg[emp][date] || {};
-
-          var a = normEvent(act);
-          if (a === 'checkin'){
-            agg[emp][date].checkIn = iso;
-            if (date === currentDate) (window.currentStatus||{})[emp] = 'in';
-          } else if (a === 'checkout'){
-            agg[emp][date].checkOut = iso;
-            if (date === currentDate) (window.currentStatus||{})[emp] = 'out';
-          } else if (act === 'event'){
-            agg[emp][date].events = (agg[emp][date].events || 0) + 1;
-          }
-
-          if (a === 'checkin' || a === 'checkout'){
-            raw[emp] = raw[emp] || {};
-            raw[emp][date] = raw[emp][date] || [];
-            raw[emp][date].push({action:a, ts: iso});
-          }
+  async function loadRawFromSheet(){
+    try{
+      if (!window.sheetId || !window.apiKey) return false;
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${window.sheetId}/values/A:F?key=${window.apiKey}`;
+      const resp = await fetch(url);
+      if (!resp.ok) return false;
+      const data = await resp.json();
+      const rows = (data && data.values) ? data.values : [];
+      const raw = {}; // emp -> date -> [{action, ts}]
+      for (let i=1;i<rows.length;i++){
+        const row = rows[i]||[];
+        const emp = row[0]||'';
+        const act = normEvent(row[1]||'');
+        const iso = row[2]||'';
+        const date = row[3]||'';
+        if (!emp || !date) continue;
+        if (act==='checkin' || act==='checkout'){
+          (raw[emp]||(raw[emp]={}))[date] = (raw[emp][date]||[]);
+          raw[emp][date].push({action:act, ts:iso});
         }
-
-        if (adminPw && adminPw !== window.adminPassword){
-          window.adminPassword = adminPw;
-          try { if (typeof showAlert==='function') showAlert('🔐 סיסמת המנהל עודכנה','success'); } catch(e){}
-        }
-
-        window.employees = Array.from(employees).sort();
-        window.attendanceData = agg;
-        window.attendanceRaw = raw;
-        try{ if (typeof saveLocalData==='function') saveLocalData(); }catch(e){}
-        try{ if (typeof updateAll==='function') updateAll(); }catch(e){}
-      })
-      .catch(function(err){
-        console.log('loadDataFromSheet error:', err);
-        if (typeof _origLoad === 'function') try{ _origLoad(); }catch(e){}
-      });
-  };
-
-  // Helpers
-  function toDate(s){ var d=new Date(s); return isNaN(+d)?null:d; }
-  function hoursBetween(a,b){ if(!a||!b) return 0; var d=b-a; return d>0? d/36e5 : 0; }
-
-  // Replace detailed report calculator to obey window.__calcMode
-  var _origGen = window.generateDetailedReportData;
-  window.generateDetailedReportData = function(startDate, endDate, selectedEmployee){
-    var mode = window.__calcMode || 'pair';
-    // Base data
-    var data = {
-      totalHours: 0, totalEvents: 0, eventsByDate: {},
-      totalDays: 0, overtimeDays: 0, overtimeHours: 0,
-      missingDays: 0, averageHours: 0, employees: [], dailyData: []
-    };
-    var emps = (selectedEmployee === 'all' || !selectedEmployee) ? (window.employees || []) : [selectedEmployee];
-
-    // Build date list
-    var dates = [];
-    for (var d = new Date(startDate); d <= endDate; d.setDate(d.getDate()+1)){
-      var y=d.getFullYear(), m=(''+(d.getMonth()+1)).padStart(2,'0'), dd=(''+d.getDate()).padStart(2,'0');
-      dates.push(y+'-'+m+'-'+dd);
-    }
-
-    function dayHours(rawList){
-      rawList.sort(function(a,b){ return String(a.ts||'').localeCompare(String(b.ts||'')); });
-      if (mode==='span'){
-        var first=null, last=null;
-        for (var i=0;i<rawList.length;i++){
-          if (rawList[i].action==='checkin' && !first) first = toDate(rawList[i].ts);
-          if (rawList[i].action==='checkout') last = toDate(rawList[i].ts);
-        }
-        var h = hoursBetween(first, last);
-        var incomplete = !(first && last);
-        return {hours: Math.round(h*100)/100, incomplete: incomplete};
-      } else { // pair
-        var open=null, sum=0;
-        for (var i=0;i<rawList.length;i++){
-          var ev = rawList[i];
-          if (ev.action==='checkin'){
-            if (!open) open = toDate(ev.ts); // ignore extra ins until closed
-          } else if (ev.action==='checkout'){
-            var end = toDate(ev.ts);
-            if (open && end){ sum += hoursBetween(open, end); open = null; }
-          }
-        }
-        return {hours: Math.round(sum*100)/100, incomplete: !!open};
       }
+      window.attendanceRaw = raw;
+      return true;
+    }catch(e){
+      console.log('loadRawFromSheet error', e);
+      return false;
     }
-
-    for (var e=0;e<emps.length;e++){
-      var emp = emps[e];
-      var empData = {name: emp, totalEvents:0, eventDates:[], totalHours:0, workDays:0, overtimeDays:0, overtimeHours:0, missingDays:0, dailyHours:[]};
-
-      for (var i=0;i<dates.length;i++){
-        var dateKey = dates[i];
-        var rawList = (window.attendanceRaw && window.attendanceRaw[emp] && window.attendanceRaw[emp][dateKey]) ? window.attendanceRaw[emp][dateKey].slice() : [];
-        var res = dayHours(rawList);
-        var hours = res.hours || 0;
-        var incomplete = !!res.incomplete;
-
-        var aggr = window.attendanceData && window.attendanceData[emp] && window.attendanceData[emp][dateKey];
-        var evCount = aggr && aggr.events ? Number(aggr.events) : 0;
-        if (evCount){ empData.totalEvents += evCount; data.totalEvents += evCount; empData.eventDates.push({date:dateKey, count:evCount}); }
-
-        if (hours>0){ empData.totalHours += hours; empData.workDays++; }
-        if (incomplete){ empData.missingDays++; }
-        if (hours>9){ empData.overtimeDays++; empData.overtimeHours += (hours-9); }
-
-        empData.dailyHours.push({date:dateKey, hours:hours, incomplete:incomplete});
-      }
-
-      empData.averageHours = empData.workDays>0 ? Math.round((empData.totalHours/empData.workDays)*100)/100 : 0;
-      data.employees.push(empData);
-      data.totalHours += empData.totalHours;
-      data.totalDays  += empData.workDays;
-      data.overtimeDays  += empData.overtimeDays;
-      data.overtimeHours += empData.overtimeHours;
-      data.missingDays   += empData.missingDays;
-    }
-    data.averageHours = data.totalDays>0 ? Math.round((data.totalHours/data.totalDays)*100)/100 : 0;
-
-    // daily totals (across employees)
-    for (var i=0;i<dates.length;i++){
-      var dateKey = dates[i];
-      var dayTotal=0, workers=0;
-      for (var e=0;e<emps.length;e++){
-        var empObj = data.employees[e];
-        var rec = empObj && empObj.dailyHours && empObj.dailyHours.find(function(x){ return x.date===dateKey; });
-        var h = rec ? Number(rec.hours||0) : 0;
-        if (h>0){ workers++; dayTotal+=h; }
-      }
-      data.dailyData.push({date:dateKey, totalHours: Math.round(dayTotal*10)/10, workers: workers, average: workers? Math.round((dayTotal/workers)*100)/100 : 0});
-    }
-
-    return data;
-  };
-
-  // Run after DOM ready
-  if (document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', injectModeButtons);
-  } else {
-    injectModeButtons();
   }
+
+  // ======== חישוב לפי מצב ========
+  function toDate(s){ const d=new Date(s); return isNaN(+d)?null:d; }
+  function hoursBetween(a,b){ if(!a||!b) return 0; const ms=b-a; return ms>0? ms/36e5 : 0; }
+
+  function calcDay(rawList, mode){
+    const arr = (rawList||[]).slice().sort((a,b)=>String(a.ts||'').localeCompare(String(b.ts||'')));
+    if (mode==='span'){
+      let first=null, last=null;
+      for (const ev of arr){
+        if (ev.action==='checkin' && !first) first = toDate(ev.ts);
+        if (ev.action==='checkout') last = toDate(ev.ts);
+      }
+      const hrs = Math.round(hoursBetween(first,last)*100)/100;
+      return {hours:hrs, incomplete: !(first && last)};
+    } else {
+      let open=null, sum=0;
+      for (const ev of arr){
+        if (ev.action==='checkin'){ if (!open) open = toDate(ev.ts); }
+        else if (ev.action==='checkout'){
+          const end = toDate(ev.ts);
+          if (open && end){ sum += hoursBetween(open,end); open=null; }
+        }
+      }
+      return {hours: Math.round(sum*100)/100, incomplete: !!open};
+    }
+  }
+
+  function ymd(d){ const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), da=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${da}`; }
+  function rangeFromUI(){
+    const periodEl = qs('#selfPeriod');
+    const fromEl = qs('#fromDate');
+    const toEl = qs('#toDate');
+    const now = new Date();
+    let start,end;
+    if (periodEl && periodEl.value==='week'){
+      const day = (now.getDay()+6)%7; start = new Date(now); start.setDate(now.getDate()-day); start.setHours(0,0,0,0);
+      end = new Date(now); end.setHours(23,59,59,999);
+    } else if (periodEl && periodEl.value==='custom' && fromEl && toEl && fromEl.value && toEl.value){
+      start = new Date(fromEl.value+'T00:00:00'); end = new Date(toEl.value+'T23:59:59');
+    } else {
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+      end = new Date(now.getFullYear(), now.getMonth()+1, 0, 23,59,59,999);
+    }
+    const dates=[]; const d=new Date(start);
+    while (d<=end){ dates.push( ymd(d) ); d.setDate(d.getDate()+1); }
+    return {start,end,dates};
+  }
+
+  // ======== עדכון דוח בעמוד הדוחות ========
+  async function updateSelfReport(){
+    // בחר עובד
+    const empEl = qs('#selfEmployee') || qs('#employee') || qs('input[list="empList"]');
+    const emp = empEl ? empEl.value : '';
+    if (!emp){ try{ if (window.showAlert) showAlert('בחר עובד לדוח','warning'); }catch(_){ } }
+
+    // טען RAW אם חסר
+    if (!window.attendanceRaw){ await loadRawFromSheet(); }
+
+    const mode = window.__calcMode || 'pair';
+    const r = rangeFromUI();
+    let total = 0, days=0, eventsTotal=0;
+    const tableEl = qs('#selfTable') || (function(){ const t=document.createElement('table'); (qs('.reports')||document.body).appendChild(t); return t; })();
+    const summaryEl = qs('#summary') || (function(){ const d=document.createElement('div'); d.id='summary'; (qs('.reports')||document.body).appendChild(d); return d; })();
+
+    const rows = [`<tr><th>תאריך</th><th>שעות</th></tr>`];
+    for (const dateKey of r.dates){
+      const rawList = window.attendanceRaw && emp && window.attendanceRaw[emp] && window.attendanceRaw[emp][dateKey];
+      const res = calcDay(rawList, mode);
+      const h = Number(res.hours||0);
+      if (h>0){ days++; total+=h; }
+      rows.push(`<tr><td>${dateKey.split('-').reverse().join('/')}</td><td>${h.toFixed(2)}</td></tr>`);
+    }
+    tableEl.innerHTML = rows.join('');
+    summaryEl.textContent = `סה״כ שעות: ${total.toFixed(2)} • ימי עבודה: ${days} • מצב חישוב: ${mode==='pair'?'זוגות':'מכניסה ראשונה'}`;
+  }
+
+  function tryUpdateSelfReport(){
+    try { updateSelfReport(); } catch(e){ console.log('updateSelfReport failed', e); }
+  }
+
+  // חיבור לכפתור "הצג דוח" אם קיים
+  const btnShow = qs('#btnShow');
+  if (btnShow) btnShow.addEventListener('click', function(ev){ setTimeout(tryUpdateSelfReport, 0); });
+
+  // הרצה והזרקה אחרי טעינת DOM
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', function(){
+      injectModeButtonsForSelf();
+      // נריץ פעם ראשונה אחרי שהמשתמש יבחר עובד/טווח
+    });
+  } else {
+    injectModeButtonsForSelf();
+  }
+
+  // אם אין טעינה קיימת של נתונים, נבנה RAW כשניגשים לראשונה לדוח
+  window._ensureRaw = loadRawFromSheet;
 })();
 </script>
 
