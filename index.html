@@ -931,7 +931,7 @@
         const EMBEDDED_SETTINGS = {
             apiKey: 'AIzaSyB8MgwEZ7hqS_hiZqTcwzODheuwdBA55j4',
             sheetId: '1SNSdRdJy-vP--spyKmVwDbnaz808KEwTYSKiLreFn0w', 
-            scriptUrl: 'https://script.google.com/macros/s/AKfycby6lA2XbijQFLMVt4dbKnfimjZGnYkiqMTVrhbMXX_MF6XiGJ9EbBQYi8ncHVBSSv9g/exec'
+            scriptUrl: 'https://script.google.com/macros/s/AKfycbx_UMxeN_-dYeiR4xQa4HzT9ogZPv8BeYkRuUg0BOeEobOQZJVvj7gZU-2U_5LrxEtK/exec'
         };
 
         // משתני האפליקציה
@@ -2416,64 +2416,7 @@
         } else {
             initApp();
         }
-    
-// === Calc-mode selector UI + Save default ===
-document.addEventListener('DOMContentLoaded', function(){
-  try{
-    var container = document.getElementById('calcModeContainer');
-    if (!container){
-      var anchor = document.getElementById('selfPeriod') || document.querySelector('[name="selfPeriod"]') || document.querySelector('#reportsContent') || document.body;
-      container = document.createElement('div');
-      container.id = 'calcModeContainer';
-      container.style.margin = '10px 0';
-      container.style.direction = 'rtl';
-      container.innerHTML = [
-        '<label style="margin-inline-end:8px;">מצב חישוב:</label>',
-        '<select id="calcModeSelect" style="margin-inline-end:8px;">',
-        '<option value="auto">אוטומטי (לפי הגדרות העובד)</option>',
-        '<option value="sum">סכימה של זוגות IN→OUT</option>',
-        '<option value="span">מהכניסה הראשונה עד היציאה האחרונה</option>',
-        '</select>',
-        '<button id="saveCalcModeBtn" type="button">שמור כברירת מחדל לעובד</button>',
-        '<small id="calcModeHint" style="margin-inline-start:8px;color:#666"></small>'
-      ].join('');
-      anchor.parentNode.insertBefore(container, anchor.nextSibling);
-    }
-
-    var _origRenderSelf = (typeof renderSelf === 'function') ? renderSelf : null;
-    window.renderSelf = function(){
-      var sel = document.getElementById('calcModeSelect');
-      var override = sel && sel.value !== 'auto' ? sel.value : null;
-      window.__overrideCalcMode = override || null;
-      if (_origRenderSelf) return _origRenderSelf();
-    };
-
-    document.getElementById('saveCalcModeBtn').addEventListener('click', async function(){
-      try{
-        var emp = (document.getElementById('selfEmployee')||{}).value || '';
-        var sel = document.getElementById('calcModeSelect');
-        var mode = sel ? sel.value : 'auto';
-        if (!emp){ return alert('בחר עובד'); }
-        if (mode === 'auto'){ return alert('בחר מצב מפורש (sum/span) כדי לשמור כברירת מחדל'); }
-        var passEl = document.getElementById('reportsPassword');
-        var admin = passEl ? (passEl.value||'').trim() : (prompt('סיסמת מנהל?')||'').trim();
-        if (!admin){ return; }
-        var base = (window.EMBEDDED_SETTINGS && EMBEDDED_SETTINGS.scriptUrl) || window.scriptUrl || '';
-        if (!base){ return alert('כתובת השרת (scriptUrl) לא מוגדרת'); }
-        const url = base + '?report=setmode&employee=' + encodeURIComponent(emp) + '&mode=' + encodeURIComponent(mode) + '&admin=' + encodeURIComponent(admin);
-        const r = await fetch(url, { method:'GET', cache:'no-store' });
-        const j = await r.json();
-        if (j && j.ok){ alert('עודכן: ' + emp + ' ← ' + mode); }
-        else { alert('נכשל לעדכן: ' + (j && j.error || 'שגיאה')); }
-      }catch(e){ alert('שגיאה: ' + e); }
-    });
-
-    var hint = document.getElementById('calcModeHint');
-    if (hint) hint.textContent = 'Auto = לפי Settings; ניתן לעקוף בדוח או לשמור כברירת מחדל.';
-  }catch(e){ console.warn('calc-mode UI error', e); }
-});
-
-</script>
+    </script>
 <script>if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('sw.js', { scope: './' }).catch(function(e){ console.log('SW register failed', e); });
@@ -2520,7 +2463,9 @@ document.addEventListener('DOMContentLoaded', function(){
     };
   })();
 </script>
-
+<div id="floatingLogoutBtn" style="display:none; position:fixed; top:10px; right:10px; z-index:9999; background:none; border:none; font-size:26px; cursor:pointer; line-height:1;" title="התנתק">
+  🚪
+</div>
 <script>
   document.addEventListener('DOMContentLoaded', function(){
     var logoutBtn = document.getElementById('floatingLogoutBtn');
@@ -2546,7 +2491,9 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   });
 </script>
-
+<div id="floatingLogoutBtn" style="display:none; position:fixed; top:10px; right:10px; z-index:2500; background:none; border:none; font-size:26px; cursor:pointer; line-height:1;" title="התנתק">
+  🚪
+</div>
 <script>
 (function(){
   const AUTH_KEY = 'rb_auth_v1';
@@ -3905,60 +3852,5 @@ if (document.readyState === 'loading'){
 </script>
 
 
-<div id="floatingLogoutBtn" style="display:none; position:fixed; top:10px; right:10px; z-index:2500; background:none; border:none; font-size:26px; cursor:pointer; line-height:1;" title="התנתק">
-  🚪
-</div>
 </body>
 </html>
-
-
-<!-- === Minimal Fix Patch (keep your original UI) === -->
-<script>
-// Use localStorage scriptUrl if defined; otherwise use existing global scriptUrl, else empty.
-(function(){
-  if (typeof window.getExecUrl !== 'function'){
-    window.getExecUrl = function(){
-      try {
-        return localStorage.getItem('scriptUrl') || (typeof window.scriptUrl!=='undefined' ? window.scriptUrl : '');
-      } catch(e){ return (typeof window.scriptUrl!=='undefined' ? window.scriptUrl : ''); }
-    };
-  }
-
-  // Map Hebrew/English to checkin/checkout
-  function _normAction(a){
-    if(!a) return '';
-    a = String(a).toLowerCase();
-    if (['in','checkin','check-in','enter','start','arrival'].includes(a)) return 'checkin';
-    if (['out','checkout','check-out','leave','end','exit'].includes(a)) return 'checkout';
-    if (a.includes('כניס')) return 'checkin';
-    if (a.includes('יציא')) return 'checkout';
-    return a;
-  }
-
-  // Hard override recordToSheet() to send exactly what the Apps Script expects
-  window.recordToSheet = function(employee, action, timestamp /*, date, time */){
-    var url = (typeof getExecUrl==='function') ? getExecUrl() : (window.scriptUrl || '');
-    if (!url){ console.warn('scriptUrl not set'); return Promise.resolve(false); }
-    var iso = timestamp || new Date().toISOString();
-    var event = _normAction(action);
-
-    var payload = {
-      secret: 'Ms7692016',
-      name: employee,
-      event: event,            // 'checkin' | 'checkout'
-      timestamp: iso,          // ISO string
-      source: 'pwa',
-      // back-compat for old backends that read "values"
-      values: [[employee, event, iso, iso.slice(0,10), iso.slice(11,19), 'PWA']]
-    };
-
-    // no-cors + text/plain avoids preflight on Apps Script
-    return fetch(url, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: {'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify(payload)
-    }).then(function(){ return true; }).catch(function(){ return false; });
-  };
-})();
-</script>
