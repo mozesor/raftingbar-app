@@ -3852,5 +3852,251 @@ if (document.readyState === 'loading'){
 </script>
 
 
+
+<!-- === PATCH: Reports calc mode (Pair vs First→Last) + robust table-based calculation === -->
+<style>
+  .mode-btn{padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;cursor:pointer;margin-inline-start:8px}
+  .mode-btn.active{background:#2563eb;color:#fff;border-color:#2563eb}
+</style>
+<script>
+(function(){
+  // Global calc mode (pair | span)
+  window.__calcMode = window.__calcMode || 'pair';
+
+  // Inject two buttons near report controls (non-destructive to your UI)
+  function injectModeButtons(){
+    var anchor = document.getElementById('btnShow');
+    if(!anchor){
+      anchor = document.querySelector('.toolbar') || document.querySelector('#reportControls') || document.body;
+    }
+    // avoid duplicate
+    if(document.getElementById('modePairBtn')) return;
+
+    var pairBtn = document.createElement('button');
+    pairBtn.id = 'modePairBtn';
+    pairBtn.className = 'mode-btn';
+    pairBtn.textContent = 'חישוב: כניסות ויציאות (זוגות)';
+
+    var spanBtn = document.createElement('button');
+    spanBtn.id = 'modeSpanBtn';
+    spanBtn.className = 'mode-btn';
+    spanBtn.textContent = 'חישוב: מכניסה ראשונה עד יציאה אחרונה';
+
+    function paint(){
+      pairBtn.classList.toggle('active', window.__calcMode==='pair');
+      spanBtn.classList.toggle('active', window.__calcMode==='span');
+    }
+
+    pairBtn.addEventListener('click', function(){
+      window.__calcMode = 'pair';
+      paint();
+      rerenderReports();
+    });
+    spanBtn.addEventListener('click', function(){
+      window.__calcMode = 'span';
+      paint();
+      rerenderReports();
+    });
+
+    anchor.parentNode.insertBefore(pairBtn, anchor.nextSibling);
+    anchor.parentNode.insertBefore(spanBtn, pairBtn.nextSibling);
+    paint();
+  }
+
+  function rerenderReports(){
+    // Try to trigger your existing render function
+    if (typeof window.updateDetailedReport === 'function') return window.updateDetailedReport();
+    if (typeof window.renderSelf === 'function') return window.renderSelf();
+    // Fallback: click the "show" button if exists
+    var btn = document.getElementById('btnShow');
+    if (btn) btn.click();
+  }
+
+  // Normalize action
+  function normEvent(a){
+    a = String(a||'').toLowerCase();
+    if (!a) return '';
+    if (['in','checkin','check-in','enter','start','arrival','connected','online','join'].indexOf(a)>-1) return 'checkin';
+    if (['out','checkout','check-out','leave','end','exit','disconnect','offline','left'].indexOf(a)>-1) return 'checkout';
+    if (a.indexOf('כניסה')>-1 || a.indexOf('כניס')>-1) return 'checkin';
+    if (a.indexOf('יציאה')>-1 || a.indexOf('יציא')>-1) return 'checkout';
+    return a;
+  }
+
+  // Override loadDataFromSheet to capture raw rows for pairing/span
+  var _origLoad = window.loadDataFromSheet;
+  window.loadDataFromSheet = function(){
+    if (!window.isInitialized) { if (typeof _origLoad==='function') return _origLoad(); }
+    var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + window.sheetId + '/values/A:F?key=' + window.apiKey;
+    fetch(url)
+      .then(function(r){ if(r.ok) return r.json(); throw new Error('HTTP '+r.status); })
+      .then(function(data){
+        var rows = data.values || [];
+        var employees = new Set();
+        var agg = {};
+        var raw = {}; // emp -> date -> [{action, ts}]
+        var currentDate = (typeof getCurrentDate==='function') ? getCurrentDate() : (new Date().toISOString().slice(0,10));
+        var adminPw = null;
+
+        for (var i=1;i<rows.length;i++){
+          var row = rows[i];
+          if (!row) continue;
+          var emp  = row[0] || '';
+          var act  = row[1] || '';
+          var iso  = row[2] || '';
+          var date = row[3] || '';
+
+          // admin password marker
+          if (act === 'admin_password_change'){
+            adminPw = emp || row[0];
+            continue;
+          }
+          if (!emp) continue;
+
+          employees.add(emp);
+          agg[emp] = agg[emp] || {};
+          agg[emp][date] = agg[emp][date] || {};
+
+          var a = normEvent(act);
+          if (a === 'checkin'){
+            agg[emp][date].checkIn = iso;
+            if (date === currentDate) (window.currentStatus||{})[emp] = 'in';
+          } else if (a === 'checkout'){
+            agg[emp][date].checkOut = iso;
+            if (date === currentDate) (window.currentStatus||{})[emp] = 'out';
+          } else if (act === 'event'){
+            agg[emp][date].events = (agg[emp][date].events || 0) + 1;
+          }
+
+          if (a === 'checkin' || a === 'checkout'){
+            raw[emp] = raw[emp] || {};
+            raw[emp][date] = raw[emp][date] || [];
+            raw[emp][date].push({action:a, ts: iso});
+          }
+        }
+
+        if (adminPw && adminPw !== window.adminPassword){
+          window.adminPassword = adminPw;
+          try { if (typeof showAlert==='function') showAlert('🔐 סיסמת המנהל עודכנה','success'); } catch(e){}
+        }
+
+        window.employees = Array.from(employees).sort();
+        window.attendanceData = agg;
+        window.attendanceRaw = raw;
+        try{ if (typeof saveLocalData==='function') saveLocalData(); }catch(e){}
+        try{ if (typeof updateAll==='function') updateAll(); }catch(e){}
+      })
+      .catch(function(err){
+        console.log('loadDataFromSheet error:', err);
+        if (typeof _origLoad === 'function') try{ _origLoad(); }catch(e){}
+      });
+  };
+
+  // Helpers
+  function toDate(s){ var d=new Date(s); return isNaN(+d)?null:d; }
+  function hoursBetween(a,b){ if(!a||!b) return 0; var d=b-a; return d>0? d/36e5 : 0; }
+
+  // Replace detailed report calculator to obey window.__calcMode
+  var _origGen = window.generateDetailedReportData;
+  window.generateDetailedReportData = function(startDate, endDate, selectedEmployee){
+    var mode = window.__calcMode || 'pair';
+    // Base data
+    var data = {
+      totalHours: 0, totalEvents: 0, eventsByDate: {},
+      totalDays: 0, overtimeDays: 0, overtimeHours: 0,
+      missingDays: 0, averageHours: 0, employees: [], dailyData: []
+    };
+    var emps = (selectedEmployee === 'all' || !selectedEmployee) ? (window.employees || []) : [selectedEmployee];
+
+    // Build date list
+    var dates = [];
+    for (var d = new Date(startDate); d <= endDate; d.setDate(d.getDate()+1)){
+      var y=d.getFullYear(), m=(''+(d.getMonth()+1)).padStart(2,'0'), dd=(''+d.getDate()).padStart(2,'0');
+      dates.push(y+'-'+m+'-'+dd);
+    }
+
+    function dayHours(rawList){
+      rawList.sort(function(a,b){ return String(a.ts||'').localeCompare(String(b.ts||'')); });
+      if (mode==='span'){
+        var first=null, last=null;
+        for (var i=0;i<rawList.length;i++){
+          if (rawList[i].action==='checkin' && !first) first = toDate(rawList[i].ts);
+          if (rawList[i].action==='checkout') last = toDate(rawList[i].ts);
+        }
+        var h = hoursBetween(first, last);
+        var incomplete = !(first && last);
+        return {hours: Math.round(h*100)/100, incomplete: incomplete};
+      } else { // pair
+        var open=null, sum=0;
+        for (var i=0;i<rawList.length;i++){
+          var ev = rawList[i];
+          if (ev.action==='checkin'){
+            if (!open) open = toDate(ev.ts); // ignore extra ins until closed
+          } else if (ev.action==='checkout'){
+            var end = toDate(ev.ts);
+            if (open && end){ sum += hoursBetween(open, end); open = null; }
+          }
+        }
+        return {hours: Math.round(sum*100)/100, incomplete: !!open};
+      }
+    }
+
+    for (var e=0;e<emps.length;e++){
+      var emp = emps[e];
+      var empData = {name: emp, totalEvents:0, eventDates:[], totalHours:0, workDays:0, overtimeDays:0, overtimeHours:0, missingDays:0, dailyHours:[]};
+
+      for (var i=0;i<dates.length;i++){
+        var dateKey = dates[i];
+        var rawList = (window.attendanceRaw && window.attendanceRaw[emp] && window.attendanceRaw[emp][dateKey]) ? window.attendanceRaw[emp][dateKey].slice() : [];
+        var res = dayHours(rawList);
+        var hours = res.hours || 0;
+        var incomplete = !!res.incomplete;
+
+        var aggr = window.attendanceData && window.attendanceData[emp] && window.attendanceData[emp][dateKey];
+        var evCount = aggr && aggr.events ? Number(aggr.events) : 0;
+        if (evCount){ empData.totalEvents += evCount; data.totalEvents += evCount; empData.eventDates.push({date:dateKey, count:evCount}); }
+
+        if (hours>0){ empData.totalHours += hours; empData.workDays++; }
+        if (incomplete){ empData.missingDays++; }
+        if (hours>9){ empData.overtimeDays++; empData.overtimeHours += (hours-9); }
+
+        empData.dailyHours.push({date:dateKey, hours:hours, incomplete:incomplete});
+      }
+
+      empData.averageHours = empData.workDays>0 ? Math.round((empData.totalHours/empData.workDays)*100)/100 : 0;
+      data.employees.push(empData);
+      data.totalHours += empData.totalHours;
+      data.totalDays  += empData.workDays;
+      data.overtimeDays  += empData.overtimeDays;
+      data.overtimeHours += empData.overtimeHours;
+      data.missingDays   += empData.missingDays;
+    }
+    data.averageHours = data.totalDays>0 ? Math.round((data.totalHours/data.totalDays)*100)/100 : 0;
+
+    // daily totals (across employees)
+    for (var i=0;i<dates.length;i++){
+      var dateKey = dates[i];
+      var dayTotal=0, workers=0;
+      for (var e=0;e<emps.length;e++){
+        var empObj = data.employees[e];
+        var rec = empObj && empObj.dailyHours && empObj.dailyHours.find(function(x){ return x.date===dateKey; });
+        var h = rec ? Number(rec.hours||0) : 0;
+        if (h>0){ workers++; dayTotal+=h; }
+      }
+      data.dailyData.push({date:dateKey, totalHours: Math.round(dayTotal*10)/10, workers: workers, average: workers? Math.round((dayTotal/workers)*100)/100 : 0});
+    }
+
+    return data;
+  };
+
+  // Run after DOM ready
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', injectModeButtons);
+  } else {
+    injectModeButtons();
+  }
+})();
+</script>
+
 </body>
 </html>
