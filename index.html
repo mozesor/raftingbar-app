@@ -4062,13 +4062,11 @@ if (document.readyState === 'loading'){
 
 
 <script>
-/* === RB_MODE_ULTRASAFE v8 ===
-   - תאימות מלאה למצב חישוב: זיהוי לפי הטקסט על המסך (מילים "ראשונה"+"אחרונה") מקבל קדימות, וגם מאזינים לכל הקלקה בכל מקום.
-   - אין סינון לזוגות קצרים.
-   - לא משנים מבנה, רק מעדכנים תאים.
+/* === RB_MODE_ULTRASAFE v9 ===
+   שינוי עיקרי: זיהוי מצב "טווח" לפי הטקסט "יציאה האחרונה" (לא מחייב המילה "ראשונה").
+   זה תואם ללייבל שהצגת בצילום. נשאר: אין סינון לזוגות, לא משנים מבנה עמוד, מעדכנים רק תאים.
 */
 (function(){
-  // ---------- utils ----------
   function toYMDfromDDMMYYYY(s){
     if(!s) return null;
     var m=s.match(/^(\d{1,2})[\/\.](\d{1,2})[\/\.](\d{4})$/);
@@ -4085,7 +4083,10 @@ if (document.readyState === 'loading'){
     const raw={};
     for(let i=1;i<rows.length;i++){
       const row=rows[i]||[];
-      const emp=row[0]||''; const act=(row[1]||'').toLowerCase(); const ts=row[2]||''; const dt=row[3]||'';
+      const emp=row[0]||'';                   // שם העובד
+      const act=(row[1]||'').toLowerCase();   // פעולה
+      const ts=row[2]||'';                    // זמן מלא (ISO)
+      const dt=row[3]||'';                    // תאריך YYYY-MM-DD
       if(!emp||!dt) continue;
       if (act==='checkin' || act==='checkout'){
         (raw[emp]||(raw[emp]={}))[dt]=(raw[emp][dt]||[]);
@@ -4108,48 +4109,39 @@ if (document.readyState === 'loading'){
     const spanHours=(firstIn&&lastOut&&lastOut>firstIn)? (lastOut-firstIn)/36e5 : 0;
     const pairHours=sumPairs/36e5;
     return {
-      firstIn, lastOut,
       in:firstIn?hhmm(firstIn):'-',
       out:lastOut?hhmm(lastOut):'-',
       hoursSpan:+(Math.round(spanHours*100)/100).toFixed(2),
-      hoursPairs:+(Math.round(pairHours*100)/100).toFixed(2)
+      hoursPairs:+(Math.round(pairHours*100)/100).toFixed(2),
+      firstIn:firstIn,lastOut:lastOut
     };
   }
 
-  // ---------- MODE handling ----------
+  // === MODE ===
   function textSnapshot(){
     return (document.body.textContent||'')
-      .replace(/[\u200E\u200F\u202A-\u202E]/g,'') // הסרת כיווניות נסתרת
+      .replace(/[\u200E\u200F\u202A-\u202E]/g,'')
       .replace(/\s+/g,' ')
       .trim();
   }
   function detectMode(){
     const txt=textSnapshot();
-    // "מכניסה/מהכניסה/הכניסה הראשונה ... היציאה האחרונה"
-    if (txt.includes('ראשונה') && txt.includes('אחרונה') && (txt.includes('כניסה') || txt.includes('יציאה'))){
-      return 'span';
-    }
-    // זוגות / IN OUT
+    // אם כתוב "יציאה האחרונה" – זה מצב טווח (מכניסה->יציאה)
+    if (/יציאה\s*האחרונה/.test(txt)) return 'span';
     if (/זוגות|IN.?OUT/i.test(txt)) return 'pairs';
     const ls=localStorage.getItem('rb_calc_mode');
     if (ls==='span' || ls==='pairs') return ls;
     return 'pairs';
   }
   function saveMode(m){ try{ localStorage.setItem('rb_calc_mode', m); }catch(e){} }
+  document.addEventListener('click', (ev)=>{
+    const el=ev.target.closest('*'); if(!el) return;
+    const t=((el.textContent||'')+' '+(el.getAttribute?.('aria-label')||'')).trim();
+    if (/יציאה\s*האחרונה/.test(t)){ saveMode('span'); setTimeout(recalcAfterStable,50); }
+    else if (/זוגות|IN.?OUT/i.test(t)){ saveMode('pairs'); setTimeout(recalcAfterStable,50); }
+  }, true);
 
-  // מאזין לכל קליק במסמך ומחליט אם זו לחיצה על מצב
-  function globalClickModeListener(){
-    document.addEventListener('click', (ev)=>{
-      const el=ev.target.closest('*');
-      if(!el) return;
-      const t=((el.textContent||'')+' '+(el.getAttribute?.('aria-label')||'')).trim();
-      if (!t) return;
-      if (t.includes('ראשונה') && t.includes('אחרונה')){ saveMode('span'); setTimeout(recalcAfterStable,50); }
-      else if (/זוגות|IN.?OUT/i.test(t)){ saveMode('pairs'); setTimeout(recalcAfterStable,50); }
-    }, true);
-  }
-
-  // ---------- TABLE handling ----------
+  // === TABLE ===
   function findReportTable(){
     var candidates=Array.from(document.querySelectorAll('table')).filter(t => /תאריך/.test(t.textContent||''));
     return candidates.find(t => /שעות/.test((t.tHead && t.tHead.textContent)||t.textContent||'')) || null;
@@ -4161,6 +4153,7 @@ if (document.readyState === 'loading'){
   function setCell(tr, colIdx, value){
     if (colIdx>=0 && tr.cells[colIdx]) tr.cells[colIdx].textContent=value;
   }
+
   async function recalcOnce(){
     var table=findReportTable(); if(!table) return false;
     var mode=detectMode(); saveMode(mode);
@@ -4178,6 +4171,7 @@ if (document.readyState === 'loading'){
       var dateText=(tr.cells[dateCol] && tr.cells[dateCol].textContent || '').trim();
       var ymd=toYMDfromDDMMYYYY(dateText); if (!ymd) return;
       var res=calcDay(empRaw[ymd]||[]);
+
       var hours=(mode==='span')?res.hoursSpan:res.hoursPairs;
       setCell(tr, hrsCol, (hours||0).toFixed(2));
 
@@ -4214,15 +4208,13 @@ if (document.readyState === 'loading'){
     setTimeout(async ()=>{ if (Date.now()-last>350){ obs.disconnect(); await recalcOnce(); } }, 650);
   }
 
-  // גם מחבר לכפתור "הצג דוח"
   function wireShowButtons(){
     const all=Array.from(document.querySelectorAll('button, .btn, [role="button"], [onclick]'));
     const showBtns=all.filter(b => /הצג\s*דוח|צור\s*דוח|חשב\s*דוח/.test(((b.textContent||'')+(b.getAttribute('aria-label')||''))));
-    showBtns.forEach(btn => { if(!btn.__rb_v8){ btn.__rb_v8=true; btn.addEventListener('click', ()=>recalcAfterStable()); } });
+    showBtns.forEach(btn => { if(!btn.__rb_v9){ btn.__rb_v9=true; btn.addEventListener('click', ()=>recalcAfterStable()); } });
   }
 
   function init(){
-    globalClickModeListener();
     wireShowButtons();
     setTimeout(recalcAfterStable, 800);
   }
