@@ -1299,29 +1299,15 @@
                             if (action === 'event') {
                                 newAttendanceData[employee][date].events = (newAttendanceData[employee][date].events || 0) + 1;
                             } else if (action === 'checkin') {
-                                var dayObj = newAttendanceData[employee][date];
-                                dayObj.ins = dayObj.ins || [];
-                                dayObj.ins.push(timestamp);
-                                // keep the earliest check-in
-                                if (!dayObj.checkIn || new Date(timestamp) < new Date(dayObj.checkIn)) {
-                                    dayObj.checkIn = timestamp;
-                                }
+                                newAttendanceData[employee][date].checkIn = timestamp;
                                 if (date === currentDate) {
                                     newCurrentStatus[employee] = 'in';
                                 }
-                            }
                             } else if (action === 'checkout') {
-                                var dayObj2 = newAttendanceData[employee][date];
-                                dayObj2.outs = dayObj2.outs || [];
-                                dayObj2.outs.push(timestamp);
-                                // keep the latest check-out
-                                if (!dayObj2.checkOut || new Date(timestamp) > new Date(dayObj2.checkOut)) {
-                                    dayObj2.checkOut = timestamp;
-                                }
+                                newAttendanceData[employee][date].checkOut = timestamp;
                                 if (date === currentDate) {
                                     newCurrentStatus[employee] = 'out';
                                 }
-                            }
                             }
                         }
                     }
@@ -2166,7 +2152,7 @@
             updateDetailedReportsTable(reportData);
         }
 
-        function generateDetailedReportData_BASE(startDate, endDate, selectedEmployee) {
+        function generateDetailedReportData(startDate, endDate, selectedEmployee) {
             var data = {
                 totalHours: 0,
                 totalEvents: 0,
@@ -3104,7 +3090,7 @@ function fillSelfEmployees(){
   employees.forEach(function(n){ var o=document.createElement('option'); o.value=n; o.textContent=n; sel.appendChild(o); });
   if(keep) sel.value = keep;
 }
-function renderSelf_BASE(){
+function renderSelf(){
   var emp = (document.getElementById('selfEmployee')||{}).value;
   if(!emp){ showAlert('בחר עובד', 'error'); return; }
   var period = (document.getElementById('selfPeriod')||{}).value || 'month';
@@ -4073,5 +4059,234 @@ if (document.readyState === 'loading'){
 </script>
 
 
+
+<script>
+// === RB_FULL_PATCH: דוחות + דוחות מפורטים לפי מצב חישוב (pairs/span) — SAFE ATTACH ===
+(function(){
+  var RB_MODE = localStorage.getItem('rb_calc_mode') || 'pairs'; // 'pairs' | 'span'
+  function setRbMode(m){ RB_MODE=(m==='span'?'span':'pairs'); localStorage.setItem('rb_calc_mode', RB_MODE); paintChips(); buildSelfReport_SAFE(); buildDetailed_SAFE(); }
+
+  function hhmm(d){ if(!d) return '-'; var p=n=>String(n).padStart(2,'0'); return p(d.getHours())+':'+p(d.getMinutes()); }
+  async function fetchRaw_SAFE(){
+    if (!window.sheetId || !window.apiKey){ console.warn('sheetId/apiKey missing'); return {}; }
+    const url=`https://sheets.googleapis.com/v4/spreadsheets/${window.sheetId}/values/A:F?key=${window.apiKey}`;
+    const r=await fetch(url); const j=await r.json(); const rows=(j&&j.values)||[];
+    const raw={};
+    for(let i=1;i<rows.length;i++){
+      const row=rows[i]||[];
+      const emp=row[0]||''; const act=(row[1]||'').toLowerCase(); const ts=row[2]||''; const dt=row[3]||'';
+      if(!emp||!dt) continue;
+      if (act==='checkin' || act==='checkout'){
+        (raw[emp]||(raw[emp]={}))[dt]=(raw[emp][dt]||[]);
+        raw[emp][dt].push({action:act, ts});
+      }
+    }
+    return raw;
+  }
+  function calcDay_SAFE(events){
+    const arr=(events||[]).slice().sort((a,b)=>String(a.ts).localeCompare(String(b.ts)));
+    let firstIn=null,lastOut=null,open=null,sumPairs=0;
+    for(const ev of arr){
+      if(ev.action==='checkin'){ if(!firstIn) firstIn=new Date(ev.ts); if(!open) open=new Date(ev.ts); }
+      else if(ev.action==='checkout'){
+        lastOut=new Date(ev.ts);
+        if(open){ sumPairs += (lastOut - open); open=null; }
+      }
+    }
+    const spanHours=(firstIn&&lastOut&&lastOut>firstIn)? (lastOut-firstIn)/36e5 : 0;
+    const pairHours=sumPairs/36e5;
+    return {
+      in:firstIn?hhmm(firstIn):'-',
+      out:lastOut?hhmm(lastOut):'-',
+      hoursSpan:+(Math.round(spanHours*100)/100).toFixed(2),
+      hoursPairs:+(Math.round(pairHours*100)/100).toFixed(2)
+    };
+  }
+  function ymdRange_SAFE(start,end){
+    const out=[], d=new Date(start);
+    while(d<=end){ var y=d.getFullYear(), m=('0'+(d.getMonth()+1)).slice(-2), da=('0'+d.getDate()).slice(-2);
+      out.push(`${y}-${m}-${da}`); d.setDate(d.getDate()+1);
+    }
+    return out;
+  }
+
+  // ----- SELF REPORT -----
+  function findSelfShowBtn_SAFE(){
+    return document.getElementById('btnShow')
+        || Array.from(document.querySelectorAll('button')).find(b => (b.textContent||'').trim().includes('הצג דוח')) || null;
+  }
+  function findSelfSection_SAFE(){
+    var btn=findSelfShowBtn_SAFE(); return (btn && btn.closest('section')) || document.body;
+  }
+  function ensureSelfChips_SAFE(){
+    var sec=findSelfSection_SAFE(); if(!sec) return;
+    if (document.getElementById('rbModePairs')) return;
+    var anchor=findSelfShowBtn_SAFE(); if(!anchor) return;
+    var bar=document.createElement('div');
+    bar.style.display='flex'; bar.style.gap='8px'; bar.style.margin='10px 0';
+    bar.innerHTML =
+      '<button id="rbModePairs" class="btn" style="border-radius:10px;padding:8px 12px;">כניסות↔︎יציאות (זוגות)</button>'+
+      '<button id="rbModeSpan"  class="btn" style="border-radius:10px;padding:8px 12px;">מכניסה ראשונה עד יציאה אחרונה</button>';
+    anchor.parentNode.insertBefore(bar, anchor);
+    document.getElementById('rbModePairs').onclick=function(){ setRbMode('pairs'); };
+    document.getElementById('rbModeSpan').onclick=function(){ setRbMode('span'); };
+  }
+  function paintChips(){
+    var a=document.getElementById('rbModePairs'), b=document.getElementById('rbModeSpan');
+    if (a&&b){
+      if (RB_MODE==='pairs'){ a.style.background='#2563eb'; a.style.color='#fff'; b.style.background='#e5e7eb'; b.style.color='#111827'; }
+      else { b.style.background='#2563eb'; b.style.color='#fff'; a.style.background='#e5e7eb'; a.style.color='#111827'; }
+    }
+    var aa=document.getElementById('rbDetModePairs'), bb=document.getElementById('rbDetModeSpan');
+    if (aa&&bb){
+      if (RB_MODE==='pairs'){ aa.style.background='#2563eb'; aa.style.color='#fff'; bb.style.background='#e5e7eb'; bb.style.color='#111827'; }
+      else { bb.style.background='#2563eb'; bb.style.color='#fff'; aa.style.background='#e5e7eb'; aa.style.color='#111827'; }
+    }
+  }
+  function getSelfRange_SAFE(sec){
+    var now=new Date(), start, end;
+    var selects=sec.querySelectorAll('select'); var period=(selects[1] && selects[1].value)||'';
+    if (period.includes('שבוע')){
+      var day=(now.getDay()+6)%7; start=new Date(now); start.setDate(now.getDate()-day); start.setHours(0,0,0,0);
+      end=new Date(now); end.setHours(23,59,59,999);
+    } else if (period.includes('מותאם')){
+      var from=sec.querySelector('#fromDate, input[name="from"][type="date"]');
+      var to  =sec.querySelector('#toDate,   input[name="to"][type="date"]');
+      start = from && from.value ? new Date(from.value+'T00:00:00') : new Date(now.getFullYear(), now.getMonth(), 1);
+      end   = to   && to.value   ? new Date(to.value  +'T23:59:59') : new Date(now.getFullYear(), now.getMonth()+1, 0, 23,59,59,999);
+    } else {
+      start=new Date(now.getFullYear(), now.getMonth(), 1);
+      end  =new Date(now.getFullYear(), now.getMonth()+1, 0, 23,59,59,999);
+    }
+    return {start,end,dates:ymdRange_SAFE(start,end)};
+  }
+  async function buildSelfReport_SAFE(){
+    var btn=findSelfShowBtn_SAFE(); if(!btn) return;
+    var sec=findSelfSection_SAFE();
+    var selects=sec.querySelectorAll('select'); var emp=(selects[0] && selects[0].value)||'';
+    if(!emp) return;
+
+    var range=getSelfRange_SAFE(sec);
+    var raw=await fetchRaw_SAFE();
+    var empRaw=raw[emp]||{};
+
+    var table = sec.querySelector('table') || (function(){ var t=document.createElement('table'); t.style.width='100%'; sec.appendChild(t); return t; })();
+    var thead = table.tHead || table.createTHead();
+    var tbody = table.tBodies[0] || table.createTBody();
+    thead.innerHTML='<tr><th>תאריך</th><th>כניסה</th><th>יציאה</th><th>שעות</th></tr>';
+    tbody.innerHTML='';
+
+    var total=0, days=0;
+    range.dates.forEach(function(d){
+      var res=calcDay_SAFE(empRaw[d]||[]);
+      var h=(RB_MODE==='span')?res.hoursSpan:res.hoursPairs;
+      if (h>0){ total+=h; days++; }
+      var tr=document.createElement('tr');
+      tr.innerHTML=`<td>${d.split('-').reverse().join('/')}</td><td>${res.in}</td><td>${res.out}</td><td>${h.toFixed(2)}</td>`;
+      tbody.appendChild(tr);
+    });
+
+    var sumEl = Array.from(sec.querySelectorAll('*')).find(el => /סה.?כ שעות/.test((el.textContent||'')));
+    if (sumEl) sumEl.textContent=`סה״כ שעות: ${total.toFixed(2)} • ימי עבודה: ${days} • מצב: ${RB_MODE==='span'?'מכניסה ראשונה→יציאה אחרונה':'זוגות'}`;
+  }
+
+  // ----- DETAILED -----
+  function findDetailedSection_SAFE(){
+    var h = Array.from(document.querySelectorAll('h1,h2,h3')).find(el => /דוחות\s*מפורטים/.test(el.textContent||''));
+    return (h && h.closest('section')) || document.body;
+  }
+  function findDetailedShowBtn_SAFE(sec){
+    return sec.querySelector('#btnShowDetailed')
+        || Array.from(sec.querySelectorAll('button')).find(b => /(הצג|צור|חשב).{0,5}דוח/.test((b.textContent||'')))
+        || null;
+  }
+  function ensureDetailedChips_SAFE(sec){
+    if (sec.querySelector('#rbDetModePairs')) return;
+    var anchor=findDetailedShowBtn_SAFE(sec) || sec.querySelector('h2,h3') || sec;
+    var bar=document.createElement('div');
+    bar.style.display='flex'; bar.style.gap='8px'; bar.style.margin='10px 0';
+    bar.innerHTML =
+      '<button id="rbDetModePairs" class="btn" style="border-radius:10px;padding:6px 10px;">כניסות↔︎יציאות (זוגות)</button>'+
+      '<button id="rbDetModeSpan"  class="btn" style="border-radius:10px;padding:6px 10px;">מכניסה ראשונה עד יציאה אחרונה</button>';
+    anchor.parentNode.insertBefore(bar, anchor);
+    document.getElementById('rbDetModePairs').onclick=function(){ setRbMode('pairs'); };
+    document.getElementById('rbDetModeSpan').onclick=function(){ setRbMode('span'); };
+  }
+  function getDetailedRange_SAFE(sec){
+    var now=new Date(), start, end;
+    var from=sec.querySelector('#detailedFrom, input[type="date"][name="from"], input[type="date"]#fromDate');
+    var to  =sec.querySelector('#detailedTo,   input[type="date"][name="to"],   input[type="date"]#toDate');
+    if (from && from.value || to && to.value){
+      start = from && from.value ? new Date(from.value+'T00:00:00') : new Date(now.getFullYear(), now.getMonth(), 1);
+      end   = to   && to.value   ? new Date(to.value  +'T23:59:59') : new Date(now.getFullYear(), now.getMonth()+1, 0, 23,59,59,999);
+    } else {
+      start=new Date(now.getFullYear(), now.getMonth(), 1);
+      end  =new Date(now.getFullYear(), now.getMonth()+1, 0, 23,59,59,999);
+    }
+    return {start,end,dates:ymdRange_SAFE(start,end)};
+  }
+  async function buildDetailed_SAFE(){
+    var sec=findDetailedSection_SAFE(); if(!sec) return;
+    ensureDetailedChips_SAFE(sec);
+
+    var raw=await fetchRaw_SAFE();
+    var range=getDetailedRange_SAFE(sec);
+    // בחירת עובדים: אם אין סלקטור — נחשב על כולם
+    var sels=Array.from(sec.querySelectorAll('select'));
+    var val = (sels[0] && sels[0].value) || 'all';
+    var emps = val==='all' ? Object.keys(raw) : (raw[val] ? [val] : []);
+
+    var daily=[]; var totalHours=0, totalDays=0;
+    for(const d of range.dates){
+      let sum=0, workers=0;
+      for(const name of emps){
+        var res=calcDay_SAFE((raw[name]||{})[d]);
+        var h=(RB_MODE==='span')?res.hoursSpan:res.hoursPairs;
+        if (h>0){ sum+=h; workers++; }
+      }
+      daily.push({date:d,total:+sum.toFixed(2),workers});
+      if (sum>0) totalDays++;
+      totalHours += sum;
+    }
+    totalHours=+totalHours.toFixed(2);
+    var avg = totalDays ? +(totalHours/totalDays).toFixed(2) : 0;
+
+    var out=sec.querySelector('#rbDetailedOut_SAFE');
+    if(!out){
+      out=document.createElement('div'); out.id='rbDetailedOut_SAFE'; out.style.marginTop='10px';
+      out.innerHTML = `
+        <div id="rbDetSummary_SAFE" class="notice" style="margin-bottom:8px"></div>
+        <div class="card" style="padding:0;border:none;box-shadow:none">
+          <table id="rbDetTable_SAFE" style="width:100%">
+            <thead><tr><th>תאריך</th><th>סה״כ שעות</th><th>עובדים</th><th>ממוצע</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>`;
+      (findDetailedShowBtn_SAFE(sec)?.parentNode || sec).appendChild(out);
+    }
+    out.querySelector('#rbDetSummary_SAFE').textContent =
+      `סה״כ שעות: ${totalHours.toFixed(2)} • ימי עבודה עם שעות>0: ${totalDays} • ממוצע יומי: ${avg.toFixed(2)} • מצב: ${RB_MODE==='span'?'מכניסה ראשונה→יציאה אחרונה':'זוגות'}`;
+
+    var tbody = out.querySelector('#rbDetTable_SAFE tbody'); tbody.innerHTML='';
+    daily.forEach(row=>{
+      var tr=document.createElement('tr');
+      var avgRow = row.workers ? +(row.total/row.workers).toFixed(2) : 0;
+      tr.innerHTML = `<td>${row.date.split('-').reverse().join('/')}</td><td>${row.total.toFixed(2)}</td><td>${row.workers}</td><td>${avgRow.toFixed(2)}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function init_SAFE(){
+    ensureSelfChips_SAFE(); paintChips();
+    var btnS=findSelfShowBtn_SAFE(); if (btnS && !btnS.__rbSafe){ btnS.__rbSafe=true; btnS.addEventListener('click', ()=>setTimeout(buildSelfReport_SAFE,0)); }
+    var secD=findDetailedSection_SAFE(); ensureDetailedChips_SAFE(secD); paintChips();
+    var btnD=findDetailedShowBtn_SAFE(secD); if (btnD && !btnD.__rbDetSafe){ btnD.__rbDetSafe=true; btnD.addEventListener('click', ()=>setTimeout(buildDetailed_SAFE,0)); }
+    // טעינה ראשונית
+    setTimeout(buildSelfReport_SAFE,300);
+    setTimeout(buildDetailed_SAFE,500);
+  }
+  if (document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', init_SAFE); } else { init_SAFE(); }
+})();
+</script>
 </body>
 </html>
