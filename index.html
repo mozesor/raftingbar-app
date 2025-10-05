@@ -4062,27 +4062,12 @@ if (document.readyState === 'loading'){
 
 
 <script>
-/* === RB_MODE_ENGINE_SAFE v2 ===
-   - לא מייצר כפתורים חדשים
-   - משתמש בכפתורים הקיימים לבחירת מצב (זוגות/מכניסה→יציאה)
-   - מחשב דוחות מהגיליון ומחליף את התוצאה אחרי שהמערכת מסיימת לצייר
+/* === RB_MODE_ENGINE_SAFE v3 ===
+   קורא את "מצב חישוב" מהטקסט על המסך (מכניסה ראשונה/זוגות)
+   ומחשב דוחות בהתאם, בלי להוסיף או לשנות כפתורים קיימים.
 */
 (function(){
-  // ----- מצב חישוב -----
-  var RB_MODE = localStorage.getItem('rb_calc_mode') || 'pairs'; // 'pairs' | 'span'
-  function setMode(m){
-    RB_MODE = (m==='span'?'span':'pairs');
-    try{ localStorage.setItem('rb_calc_mode', RB_MODE); }catch(e){}
-    paintModeButtons();
-    setTimeout(refreshAll, 50);
-  }
-
-  // ----- ניקוי כפתורים שהוזרקו בעבר (אם היו) -----
-  ['#rbModePairs','#rbModeSpan','#rbDetModePairs','#rbDetModeSpan'].forEach(sel=>{
-    document.querySelectorAll(sel).forEach(el=>el.remove());
-  });
-
-  // ----- עזרים -----
+  // --- Utils ---
   function hhmm(d){ if(!d) return '-'; const p=n=>String(n).padStart(2,'0'); return p(d.getHours())+':'+p(d.getMinutes()); }
   function ymdRange(start,end){
     const out=[], d=new Date(start);
@@ -4127,47 +4112,34 @@ if (document.readyState === 'loading'){
     };
   }
 
-  // ----- חיבור הכפתורים המקוריים -----
-  function findBtnByText(root, contains){
-    return Array.from(root.querySelectorAll('button, .btn, [role="button"]'))
-      .find(el => (el.textContent||'').replace(/\s+/g,' ').includes(contains));
+  // --- Mode detection from UI text ---
+  function detectModeFromUI(){
+    const txt = (document.body.textContent||'').replace(/\s+/g,' ');
+    if (/מכניסה .* עד .* יציאה .* אחרונה/.test(txt)) return 'span';
+    if (/זוגות|IN.?OUT/i.test(txt)) return 'pairs';
+    // fallback: keep saved
+    return localStorage.getItem('rb_calc_mode') || 'pairs';
   }
-  function wireModeButtons(){
-    // דוח אישי
-    var secSelf = document.querySelector('#selfPage') || document;
-    var pairsSelf = findBtnByText(secSelf, 'כניסות') || findBtnByText(secSelf, 'זוגות');
-    var spanSelf  = findBtnByText(secSelf, 'מכניסה') || findBtnByText(secSelf, 'יציאה אחרונה');
-    if (pairsSelf && !pairsSelf.__rb_mode){ pairsSelf.__rb_mode=true; pairsSelf.addEventListener('click', ()=>setMode('pairs')); }
-    if (spanSelf  && !spanSelf.__rb_mode){ spanSelf.__rb_mode=true;  spanSelf.addEventListener('click',  ()=>setMode('span'));  }
 
-    // דוחות מפורטים (נחפש סקשן שיש בו הטקסט "דוחות מפורטים")
-    var detailedSec = Array.from(document.querySelectorAll('section, main, body')).find(s => /דוחות\s*מפורטים/.test((s.textContent||'')));
-    if (detailedSec){
-      var pairsDet = findBtnByText(detailedSec, 'כניסות') || findBtnByText(detailedSec, 'זוגות');
-      var spanDet  = findBtnByText(detailedSec, 'מכניסה') || findBtnByText(detailedSec, 'יציאה אחרונה');
-      if (pairsDet && !pairsDet.__rb_mode){ pairsDet.__rb_mode=true; pairsDet.addEventListener('click', ()=>setMode('pairs')); }
-      if (spanDet  && !spanDet.__rb_mode){ spanDet.__rb_mode=true;  spanDet.addEventListener('click',  ()=>setMode('span'));  }
-    }
-  }
-  function paintModeButtons(){
-    const on  = {bg:'#2563eb', fg:'#fff'};
-    const off = {bg:'#e5e7eb', fg:'#111827'};
+  // --- Hook show buttons ---
+  function wireShowButtons(){
     const all = Array.from(document.querySelectorAll('button, .btn, [role="button"]'));
-    const pairs = all.filter(b => /כניסות|זוגות/.test(b.textContent||''));
-    const span  = all.filter(b => /מכניסה|יציאה אחרונה/.test(b.textContent||''));
-    function paint(btn, active){ if(!btn) return; btn.style.background=active?on.bg:off.bg; btn.style.color=active?on.fg:off.fg; }
-    pairs.forEach(b=>paint(b, RB_MODE==='pairs'));
-    span.forEach(b =>paint(b, RB_MODE==='span'));
+    const showBtns = all.filter(b => /הצג\s*דוח|צור\s*דוח|חשב\s*דוח/.test((b.textContent||'')));
+    showBtns.forEach(btn => {
+      if (!btn.__rb_show){
+        btn.__rb_show = true;
+        btn.addEventListener('click', ()=>setTimeout(refreshAll, 120));
+      }
+    });
   }
 
-  // ----- דוח אישי: החלפה אחרי ציור -----
+  // --- Self report refresh ---
   async function refreshSelf(){
-    var sec = document.querySelector('#selfPage') || document;
-    var selects = sec.querySelectorAll('select');
-    var emp = (selects[0] && selects[0].value) || '';
+    const MODE = detectModeFromUI();
+    try{ localStorage.setItem('rb_calc_mode', MODE); }catch(e){}
+    var sec=document.querySelector('#selfPage') || document;
+    var selects=sec.querySelectorAll('select'); var emp=(selects[0] && selects[0].value)||'';
     if(!emp) return;
-
-    // טווח
     var now=new Date(), start, end;
     var period=(selects[1] && selects[1].value)||'';
     if (period.includes('שבוע')){
@@ -4178,45 +4150,35 @@ if (document.readyState === 'loading'){
       end  =new Date(now.getFullYear(), now.getMonth()+1, 0, 23,59,59,999);
     }
     var dates=ymdRange(start,end);
-
     var raw=await fetchRaw(); var empRaw=raw[emp]||{};
 
-    // מצא טבלה להצגה (זו שהמערכת יצרה)
-    var table = Array.from(sec.querySelectorAll('table')).find(t => /תאריך/.test(t.textContent||''));
-    if (!table){ return; }
-    var thead = table.tHead || table.createTHead();
+    var table = Array.from(sec.querySelectorAll('table')).find(t => /תאריך/.test(t.textContent||'')) || (function(){var t=document.createElement('table'); sec.appendChild(t); return t;})();
+    var thead=table.tHead||table.createTHead(); var tbody=table.tBodies[0]||table.createTBody();
     thead.innerHTML='<tr><th>תאריך</th><th>כניסה</th><th>יציאה</th><th>שעות</th></tr>';
-    var tbody = table.tBodies[0] || table.createTBody();
     tbody.innerHTML='';
 
     var total=0, days=0;
-    dates.forEach(function(d){
+    dates.forEach(d=>{
       var res=calcDay(empRaw[d]||[]);
-      var h=(RB_MODE==='span')?res.hoursSpan:res.hoursPairs;
+      var h=(MODE==='span')?res.hoursSpan:res.hoursPairs;
       if (h>0){ total+=h; days++; }
       var tr=document.createElement('tr');
       tr.innerHTML=`<td>${d.split('-').reverse().join('/')}</td><td>${res.in}</td><td>${res.out}</td><td>${h.toFixed(2)}</td>`;
       tbody.appendChild(tr);
     });
-
-    // סיכום אם יש
     var sumEl = Array.from(sec.querySelectorAll('*')).find(el => /סה.?כ שעות/.test((el.textContent||'')));
-    if (sumEl) sumEl.textContent=`סה״כ שעות: ${total.toFixed(2)} • ימי עבודה: ${days} • מצב: ${RB_MODE==='span'?'מכניסה ראשונה→יציאה אחרונה':'זוגות'}`;
+    if (sumEl) sumEl.textContent=`סה״כ שעות: ${total.toFixed(2)} • ימי עבודה: ${days} • מצב: ${MODE==='span'?'מכניסה ראשונה→יציאה אחרונה':'זוגות'}`;
   }
 
-  // ----- דוחות מפורטים: החלפה אחרי ציור -----
+  // --- Detailed refresh ---
   async function refreshDetailed(){
-    // מצא סקשן של "דוחות מפורטים"
-    var sec = Array.from(document.querySelectorAll('section, main, body')).find(s => /דוחות\s*מפורטים/.test((s.textContent||'')));
+    const MODE = detectModeFromUI();
+    var sec=Array.from(document.querySelectorAll('section, main, body')).find(s => /דוחות\s*מפורטים/.test((s.textContent||''))) || null;
     if (!sec) return;
-
     var now=new Date(), start=new Date(now.getFullYear(), now.getMonth(), 1), end=new Date(now.getFullYear(), now.getMonth()+1, 0, 23,59,59,999);
     var dates=ymdRange(start,end);
-
     var raw=await fetchRaw();
-    // בחירת עובדים מהסלקטור אם יש
-    var sels=Array.from(sec.querySelectorAll('select'));
-    var val = (sels[0] && sels[0].value) || 'all';
+    var sels=Array.from(sec.querySelectorAll('select')); var val=(sels[0] && sels[0].value) || 'all';
     var emps = val==='all' ? Object.keys(raw) : (raw[val] ? [val] : []);
 
     var daily=[], totalHours=0, totalDays=0;
@@ -4224,7 +4186,7 @@ if (document.readyState === 'loading'){
       let sum=0, workers=0;
       for(const name of emps){
         var res=calcDay((raw[name]||{})[d]);
-        var h=(RB_MODE==='span')?res.hoursSpan:res.hoursPairs;
+        var h=(MODE==='span')?res.hoursSpan:res.hoursPairs;
         if (h>0){ sum+=h; workers++; }
       }
       daily.push({date:d,total:+sum.toFixed(2),workers});
@@ -4234,42 +4196,29 @@ if (document.readyState === 'loading'){
     totalHours=+totalHours.toFixed(2);
     var avg = totalDays? +(totalHours/totalDays).toFixed(2) : 0;
 
-    // מצא הטבלה הקיימת של המפורט והחלף
-    var t = Array.from(sec.querySelectorAll('table')).find(T => /תאריך/.test(T.textContent||''));
-    if (!t){
-      // אם אין — ניצור אחת בסוף הסקשן
-      t=document.createElement('table'); t.style.width='100%'; sec.appendChild(t);
-    }
-    var thead=t.tHead||t.createTHead(); thead.innerHTML='<tr><th>תאריך</th><th>סה״כ שעות</th><th>עובדים</th><th>ממוצע</th></tr>';
-    var tbody=t.tBodies[0]||t.createTBody(); tbody.innerHTML='';
+    var t = Array.from(sec.querySelectorAll('table')).find(T => /תאריך/.test(T.textContent||'')) || (function(){var tt=document.createElement('table'); sec.appendChild(tt); return tt;})();
+    var thead=t.tHead||t.createTHead(); var tbody=t.tBodies[0]||t.createTBody();
+    thead.innerHTML='<tr><th>תאריך</th><th>סה״כ שעות</th><th>עובדים</th><th>ממוצע</th></tr>';
+    tbody.innerHTML='';
     daily.forEach(row=>{
       var tr=document.createElement('tr');
       var avgRow = row.workers ? +(row.total/row.workers).toFixed(2) : 0;
       tr.innerHTML = `<td>${row.date.split('-').reverse().join('/')}</td><td>${row.total.toFixed(2)}</td><td>${row.workers}</td><td>${avgRow.toFixed(2)}</td>`;
       tbody.appendChild(tr);
     });
-
-    // סיכום אם קיים
     var sumEl = Array.from(sec.querySelectorAll('*')).find(el => /סה.?כ שעות/.test((el.textContent||'')));
-    if (sumEl) sumEl.textContent = `סה״כ שעות: ${totalHours.toFixed(2)} • ימי עבודה עם שעות>0: ${totalDays} • ממוצע יומי: ${avg.toFixed(2)} • מצב: ${RB_MODE==='span'?'מכניסה ראשונה→יציאה אחרונה':'זוגות'}`;
+    if (sumEl) sumEl.textContent = `סה״כ שעות: ${totalHours.toFixed(2)} • ימי עבודה עם שעות>0: ${totalDays} • ממוצע יומי: ${avg.toFixed(2)} • מצב: ${MODE==='span'?'מכניסה ראשונה→יציאה אחרונה':'זוגות'}`;
   }
 
   function refreshAll(){ refreshSelf(); refreshDetailed(); }
 
-  // ----- חיבור לכפתורי "הצג דוח" המקוריים -----
-  function wireShowButtons(){
-    const all = Array.from(document.querySelectorAll('button, .btn'));
-    const showBtns = all.filter(b => /הצג\s*דוח|צור\s*דוח|חשב\s*דוח/.test((b.textContent||'')));
-    showBtns.forEach(btn => {
-      if (!btn.__rb_after){ btn.__rb_after=true; btn.addEventListener('click', ()=>setTimeout(refreshAll, 50)); }
-    });
-  }
-
   function init(){
-    wireModeButtons();
-    paintModeButtons();
-    wireShowButtons();
-    setTimeout(refreshAll, 400);
+    // רענון אחרי ציור – ולקשר לכפתורי "הצג דוח"
+    const all = Array.from(document.querySelectorAll('button, .btn, [role="button"]'));
+    all.filter(b => /הצג\s*דוח|צור\s*דוח|חשב\s*דוח/.test((b.textContent||''))).forEach(btn => {
+      if (!btn.__rb_show){ btn.__rb_show=true; btn.addEventListener('click', ()=>setTimeout(refreshAll, 150)); }
+    });
+    setTimeout(refreshAll, 500);
   }
   if (document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', init); }
   else { init(); }
