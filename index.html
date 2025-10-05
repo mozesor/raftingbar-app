@@ -4059,5 +4059,73 @@ if (document.readyState === 'loading'){
 })();
 </script>
 
+
+
+<!-- RB CALC SWITCHER v12: יוצר מתגי מצב חישוב קבועים בעמוד הדוחות -->
+<style>
+  .rb-calc-switcher{display:flex;gap:10px;justify-content:flex-start;align-items:center;
+    background:rgba(255,255,255,.85);border-radius:12px;padding:8px 10px;margin:12px 0;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+  .rb-calc-switcher .rbbtn{border:1px solid #e1e1f0;border-radius:999px;padding:6px 12px;cursor:pointer;font-size:.95rem}
+  .rb-calc-switcher .rbbtn.active{background:#2563eb;color:#fff;border-color:#2563eb}
+</style>
+<script>
+(function(){
+  function saveMode(m){ try{ localStorage.setItem('rb_calc_mode', m); } catch(e){} }
+  function getMode(){ try{ const m = localStorage.getItem('rb_calc_mode'); return (m==='span'||m==='pairs')?m:'pairs'; } catch(e){ return 'pairs'; } }
+  function triggerRecalc(){
+    // נסה את שתי השכבות שהטמעתי קודם
+    if (window.recalcAfterStable) try{ window.recalcAfterStable(); }catch(e){}
+    if (window.buildAndRender)   try{ window.buildAndRender(); }catch(e){}
+    // וגם לחץ על "הצג דוח" אם קיים
+    const showBtn = [...document.querySelectorAll('button,.btn,[role="button"],[onclick]')]
+      .find(b => /הצג\s*דוח|צור\s*דוח|חשב\s*דוח/.test((b.textContent||'')+(b.getAttribute('aria-label')||'')));
+    if (showBtn) showBtn.click();
+  }
+  function ensureSwitcher(){
+    if (document.getElementById('rb-calc-switcher')) return;
+    const host = document.createElement('div');
+    host.id = 'rb-calc-switcher';
+    host.className = 'rb-calc-switcher';
+    host.innerHTML = `
+      <span style="opacity:.8">מצב חישוב:</span>
+      <button type="button" class="rbbtn" data-mode="pairs">(זוגות) כניסות↔יציאות</button>
+      <button type="button" class="rbbtn" data-mode="span">מכניסה ראשונה עד יציאה אחרונה</button>
+    `;
+    // הזרקה לפני "הצג דוח" אם אפשר, אחרת לראש הגוף
+    let anchor = [...document.querySelectorAll('button,.btn,[role="button"],[onclick]')]
+      .find(b => /הצג\s*דוח|צור\s*דוח|חשב\s*דוח/.test((b.textContent||'')+(b.getAttribute('aria-label')||'')));
+    if (anchor && anchor.parentElement) {
+      anchor.parentElement.insertBefore(host, anchor);
+    } else {
+      document.body.insertBefore(host, document.body.firstChild);
+    }
+    const setActive=(m)=>{
+      host.querySelectorAll('.rbbtn').forEach(x => x.classList.toggle('active', x.dataset.mode===m));
+      // עדכן גם טקסט אינדיקציה אם יש
+      const indi = document.querySelector('[data-rb-mode-indicator]');
+      if (indi) indi.textContent = (m==='span'?'מכניסה ראשונה עד יציאה אחרונה':'(זוגות) כניסות↔יציאות');
+    };
+    host.addEventListener('click', (ev)=>{
+      const btn = ev.target.closest('.rbbtn');
+      if (!btn) return;
+      const mode = btn.dataset.mode;
+      saveMode(mode);
+      setActive(mode);
+      triggerRecalc();
+    });
+    setActive(getMode());
+  }
+  function init(){
+    ensureSwitcher();
+    // אם הדף נטען באיחור / רינדור דינמי – נוודא שוב
+    const obs = new MutationObserver(() => {
+      if (!document.getElementById('rb-calc-switcher')) ensureSwitcher();
+    });
+    obs.observe(document.body, {childList:true, subtree:true});
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
+</script>
+
 </body>
 </html>
