@@ -4062,11 +4062,10 @@ if (document.readyState === 'loading'){
 
 
 <script>
-/* === RB_MODE_ULTRASAFE v6 ===
-   - לא משנה מבנה עמוד, לא יוצר טבלאות
-   - כולל זוגות קצרים (אין סינון)
-   - הכפתורים משנים מצב וחישוב מתעדכן
-   - אם לא מוצא כותרות "כניסה/יציאה", משתמש בהשערה: שני התאים שלפני "שעות"
+/* === RB_MODE_ULTRASAFE v7 ===
+   תיקון קריטי: זיהוי מצב לפי הטקסט על המסך מקבל עדיפות על localStorage,
+   כדי שבחירה ב"מהכניסה/מכניסה הראשונה עד היציאה האחרונה" תשפיע גם אם לא תפסנו אירוע לחיצה.
+   שאר הדברים: ללא סינון לזוגות קצרים, לא משנים מבנה עמוד, מעדכנים רק תאים.
 */
 (function(){
   function toYMDfromDDMMYYYY(s){
@@ -4104,9 +4103,8 @@ if (document.readyState === 'loading'){
       }
     }
     const spanHours=(firstIn&&lastOut&&lastOut>firstIn)? (lastOut-firstIn)/36e5 : 0;
-    const pairHours=sumPairs/36e5;
+    const pairHours=sumPairs/36e5; // ללא סינון
     return {
-      firstIn, lastOut,
       in:firstIn?hhmm(firstIn):'-',
       out:lastOut?hhmm(lastOut):'-',
       hoursSpan:+(Math.round(spanHours*100)/100).toFixed(2),
@@ -4114,25 +4112,32 @@ if (document.readyState === 'loading'){
     };
   }
 
-  // --- mode ---
+  // --- mode detection (TEXT FIRST!) ---
   function detectMode(){
+    // 1) קודם כל: מה כתוב על המסך כרגע
+    var txt=(document.body.textContent||'').replace(/\s+/g,' ');
+    var spanRe = /(מה|מ)?ה?כניסה .* עד .*ה?יציאה .* אחרונה/; // מכסה "מהכניסה/מכניסה/הכניסה ... עד היציאה האחרונה"
+    var pairsRe= /(זוגות|IN.?OUT)/i;
+    if (spanRe.test(txt)) return 'span';
+    if (pairsRe.test(txt)) return 'pairs';
+    // 2) אם לא זוהה – ננסה localStorage
     var ls=localStorage.getItem('rb_calc_mode');
     if (ls==='span' || ls==='pairs') return ls;
-    var txt=(document.body.textContent||'').replace(/\s+/g,' ');
-    if (/מכניסה .* יציאה .* אחרונה/.test(txt)) return 'span';
-    if (/זוגות|IN.?OUT/i.test(txt)) return 'pairs';
+    // 3) ברירת־מחדל
     return 'pairs';
   }
   function saveMode(m){ try{ localStorage.setItem('rb_calc_mode', m); }catch(e){} }
+
+  // --- buttons wiring (נחמד שיהיה, אבל הזיהוי מתבסס על הטקסט) ---
   function wireModeButtons(){
-    const all=Array.from(document.querySelectorAll('button, .btn, [role="button"]'));
-    const pairsBtns=all.filter(b => /כניסות|זוגות|IN.?OUT/i.test((b.textContent||'')));
-    const spanBtns =all.filter(b => /מכניסה|יציאה אחרונה/.test((b.textContent||'')));
-    pairsBtns.forEach(btn=>{ if(!btn.__rb_mp){ btn.__rb_mp=true; btn.addEventListener('click', ()=>{ saveMode('pairs'); recalcAfterStable(); }); }});
-    spanBtns.forEach(btn=>{ if(!btn.__rb_ms){ btn.__rb_ms=true; btn.addEventListener('click', ()=>{ saveMode('span'); recalcAfterStable(); }); }});
+    const all=Array.from(document.querySelectorAll('button, .btn, [role="button"], [onclick]'));
+    const pairsBtns=all.filter(b => /(כניסות|זוגות|IN.?OUT)/i.test((b.textContent||'') + ' ' + (b.getAttribute('aria-label')||'')));
+    const spanBtns =all.filter(b => /(מה|מ)?ה?כניסה .* עד .*ה?יציאה .* אחרונה/.test((b.textContent||'')));
+    pairsBtns.forEach(btn=>{ if(!btn.__rb_mp){ btn.__rb_mp=true; btn.addEventListener('click', ()=>{ saveMode('pairs'); setTimeout(recalcAfterStable, 50); }); }});
+    spanBtns.forEach(btn=>{ if(!btn.__rb_ms){ btn.__rb_ms=true; btn.addEventListener('click', ()=>{ saveMode('span');  setTimeout(recalcAfterStable, 50); }); }});
   }
 
-  // --- table ---
+  // --- table handling ---
   function findReportTable(){
     var candidates=Array.from(document.querySelectorAll('table')).filter(t => /תאריך/.test(t.textContent||''));
     return candidates.find(t => /שעות/.test((t.tHead && t.tHead.textContent)||t.textContent||'')) || null;
@@ -4162,30 +4167,26 @@ if (document.readyState === 'loading'){
       var ymd=toYMDfromDDMMYYYY(dateText); if (!ymd) return;
       var res=calcDay(empRaw[ymd]||[]);
       var hours=(mode==='span')?res.hoursSpan:res.hoursPairs;
-
-      // כתיבת שעות
       setCell(tr, hrsCol, (hours||0).toFixed(2));
 
-      // כתיבת כניסה/יציאה
-      var inTime  = (mode==='span')? res.in : (res.firstIn ? hhmm(new Date(empRaw[ymd].find(e=>e.action==='checkin')?.ts)) : '-');
-      // ב-"זוגות": מציגים את כניסת הזוג האחרון אם רוצים תאימות עם התצוגה המקורית; נלך לפי "כניסה של הזוג האחרון"
-      if (mode==='pairs'){
+      // כניסה/יציאה: במצב span – כניסה ראשונה ויציאה אחרונה; במצב pairs – כניסה של הזוג האחרון + יציאה אחרונה.
+      var inTime='-', outTime=res.out;
+      if (mode==='span'){
+        inTime=res.in;
+      } else {
         const day=(empRaw[ymd]||[]).slice().sort((a,b)=>String(a.ts).localeCompare(String(b.ts)));
-        // מחפש את ה-checkin האחרון שלפני ה-checkout האחרון
         let lastOutIdx=day.map(x=>x.action).lastIndexOf('checkout');
         if (lastOutIdx>-1){
           for(let i=lastOutIdx;i>=0;i--){ if (day[i].action==='checkin'){ inTime=hhmm(new Date(day[i].ts)); break; } }
         }
       }
-      var outTime = res.out;
 
       if (inCol>=0 || outCol>=0){
         if (inCol>=0)  setCell(tr, inCol,  inTime);
         if (outCol>=0) setCell(tr, outCol, outTime);
       } else {
-        // Fallback: אם אין כותרות "כניסה/יציאה", נכתוב לשני התאים שלפני "שעות"
+        // Fallback: שני התאים שלפני "שעות"
         var guessOutCol=hrsCol-1, guessInCol=hrsCol-2;
-        if (guessInCol>=0 && !tr.cells[guessInCol]) return; // הגנה
         setCell(tr, guessInCol, inTime);
         setCell(tr, guessOutCol, outTime);
       }
@@ -4203,9 +4204,9 @@ if (document.readyState === 'loading'){
     setTimeout(async ()=>{ if (Date.now()-last>350){ obs.disconnect(); await recalcOnce(); } }, 600);
   }
   function wireShowButtons(){
-    const all=Array.from(document.querySelectorAll('button, .btn, [role="button"]'));
-    const showBtns=all.filter(b => /הצג\s*דוח|צור\s*דוח|חשב\s*דוח/.test((b.textContent||'')));
-    showBtns.forEach(btn => { if(!btn.__rb_v6){ btn.__rb_v6=true; btn.addEventListener('click', ()=>recalcAfterStable()); } });
+    const all=Array.from(document.querySelectorAll('button, .btn, [role="button"], [onclick]'));
+    const showBtns=all.filter(b => /הצג\s*דוח|צור\s*דוח|חשב\s*דוח/.test((b.textContent||'')+(b.getAttribute('aria-label')||'')));
+    showBtns.forEach(btn => { if(!btn.__rb_v7){ btn.__rb_v7=true; btn.addEventListener('click', ()=>recalcAfterStable()); } });
   }
   function init(){
     wireModeButtons();
