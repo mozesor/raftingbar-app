@@ -992,43 +992,13 @@ function _ensureLogs(day){
   return day;
 }
 
-function calcDayFromLogs(day){
-  day = _ensureLogs(day);
-  var logs = (day && day.logs ? day.logs.slice() : []);
-  logs.sort(function(a,b){ return String(a.ts).localeCompare(String(b.ts)); });
-  var firstIn=null, lastOut=null, openIn=null, sumPairsMs=0;
-  for (var i=0;i<logs.length;i++){
-    var L=logs[i];
-    if (L.action==='checkin'){
-      if (!firstIn) firstIn=new Date(L.ts);
-      if (!openIn)  openIn = new Date(L.ts);
-    } else if (L.action==='checkout'){
-      lastOut = new Date(L.ts);
-      if (openIn){ sumPairsMs += (lastOut - openIn); openIn=null; }
-    }
-  }
-  var spanHours  = (firstIn && lastOut && lastOut>firstIn) ? (lastOut-firstIn)/36e5 : 0;
-  var pairsHours = sumPairsMs/36e5;
-  function _fmt(t){ if(!t) return null; var h=('0'+t.getHours()).slice(-2); var m=('0'+t.getMinutes()).slice(-2); return h+':'+m; }
-  return { firstIn:firstIn, lastOut:lastOut, hoursSpan:Math.round(spanHours*100)/100, hoursPairs:Math.round(pairsHours*100)/100, inText:_fmt(firstIn), outText:_fmt(lastOut) };
-}
 
-function dayHours(day){
-  if (!day) return 0;
-  if (day.logs && day.logs.length){ var r=calcDayFromLogs(day); return REPORT_HOURS_MODE==='span'? r.hoursSpan : r.hoursPairs; }
-  // fallback to legacy fields
-  return calculateHours(day.checkIn, day.checkOut);
-}
 
-function dayInTime(day){
-  if (day && day.logs && day.logs.length){ var r=calcDayFromLogs(day); return r.inText || '--:--'; }
-  return (day && day.checkIn) ? formatTime(day.checkIn) : '--:--';
-}
 
-function dayOutTime(day){
-  if (day && day.logs && day.logs.length){ var r=calcDayFromLogs(day); return r.outText || '--:--'; }
-  return (day && day.checkOut) ? formatTime(day.checkOut) : '--:--';
-}
+
+
+
+
 function updateCurrentTime() {
             var now = new Date();
             document.getElementById('currentTime').textContent = now.toLocaleTimeString('he-IL', {
@@ -4161,6 +4131,90 @@ if (document.readyState === 'loading'){
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
+
+
+// --- TIME NORMALIZATION + ROBUST DAILY CALC ---
+function _toDate(ts, day) {
+  if (ts instanceof Date) return ts;
+  var s = String(ts || '');
+  if (s.indexOf('T') !== -1) return new Date(s); // ISO
+  var m = s.match(/^(\d{2}):(\d{2})(?::(\d{2}))?$/);
+  if (m && day && day._dateKey) {
+    var hh = m[1], mm = m[2], ss = m[3] || '00';
+    return new Date(day._dateKey + ' ' + hh + ':' + mm + ':' + ss);
+  }
+  return new Date(s);
+}
+
+function calcDayFromLogs(day) {
+  var logs = (day && day.logs ? day.logs.slice() : []);
+  logs.sort(function(a, b) {
+    return _toDate(a.ts, day).getTime() - _toDate(b.ts, day).getTime();
+  });
+
+  var firstIn = null, lastOut = null, openIn = null, sumPairsMs = 0;
+
+  for (var i = 0; i < logs.length; i++) {
+    var act = logs[i].action;
+    if (act === 'checkin') {
+      var dIn = _toDate(logs[i].ts, day);
+      if (!firstIn) firstIn = dIn;
+      if (!openIn)  openIn  = dIn;
+    } else if (act === 'checkout') {
+      var dOut = _toDate(logs[i].ts, day);
+      lastOut = dOut;
+      if (openIn) {
+        sumPairsMs += (dOut - openIn);
+        openIn = null;
+      }
+    }
+  }
+
+  var spanHours  = (firstIn && lastOut && lastOut > firstIn) ? (lastOut - firstIn) / 36e5 : 0;
+  var pairsHours = sumPairsMs / 36e5;
+
+  function fmt(t) {
+    if (!t || isNaN(t.getTime())) return '-';
+    var h = ('0' + t.getHours()).slice(-2);
+    var m = ('0' + t.getMinutes()).slice(-2);
+    return h + ':' + m;
+  }
+
+  return {
+    firstIn: firstIn,
+    lastOut: lastOut,
+    firstInStr: fmt(firstIn),
+    lastOutStr: fmt(lastOut),
+    hoursSpan:  Math.round(spanHours * 100) / 100,
+    hoursPairs: Math.round(pairsHours * 100) / 100
+  };
+}
+
+function dayHours(day) {
+  if (!day) return 0;
+  if (!day.logs || !day.logs.length) {
+    var h = calculateHours(day && day.checkIn, day && day.checkOut) || 0;
+    return Math.round(h * 100) / 100;
+  }
+  var r = calcDayFromLogs(day);
+  return (window.REPORT_HOURS_MODE === 'span') ? r.hoursSpan : r.hoursPairs;
+}
+
+function dayInTime(day) {
+  if (day && day.logs && day.logs.length) {
+    return calcDayFromLogs(day).firstInStr;
+  }
+  return (day && day.checkIn) ? formatTime(day.checkIn) : '-';
+}
+
+function dayOutTime(day) {
+  if (day && day.logs && day.logs.length) {
+    return calcDayFromLogs(day).lastOutStr;
+  }
+  return (day && day.checkOut) ? formatTime(day.checkOut) : '-';
+}
+// --- END robust calc block ---
+
 </script>
 
 </body>
