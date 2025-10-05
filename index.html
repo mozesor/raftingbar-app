@@ -4062,12 +4062,14 @@ if (document.readyState === 'loading'){
 
 
 <script>
-/* === RB_MODE_ULTRASAFE v4 ===
-   - לא יוצר/מוחק אלמנטים
-   - מחכה שהטבלה תתייצב (MutationObserver) ואז מעדכן תאים בלבד
-   - מצב חישוב מזוהה מהטקסט על המסך (מכניסה ראשונה↔יציאה אחרונה / זוגות/IN→OUT)
+/* === RB_MODE_ULTRASAFE v5 ===
+   - לא משנה מבנה עמוד, לא יוצר טבלאות
+   - מאזין לכפתורי מצב ("כניסות↔יציאות (זוגות)" / "מכניסה ראשונה עד יציאה אחרונה")
+   - מחשב את השעות כולל זוגות קצרים (ללא סינון), ומעדכן רק תאי הטבלה הקיימת
+   - מחכה לייצוב הטבלה לפני העדכון (MutationObserver)
 */
 (function(){
+  // ---------- utils ----------
   function toYMDfromDDMMYYYY(s){
     if(!s) return null;
     var m=s.match(/^(\d{1,2})[\/\.](\d{1,2})[\/\.](\d{4})$/);
@@ -4103,7 +4105,7 @@ if (document.readyState === 'loading'){
       }
     }
     const spanHours=(firstIn&&lastOut&&lastOut>firstIn)? (lastOut-firstIn)/36e5 : 0;
-    const pairHours=sumPairs/36e5;
+    const pairHours=sumPairs/36e5; // ללא סינון לזוגות קצרים
     return {
       in:firstIn?hhmm(firstIn):'-',
       out:lastOut?hhmm(lastOut):'-',
@@ -4111,14 +4113,52 @@ if (document.readyState === 'loading'){
       hoursPairs:+(Math.round(pairHours*100)/100).toFixed(2)
     };
   }
+
+  // ---------- mode handling ----------
   function detectMode(){
+    // עדיפות למצב שמור
+    var ls = localStorage.getItem('rb_calc_mode');
+    if (ls === 'span' || ls === 'pairs') return ls;
+    // אחרת – זיהוי מהטקסט על המסך
     var txt=(document.body.textContent||'').replace(/\s+/g,' ');
     if (/מכניסה .* יציאה .* אחרונה/.test(txt)) return 'span';
     if (/זוגות|IN.?OUT/i.test(txt)) return 'pairs';
-    return localStorage.getItem('rb_calc_mode') || 'pairs';
+    return 'pairs';
   }
+  function saveMode(m){ try{ localStorage.setItem('rb_calc_mode', m); }catch(e){} }
+  function wireModeButtons(){
+    const all = Array.from(document.querySelectorAll('button, .btn, [role="button"]'));
+    const pairsBtns = all.filter(b => /כניסות|זוגות|IN.?OUT/i.test((b.textContent||'')));
+    const spanBtns  = all.filter(b => /מכניסה|יציאה אחרונה/.test((b.textContent||'')));
+    pairsBtns.forEach(btn => {
+      if (!btn.__rb_mode_pairs){
+        btn.__rb_mode_pairs = true;
+        btn.addEventListener('click', ()=>{ saveMode('pairs'); recalcAfterStable(); paintActive(); });
+      }
+    });
+    spanBtns.forEach(btn => {
+      if (!btn.__rb_mode_span){
+        btn.__rb_mode_span = true;
+        btn.addEventListener('click', ()=>{ saveMode('span'); recalcAfterStable(); paintActive(); });
+      }
+    });
+    paintActive();
+  }
+  function paintActive(){
+    const mode = detectMode();
+    const all = Array.from(document.querySelectorAll('button, .btn, [role="button"]'));
+    const pairsBtns = all.filter(b => /כניסות|זוגות|IN.?OUT/i.test((b.textContent||'')));
+    const spanBtns  = all.filter(b => /מכניסה|יציאה אחרונה/.test((b.textContent||'')));
+    const on  = {bg:'#2563eb', fg:'#fff'};
+    const off = {bg:'', fg:''}; // אל תשנה סטייל אם שלך כבר מטפל
+    function set(btn, active){ if(!btn) return; if(on.bg){ btn.style.background= active?on.bg:off.bg; } if(on.fg){ btn.style.color=active?on.fg:off.fg; } }
+    pairsBtns.forEach(b=>set(b, mode==='pairs'));
+    spanBtns.forEach(b =>set(b, mode==='span'));
+  }
+
+  // ---------- table handling ----------
   function findReportTable(){
-    var candidates=Array.from(document.querySelectorAll('table')).filter(t => /תאריך/.test(t.textContent||''));
+    var candidates = Array.from(document.querySelectorAll('table')).filter(t => /תאריך/.test(t.textContent||''));
     return candidates.find(t => /שעות/.test((t.tHead && t.tHead.textContent)||t.textContent||'')) || null;
   }
   function getEmployeeFromFilters(){
@@ -4128,7 +4168,7 @@ if (document.readyState === 'loading'){
   async function recalcOnce(){
     var table=findReportTable();
     if (!table) return false;
-    var mode=detectMode(); try{ localStorage.setItem('rb_calc_mode',mode);}catch(e){}
+    var mode=detectMode(); saveMode(mode);
     var emp=getEmployeeFromFilters(); if (!emp) return false;
     var raw=await fetchRaw(); var empRaw=raw[emp]||{};
 
@@ -4150,35 +4190,33 @@ if (document.readyState === 'loading'){
     });
     return true;
   }
-  // מחכה שהטבלה תתייצב: בלי שינויים ל-400ms
   function recalcAfterStable(){
     const table=findReportTable(); if (!table){ setTimeout(recalcAfterStable, 300); return; }
     let timer=null, last=Date.now();
     const obs=new MutationObserver(()=>{
       last=Date.now();
       if (timer) clearTimeout(timer);
-      timer=setTimeout(async ()=>{
-        await recalcOnce();
-        obs.disconnect();
-      }, 400);
+      timer=setTimeout(async ()=>{ await recalcOnce(); obs.disconnect(); }, 400);
     });
     obs.observe(table, {childList:true, subtree:true, characterData:true});
-    // ביטחון: אם אין שינויים, נחשב אחרי 600ms
     setTimeout(async ()=>{ if (Date.now()-last>350){ obs.disconnect(); await recalcOnce(); } }, 600);
   }
+
+  // ---------- show button hook ----------
   function wireShowButtons(){
     const all=Array.from(document.querySelectorAll('button, .btn, [role="button"]'));
     const showBtns=all.filter(b => /הצג\s*דוח|צור\s*דוח|חשב\s*דוח/.test((b.textContent||'')));
     showBtns.forEach(btn => {
-      if (!btn.__rb_ultra_v4){
-        btn.__rb_ultra_v4=true;
+      if (!btn.__rb_ultra_v5){
+        btn.__rb_ultra_v5=true;
         btn.addEventListener('click', ()=>recalcAfterStable());
       }
     });
   }
+
   function init(){
+    wireModeButtons();
     wireShowButtons();
-    // טעינה ראשונית
     setTimeout(recalcAfterStable, 800);
   }
   if (document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', init); }
