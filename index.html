@@ -4062,11 +4062,15 @@ if (document.readyState === 'loading'){
 
 
 <script>
-/* === RB_MODE_ULTRASAFE === */
+/* === RB_MODE_ULTRASAFE v4 ===
+   - לא יוצר/מוחק אלמנטים
+   - מחכה שהטבלה תתייצב (MutationObserver) ואז מעדכן תאים בלבד
+   - מצב חישוב מזוהה מהטקסט על המסך (מכניסה ראשונה↔יציאה אחרונה / זוגות/IN→OUT)
+*/
 (function(){
   function toYMDfromDDMMYYYY(s){
     if(!s) return null;
-    var m = s.match(/^(\d{1,2})[\/\.](\d{1,2})[\/\.](\d{4})$/);
+    var m=s.match(/^(\d{1,2})[\/\.](\d{1,2})[\/\.](\d{4})$/);
     if(!m) return null;
     var dd=('0'+m[1]).slice(-2), mm=('0'+m[2]).slice(-2), yy=m[3];
     return yy+'-'+mm+'-'+dd;
@@ -4121,13 +4125,11 @@ if (document.readyState === 'loading'){
     var selects=document.querySelectorAll('select');
     return (selects[0] && selects[0].value) || '';
   }
-  async function updateReportIfPossible(){
+  async function recalcOnce(){
     var table=findReportTable();
-    if (!table) return;
-    var mode=detectMode();
-    try{ localStorage.setItem('rb_calc_mode', mode);}catch(e){}
-    var emp=getEmployeeFromFilters();
-    if (!emp) return;
+    if (!table) return false;
+    var mode=detectMode(); try{ localStorage.setItem('rb_calc_mode',mode);}catch(e){}
+    var emp=getEmployeeFromFilters(); if (!emp) return false;
     var raw=await fetchRaw(); var empRaw=raw[emp]||{};
 
     var headers=Array.from((table.tHead && table.tHead.rows[0].cells)||[]).map(th => (th.textContent||'').trim());
@@ -4135,32 +4137,49 @@ if (document.readyState === 'loading'){
     var inCol  =headers.findIndex(h => /כניסה/.test(h));
     var outCol =headers.findIndex(h => /יציאה/.test(h));
     var hrsCol =headers.findIndex(h => /שעות/.test(h));
-    if (dateCol<0 || hrsCol<0) return;
+    if (dateCol<0 || hrsCol<0) return true;
 
     Array.from(table.tBodies[0]?.rows || []).forEach(tr => {
       var dateText=(tr.cells[dateCol] && tr.cells[dateCol].textContent || '').trim();
-      var ymd=toYMDfromDDMMYYYY(dateText);
-      if (!ymd) return;
+      var ymd=toYMDfromDDMMYYYY(dateText); if (!ymd) return;
       var res=calcDay(empRaw[ymd]||[]);
       var hours=(mode==='span')?res.hoursSpan:res.hoursPairs;
       if (inCol>=0 && res.in)  tr.cells[inCol].textContent=res.in;
       if (outCol>=0 && res.out) tr.cells[outCol].textContent=res.out;
       tr.cells[hrsCol].textContent=(hours||0).toFixed(2);
     });
+    return true;
+  }
+  // מחכה שהטבלה תתייצב: בלי שינויים ל-400ms
+  function recalcAfterStable(){
+    const table=findReportTable(); if (!table){ setTimeout(recalcAfterStable, 300); return; }
+    let timer=null, last=Date.now();
+    const obs=new MutationObserver(()=>{
+      last=Date.now();
+      if (timer) clearTimeout(timer);
+      timer=setTimeout(async ()=>{
+        await recalcOnce();
+        obs.disconnect();
+      }, 400);
+    });
+    obs.observe(table, {childList:true, subtree:true, characterData:true});
+    // ביטחון: אם אין שינויים, נחשב אחרי 600ms
+    setTimeout(async ()=>{ if (Date.now()-last>350){ obs.disconnect(); await recalcOnce(); } }, 600);
   }
   function wireShowButtons(){
     const all=Array.from(document.querySelectorAll('button, .btn, [role="button"]'));
     const showBtns=all.filter(b => /הצג\s*דוח|צור\s*דוח|חשב\s*דוח/.test((b.textContent||'')));
     showBtns.forEach(btn => {
-      if (!btn.__rb_ultra){
-        btn.__rb_ultra=true;
-        btn.addEventListener('click', ()=>setTimeout(updateReportIfPossible, 250));
+      if (!btn.__rb_ultra_v4){
+        btn.__rb_ultra_v4=true;
+        btn.addEventListener('click', ()=>recalcAfterStable());
       }
     });
   }
   function init(){
     wireShowButtons();
-    setTimeout(updateReportIfPossible, 600);
+    // טעינה ראשונית
+    setTimeout(recalcAfterStable, 800);
   }
   if (document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', init); }
   else { init(); }
