@@ -4062,14 +4062,13 @@ if (document.readyState === 'loading'){
 
 
 <script>
-/* === RB_MODE_ULTRASAFE v5 ===
+/* === RB_MODE_ULTRASAFE v6 ===
    - לא משנה מבנה עמוד, לא יוצר טבלאות
-   - מאזין לכפתורי מצב ("כניסות↔יציאות (זוגות)" / "מכניסה ראשונה עד יציאה אחרונה")
-   - מחשב את השעות כולל זוגות קצרים (ללא סינון), ומעדכן רק תאי הטבלה הקיימת
-   - מחכה לייצוב הטבלה לפני העדכון (MutationObserver)
+   - כולל זוגות קצרים (אין סינון)
+   - הכפתורים משנים מצב וחישוב מתעדכן
+   - אם לא מוצא כותרות "כניסה/יציאה", משתמש בהשערה: שני התאים שלפני "שעות"
 */
 (function(){
-  // ---------- utils ----------
   function toYMDfromDDMMYYYY(s){
     if(!s) return null;
     var m=s.match(/^(\d{1,2})[\/\.](\d{1,2})[\/\.](\d{4})$/);
@@ -4105,8 +4104,9 @@ if (document.readyState === 'loading'){
       }
     }
     const spanHours=(firstIn&&lastOut&&lastOut>firstIn)? (lastOut-firstIn)/36e5 : 0;
-    const pairHours=sumPairs/36e5; // ללא סינון לזוגות קצרים
+    const pairHours=sumPairs/36e5;
     return {
+      firstIn, lastOut,
       in:firstIn?hhmm(firstIn):'-',
       out:lastOut?hhmm(lastOut):'-',
       hoursSpan:+(Math.round(spanHours*100)/100).toFixed(2),
@@ -4114,12 +4114,10 @@ if (document.readyState === 'loading'){
     };
   }
 
-  // ---------- mode handling ----------
+  // --- mode ---
   function detectMode(){
-    // עדיפות למצב שמור
-    var ls = localStorage.getItem('rb_calc_mode');
-    if (ls === 'span' || ls === 'pairs') return ls;
-    // אחרת – זיהוי מהטקסט על המסך
+    var ls=localStorage.getItem('rb_calc_mode');
+    if (ls==='span' || ls==='pairs') return ls;
     var txt=(document.body.textContent||'').replace(/\s+/g,' ');
     if (/מכניסה .* יציאה .* אחרונה/.test(txt)) return 'span';
     if (/זוגות|IN.?OUT/i.test(txt)) return 'pairs';
@@ -4127,49 +4125,29 @@ if (document.readyState === 'loading'){
   }
   function saveMode(m){ try{ localStorage.setItem('rb_calc_mode', m); }catch(e){} }
   function wireModeButtons(){
-    const all = Array.from(document.querySelectorAll('button, .btn, [role="button"]'));
-    const pairsBtns = all.filter(b => /כניסות|זוגות|IN.?OUT/i.test((b.textContent||'')));
-    const spanBtns  = all.filter(b => /מכניסה|יציאה אחרונה/.test((b.textContent||'')));
-    pairsBtns.forEach(btn => {
-      if (!btn.__rb_mode_pairs){
-        btn.__rb_mode_pairs = true;
-        btn.addEventListener('click', ()=>{ saveMode('pairs'); recalcAfterStable(); paintActive(); });
-      }
-    });
-    spanBtns.forEach(btn => {
-      if (!btn.__rb_mode_span){
-        btn.__rb_mode_span = true;
-        btn.addEventListener('click', ()=>{ saveMode('span'); recalcAfterStable(); paintActive(); });
-      }
-    });
-    paintActive();
-  }
-  function paintActive(){
-    const mode = detectMode();
-    const all = Array.from(document.querySelectorAll('button, .btn, [role="button"]'));
-    const pairsBtns = all.filter(b => /כניסות|זוגות|IN.?OUT/i.test((b.textContent||'')));
-    const spanBtns  = all.filter(b => /מכניסה|יציאה אחרונה/.test((b.textContent||'')));
-    const on  = {bg:'#2563eb', fg:'#fff'};
-    const off = {bg:'', fg:''}; // אל תשנה סטייל אם שלך כבר מטפל
-    function set(btn, active){ if(!btn) return; if(on.bg){ btn.style.background= active?on.bg:off.bg; } if(on.fg){ btn.style.color=active?on.fg:off.fg; } }
-    pairsBtns.forEach(b=>set(b, mode==='pairs'));
-    spanBtns.forEach(b =>set(b, mode==='span'));
+    const all=Array.from(document.querySelectorAll('button, .btn, [role="button"]'));
+    const pairsBtns=all.filter(b => /כניסות|זוגות|IN.?OUT/i.test((b.textContent||'')));
+    const spanBtns =all.filter(b => /מכניסה|יציאה אחרונה/.test((b.textContent||'')));
+    pairsBtns.forEach(btn=>{ if(!btn.__rb_mp){ btn.__rb_mp=true; btn.addEventListener('click', ()=>{ saveMode('pairs'); recalcAfterStable(); }); }});
+    spanBtns.forEach(btn=>{ if(!btn.__rb_ms){ btn.__rb_ms=true; btn.addEventListener('click', ()=>{ saveMode('span'); recalcAfterStable(); }); }});
   }
 
-  // ---------- table handling ----------
+  // --- table ---
   function findReportTable(){
-    var candidates = Array.from(document.querySelectorAll('table')).filter(t => /תאריך/.test(t.textContent||''));
+    var candidates=Array.from(document.querySelectorAll('table')).filter(t => /תאריך/.test(t.textContent||''));
     return candidates.find(t => /שעות/.test((t.tHead && t.tHead.textContent)||t.textContent||'')) || null;
   }
   function getEmployeeFromFilters(){
     var selects=document.querySelectorAll('select');
     return (selects[0] && selects[0].value) || '';
   }
+  function setCell(tr, colIdx, value){
+    if (colIdx>=0 && tr.cells[colIdx]) tr.cells[colIdx].textContent=value;
+  }
   async function recalcOnce(){
-    var table=findReportTable();
-    if (!table) return false;
+    var table=findReportTable(); if(!table) return false;
     var mode=detectMode(); saveMode(mode);
-    var emp=getEmployeeFromFilters(); if (!emp) return false;
+    var emp=getEmployeeFromFilters(); if(!emp) return false;
     var raw=await fetchRaw(); var empRaw=raw[emp]||{};
 
     var headers=Array.from((table.tHead && table.tHead.rows[0].cells)||[]).map(th => (th.textContent||'').trim());
@@ -4184,9 +4162,33 @@ if (document.readyState === 'loading'){
       var ymd=toYMDfromDDMMYYYY(dateText); if (!ymd) return;
       var res=calcDay(empRaw[ymd]||[]);
       var hours=(mode==='span')?res.hoursSpan:res.hoursPairs;
-      if (inCol>=0 && res.in)  tr.cells[inCol].textContent=res.in;
-      if (outCol>=0 && res.out) tr.cells[outCol].textContent=res.out;
-      tr.cells[hrsCol].textContent=(hours||0).toFixed(2);
+
+      // כתיבת שעות
+      setCell(tr, hrsCol, (hours||0).toFixed(2));
+
+      // כתיבת כניסה/יציאה
+      var inTime  = (mode==='span')? res.in : (res.firstIn ? hhmm(new Date(empRaw[ymd].find(e=>e.action==='checkin')?.ts)) : '-');
+      // ב-"זוגות": מציגים את כניסת הזוג האחרון אם רוצים תאימות עם התצוגה המקורית; נלך לפי "כניסה של הזוג האחרון"
+      if (mode==='pairs'){
+        const day=(empRaw[ymd]||[]).slice().sort((a,b)=>String(a.ts).localeCompare(String(b.ts)));
+        // מחפש את ה-checkin האחרון שלפני ה-checkout האחרון
+        let lastOutIdx=day.map(x=>x.action).lastIndexOf('checkout');
+        if (lastOutIdx>-1){
+          for(let i=lastOutIdx;i>=0;i--){ if (day[i].action==='checkin'){ inTime=hhmm(new Date(day[i].ts)); break; } }
+        }
+      }
+      var outTime = res.out;
+
+      if (inCol>=0 || outCol>=0){
+        if (inCol>=0)  setCell(tr, inCol,  inTime);
+        if (outCol>=0) setCell(tr, outCol, outTime);
+      } else {
+        // Fallback: אם אין כותרות "כניסה/יציאה", נכתוב לשני התאים שלפני "שעות"
+        var guessOutCol=hrsCol-1, guessInCol=hrsCol-2;
+        if (guessInCol>=0 && !tr.cells[guessInCol]) return; // הגנה
+        setCell(tr, guessInCol, inTime);
+        setCell(tr, guessOutCol, outTime);
+      }
     });
     return true;
   }
@@ -4194,26 +4196,17 @@ if (document.readyState === 'loading'){
     const table=findReportTable(); if (!table){ setTimeout(recalcAfterStable, 300); return; }
     let timer=null, last=Date.now();
     const obs=new MutationObserver(()=>{
-      last=Date.now();
-      if (timer) clearTimeout(timer);
+      last=Date.now(); if (timer) clearTimeout(timer);
       timer=setTimeout(async ()=>{ await recalcOnce(); obs.disconnect(); }, 400);
     });
     obs.observe(table, {childList:true, subtree:true, characterData:true});
     setTimeout(async ()=>{ if (Date.now()-last>350){ obs.disconnect(); await recalcOnce(); } }, 600);
   }
-
-  // ---------- show button hook ----------
   function wireShowButtons(){
     const all=Array.from(document.querySelectorAll('button, .btn, [role="button"]'));
     const showBtns=all.filter(b => /הצג\s*דוח|צור\s*דוח|חשב\s*דוח/.test((b.textContent||'')));
-    showBtns.forEach(btn => {
-      if (!btn.__rb_ultra_v5){
-        btn.__rb_ultra_v5=true;
-        btn.addEventListener('click', ()=>recalcAfterStable());
-      }
-    });
+    showBtns.forEach(btn => { if(!btn.__rb_v6){ btn.__rb_v6=true; btn.addEventListener('click', ()=>recalcAfterStable()); } });
   }
-
   function init(){
     wireModeButtons();
     wireShowButtons();
