@@ -4219,3 +4219,195 @@ function dayOutTime(day) {
 
 </body>
 </html>
+
+
+<!-- RB-FIX-2025-10: calc-mode buttons + robust hours calculator -->
+<script>
+(function(){
+  if (window.__RB_FIX_2025_10__) { return; }
+  window.__RB_FIX_2025_10__ = true;
+
+  function hhmm(d){
+    try{
+      var h = String(d.getHours()).padStart(2,'0');
+      var m = String(d.getMinutes()).padStart(2,'0');
+      return h+':'+m;
+    }catch(e){ return '-'; }
+  }
+
+  // Build from logs => {in, out, hoursSpan, hoursPairs}
+  function rbCalcFromLogs(day){
+    try{
+      var events = (day && (day.logs || day.raw || day.events || day.ev)) || [];
+      // Normalize: each item should be {action:'checkin'|'checkout', ts: ISO|string|Date}
+      var arr = [];
+      for (var i=0;i<events.length;i++){
+        var a = (events[i].action || events[i].type || '').toString().toLowerCase();
+        var ts = events[i].ts || events[i].timestamp || events[i].time || null;
+        if (!ts) continue;
+        var t = (ts instanceof Date) ? ts : new Date(ts);
+        if (!isNaN(+t) && (a==='checkin' || a==='checkout')) arr.push({action:a, ts:t.toISOString()});
+      }
+      arr.sort(function(a,b){return String(a.ts).localeCompare(String(b.ts));});
+
+      var firstIn=null, lastOut=null, open=null, sumPairsMs=0;
+      for (var j=0;j<arr.length;j++){
+        var ev = arr[j];
+        if (ev.action==='checkin'){
+          if (!firstIn) firstIn = new Date(ev.ts);
+          if (!open) open = new Date(ev.ts);
+        } else if (ev.action==='checkout'){
+          lastOut = new Date(ev.ts);
+          if (open){
+            sumPairsMs += (lastOut - open);
+            open = null;
+          }
+        }
+      }
+      var spanH = (firstIn && lastOut && lastOut>firstIn) ? (lastOut-firstIn)/36e5 : 0;
+      var pairsH = sumPairsMs/36e5;
+
+      function round2(x){ return +((Math.round(x*100)/100).toFixed(2)); }
+      return {
+        _first:firstIn, _last:lastOut,
+        in:  firstIn ? hhmm(firstIn) : '-',
+        out: lastOut ? hhmm(lastOut) : '-',
+        hoursSpan:  round2(spanH),
+        hoursPairs: round2(pairsH)
+      };
+    }catch(e){
+      return {in:'-', out:'-', hoursSpan:0, hoursPairs:0};
+    }
+  }
+
+  function rbDetectMode(){
+    try{
+      // Prefer explicit localStorage
+      var ls = localStorage.getItem('rb_calc_mode');
+      if (ls==='span' || ls==='pairs') return ls;
+    }catch(e){}
+    // Heuristics fallback (look for button text)
+    var txt = (document.body.textContent || '').replace(/\\s+/g,' ');
+    if (/יציאה\\s*האחרונה/.test(txt)) return 'span';
+    if (/זוגות|IN.?OUT/i.test(txt))   return 'pairs';
+    return 'pairs';
+  }
+  function rbSaveMode(m){ try{ localStorage.setItem('rb_calc_mode', m); }catch(e){} }
+
+  // Override dayHours/dayInTime/dayOutTime safely
+  var _orig_dayHours   = window.dayHours;
+  var _orig_dayInTime  = window.dayInTime;
+  var _orig_dayOutTime = window.dayOutTime;
+
+  window.dayHours = function(day){
+    try{
+      var r = rbCalcFromLogs(day);
+      var mode = rbDetectMode();
+      return (mode==='span') ? r.hoursSpan : r.hoursPairs;
+    }catch(e){
+      return _orig_dayHours ? _orig_dayHours(day) : 0;
+    }
+  };
+  window.dayInTime = function(day){
+    try{ return rbCalcFromLogs(day).in; }
+    catch(e){ return _orig_dayInTime ? _orig_dayInTime(day) : '-'; }
+  };
+  window.dayOutTime = function(day){
+    try{ return rbCalcFromLogs(day).out; }
+    catch(e){ return _orig_dayOutTime ? _orig_dayOutTime(day) : '-'; }
+  };
+
+  // UI controls inside reports filters
+  function qs(sel, root){ return (root||document).querySelector(sel); }
+  function findFiltersContainer(){
+    return qs('.detailed-reports-filters')
+        || document.getElementById('reportsFilters')
+        || qs('#reportsContent .filters')
+        || qs('#reportsPage .filters')
+        || qs('#reportsContent')
+        || qs('#reportsPage')
+        || qs('.filters');
+  }
+
+  function rbRefresh(){
+    var fns = [
+      window.updateReports, window.updateReportsPage, window.updateReportsSummary,
+      window.updateDetailedReports, window.updateEmployeeGrid, window.updateEmployeeStatus
+    ];
+    for (var i=0;i<fns.length;i++){
+      if (typeof fns[i] === 'function'){
+        try{ fns[i](); }catch(e){ /* ignore */ }
+      }
+    }
+  }
+
+  function applyActiveStyles(){
+    var mode = rbDetectMode();
+    var a = document.getElementById('rbModeSpan');
+    var b = document.getElementById('rbModePairs');
+    if (a){ a.classList.toggle('active', mode==='span'); }
+    if (b){ b.classList.toggle('active', mode==='pairs'); }
+    var label = document.getElementById('rbModeLabel');
+    if (label){ label.textContent = (mode==='span' ? 'כניסה ראשונה → יציאה אחרונה' : 'זוגות IN/OUT'); }
+  }
+
+  function ensureCalcModeControls(){
+    var host = findFiltersContainer();
+    if (!host) return;
+    if (document.getElementById('rbCalcMode')) { applyActiveStyles(); return; }
+
+    var wrap = document.createElement('div');
+    wrap.id = 'rbCalcMode';
+    wrap.className = 'filter-group';
+    wrap.style.display = 'flex';
+    wrap.style.alignItems = 'center';
+    wrap.style.gap = '8px';
+    wrap.style.flexWrap = 'wrap';
+    wrap.innerHTML = ''
+      + '<div class="filter-label">מצב חישוב:</div>'
+      + '<div style="display:flex; gap:6px;">'
+      + '  <button id="rbModeSpan"  type="button" class="btn" style="padding:6px 10px; border-radius:20px; border:1px solid #ddd; cursor:pointer;">יציאה האחרונה</button>'
+      + '  <button id="rbModePairs" type="button" class="btn" style="padding:6px 10px; border-radius:20px; border:1px solid #ddd; cursor:pointer;">זוגות IN/OUT</button>'
+      + '</div>'
+      + '<span id="rbModeNow" style="opacity:.7;">&nbsp;|&nbsp;<b id="rbModeLabel"></b></span>';
+    host.appendChild(wrap);
+
+    function setMode(m){
+      rbSaveMode(m);
+      applyActiveStyles();
+      rbRefresh();
+    }
+    document.getElementById('rbModeSpan').addEventListener('click', function(){ setMode('span'); });
+    document.getElementById('rbModePairs').addEventListener('click', function(){ setMode('pairs'); });
+    applyActiveStyles();
+  }
+
+  // Also respond to any legacy buttons by text (if they exist)
+  document.addEventListener('click', function(ev){
+    var t = (ev.target && (ev.target.textContent || '')).trim();
+    if (/יציאה\\s*האחרונה/.test(t)) { rbSaveMode('span');  applyActiveStyles(); rbRefresh(); }
+    if (/זוגות|IN.?OUT/i.test(t))   { rbSaveMode('pairs'); applyActiveStyles(); rbRefresh(); }
+  }, true);
+
+  // Hook into app lifecycle
+  var _origShowPage = window.showPage;
+  window.showPage = function(name){
+    var ret = _origShowPage ? _origShowPage(name) : undefined;
+    setTimeout(ensureCalcModeControls, 50);
+    return ret;
+  };
+
+  // Also try on load + when filters mutate
+  function tryInject(){ ensureCalcModeControls(); }
+  document.addEventListener('DOMContentLoaded', tryInject);
+  setTimeout(tryInject, 200);
+  var mo = new MutationObserver(function(){ tryInject(); });
+  mo.observe(document.documentElement, {subtree:true, childList:true});
+
+})();
+</script>
+<style>
+  /* tiny style for active mode */
+  #rbCalcMode .btn.active { background:#2d7ef7; color:#fff; border-color:#2d7ef7; }
+</style>
+<!-- /RB-FIX-2025-10 -->
