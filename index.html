@@ -4216,6 +4216,133 @@ function dayOutTime(day) {
 // --- END robust calc block ---
 
 </script>
+<!-- === RB PATCH: calc-mode buttons + summary calc param + local fallback === -->
+<script>
+(function(){
+  var KEY = 'rb_calc_mode'; // FIRST_LAST / SUM_PAIRS
+
+  function getMode(){
+    try { return localStorage.getItem(KEY) || 'FIRST_LAST'; } catch(e){ return 'FIRST_LAST'; }
+  }
+  function setMode(m){
+    try { localStorage.setItem(KEY, m); } catch(e){}
+    paintButtons();
+    recalcReports();
+  }
+  function paintButtons(){
+    var mode = getMode();
+    var pairFinders = [
+      '#calcPairsBtn','#btn-pairs','[data-calc="pairs"]'
+    ];
+    var firstFinders = [
+      '#calcFirstLastBtn','#btn-first-last','[data-calc="firstlast"]'
+    ];
+    // נזהה גם לפי טקסט הכפתור (עברית/אנגלית)
+    var all = Array.from(document.querySelectorAll('button,.chip,[role="button"]'));
+    var btnFL = document.querySelector(firstFinders.join(',')) || all.find(el=>/כניסה|ראשונה|יציאה\s*האחרונה|first/i.test(el.textContent||''));
+    var btnPR = document.querySelector(pairFinders.join(','))   || all.find(el=>/זוגות|כניסות|יציאות|pairs/i.test(el.textContent||''));
+    if (btnFL) { btnFL.id = btnFL.id || 'calcFirstLastBtn'; btnFL.classList.toggle('active', mode==='FIRST_LAST'); btnFL.setAttribute('aria-pressed', mode==='FIRST_LAST');}
+    if (btnPR) { btnPR.id = btnPR.id || 'calcPairsBtn';      btnPR.classList.toggle('active', mode==='SUM_PAIRS');  btnPR.setAttribute('aria-pressed', mode==='SUM_PAIRS');}
+  }
+  function wireButtons(){
+    var mode = getMode();
+    paintButtons();
+    var fl = document.getElementById('calcFirstLastBtn');
+    var pr = document.getElementById('calcPairsBtn');
+    if (fl && !fl.__rb_wired){ fl.__rb_wired = true; fl.addEventListener('click', function(){ setMode('FIRST_LAST'); }); }
+    if (pr && !pr.__rb_wired){ pr.__rb_wired = true; pr.addEventListener('click', function(){ setMode('SUM_PAIRS');  }); }
+
+    // פולבק: אם אין IDs – מאזינים על הקונטיינר של הכפתורים לפי טקסט
+    document.addEventListener('click', function(ev){
+      var t = ev.target.closest('button,.chip,[role="button"]'); if(!t) return;
+      var txt = (t.textContent||'').replace(/\s+/g,' ');
+      if (/כניסה|ראשונה|יציאה\s*האחרונה|first/i.test(txt)) setMode('FIRST_LAST');
+      if (/זוגות|כניסות|יציאות|pairs/i.test(txt))            setMode('SUM_PAIRS');
+    }, true);
+  }
+
+  // --- מוסיף calc לפרמטרים של קריאת הדוח ל-GAS ---
+  var _fetch = window.fetch;
+  window.fetch = function(u, init){
+    try{
+      var url = (typeof u === 'string') ? new URL(u, location.href) : (u instanceof URL ? u : null);
+      if (url && url.searchParams && url.searchParams.get('report') === 'summary'){
+        url.searchParams.set('calc', getMode()); // FIRST_LAST / SUM_PAIRS
+        arguments[0] = url.toString();
+      }
+    }catch(e){}
+    return _fetch.apply(this, arguments);
+  };
+
+  // --- פולבק לחישוב מקומי אם צריך (כשאין שרת) ---
+  function _hhmm(d){ var p=n=>String(n).padStart(2,'0'); return p(d.getHours())+':'+p(d.getMinutes()); }
+  function _fromLogs(day){
+    try{
+      var arr = (day && (day.logs||day.raw||day.events||[])) || [];
+      var evs = [];
+      for (var i=0;i<arr.length;i++){
+        var a = String(arr[i].action||arr[i].type||'').toLowerCase();
+        var ts = arr[i].ts||arr[i].timestamp||arr[i].time;
+        if (!ts) continue;
+        var t = (ts instanceof Date) ? ts : new Date(ts);
+        if (isNaN(+t) || (a!=='checkin' && a!=='checkout')) continue;
+        evs.push({a:a,t:+t});
+      }
+      evs.sort(function(x,y){return x.t-y.t;});
+      var first=null,last=null,open=null,ms=0;
+      for (var j=0;j<evs.length;j++){
+        var e=evs[j];
+        if (e.a==='checkin'){ if(!first) first=new Date(e.t); if(!open) open=new Date(e.t); }
+        else if (e.a==='checkout'){ last=new Date(e.t); if(open){ ms += (e.t - (+open)); open=null; } }
+      }
+      return {
+        in:  first? _hhmm(first) : '-',
+        out: last?  _hhmm(last)  : '-',
+        spanHours:  (first&&last&&last>first)? (last-first)/36e5 : 0,
+        pairHours:  ms/36e5
+      };
+    }catch(e){ return {in:'-',out:'-',spanHours:0,pairHours:0}; }
+  }
+  var _dayHours   = window.dayHours;
+  var _dayInTime  = window.dayInTime;
+  var _dayOutTime = window.dayOutTime;
+  window.dayHours = function(day){
+    try{
+      var r=_fromLogs(day);
+      var h = (getMode()==='FIRST_LAST') ? r.spanHours : r.pairHours;
+      return Math.round(h*100)/100;
+    }catch(e){ return _dayHours? _dayHours(day) : 0; }
+  };
+  window.dayInTime = function(day){
+    try{ return _fromLogs(day).in; } catch(e){ return _dayInTime? _dayInTime(day) : '-'; }
+  };
+  window.dayOutTime = function(day){
+    try{ return _fromLogs(day).out; } catch(e){ return _dayOutTime? _dayOutTime(day) : '-'; }
+  };
+
+  function recalcReports(){
+    if (typeof window.recalcOnce === 'function'){ try{ window.recalcOnce(); }catch(e){} }
+    if (typeof window.refreshReports === 'function'){ try{ window.refreshReports(); }catch(e){} }
+    if (typeof window.renderDetailedReport === 'function'){ try{ window.renderDetailedReport(); }catch(e){} }
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    wireButtons();
+    paintButtons();
+  });
+  // אם הדף של הדוחות נטען דינמית – נסה לצבוע שוב מעט אחרי
+  setTimeout(paintButtons, 500);
+})();
+</script>
+<style>
+  /* סימון ויזואלי לכפתור הפעיל (אם יש class="chip" או כפתור רגיל) */
+  #calcFirstLastBtn.active, #calcPairsBtn.active, .chip.active {
+    border-color:#1677ff !important;
+    color:#1677ff !important;
+    box-shadow:0 0 0 2px rgba(22,119,255,.2) inset !important;
+  }
+</style>
+<!-- === /RB PATCH === -->
 
 </body>
 </html>
