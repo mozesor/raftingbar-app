@@ -10,6 +10,15 @@ self.addEventListener('install', (e) => {
       .then(c => c.addAll(STATIC_FILES))
       .then(() => self.skipWaiting())
   );
+self.addEventListener('fetch', (e) => {
+  const url = new URL(e.request.url);
+  if (url.hostname.includes('script.google.com')) {
+    e.respondWith(fetch(e.request)); // בלי קאשינג
+    return;
+  }
+  // ... שאר הלוגיקה שלך
+
+
 });
 
 self.addEventListener('activate', (e) => {
