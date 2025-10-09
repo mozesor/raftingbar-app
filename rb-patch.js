@@ -1,118 +1,115 @@
-/** RB PATCH: calc-mode switch + force `calc` for summary + safe refresh **/
+/* Rafting Bar - Patch: wire chips + force mode into exec calls + mode badge */
 (function () {
-  var KEY = 'rb_calc_mode'; // ערכים: 'FIRST_LAST' או 'SUM_PAIRS'
+  var STORE_KEY = 'rb_calc_mode';
 
-  function getMode() {
-    try { var m = localStorage.getItem(KEY); return (m === 'SUM_PAIRS') ? 'SUM_PAIRS' : 'FIRST_LAST'; }
-    catch (e) { return 'FIRST_LAST'; }
-  }
-  function setMode(m) {
-    try { localStorage.setItem(KEY, m); } catch (e) {}
-    paintButtons();
-    refreshReport();
+  // --- מצב חישוב (pairs / span) ---
+  try {
+    window.REPORT_HOURS_MODE = localStorage.getItem(STORE_KEY) || window.REPORT_HOURS_MODE || 'pairs';
+  } catch (e) {
+    window.REPORT_HOURS_MODE = window.REPORT_HOURS_MODE || 'pairs';
   }
 
-  // --- יצירת מתג (שני כפתורים) והדבקה לפני "הצג דוח" ---
-  function ensureSwitcher() {
-    if (document.getElementById('rb-calc-switcher')) return;
+  // --- הוספת mode לכל קריאת fetch שמכוונת ל-Apps Script /exec ---
+  (function patchFetch() {
+    if (window.__rbFetchPatched) return;
+    window.__rbFetchPatched = true;
 
-    const host = document.createElement('div');
-    host.id = 'rb-calc-switcher';
-    host.className = 'rb-calc-switcher';
-    host.innerHTML = `
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0">
-        <span style="opacity:.8">מצב חישוב:</span>
-        <button type="button" class="rbbtn" id="calcFirstLastBtn">מכניסה ראשונה עד יציאה אחרונה</button>
-        <button type="button" class="rbbtn" id="calcPairsBtn">(זוגות) כניסות↔יציאות</button>
-        <span data-rb-mode-indicator style="opacity:.6"></span>
-      </div>
-    `;
+    var origFetch = window.fetch;
+    window.fetch = function (input, init) {
+      try {
+        var req = (typeof input === 'string') ? new Request(input, init) : input;
+        var url = new URL(req.url, location.href);
 
-    // ננסה לשתול ממש לפני הכפתור "הצג דוח"
-    let anchor = [...document.querySelectorAll('button,.btn,[role="button"],[onclick]')]
-      .find(b => /הצג\s*דוח|הצגה|חשב|הצג/i.test((b.textContent || '') + (b.getAttribute('aria-label') || '')));
-    if (anchor && anchor.parentElement) anchor.parentElement.insertBefore(host, anchor);
-    else document.body.insertBefore(host, document.body.firstChild);
-
-    wireButtons();
-    paintButtons();
-  }
-
-  // --- חיבור הכפתורים ---
-  function wireButtons() {
-    const fl = document.getElementById('calcFirstLastBtn');
-    const pr = document.getElementById('calcPairsBtn');
-    if (fl && !fl.__wired) {
-      fl.__wired = true;
-      fl.addEventListener('click', () => setMode('FIRST_LAST'));
-    }
-    if (pr && !pr.__wired) {
-      pr.__wired = true;
-      pr.addEventListener('click', () => setMode('SUM_PAIRS'));
-    }
-  }
-
-  // --- צביעה: כפתור פעיל + טקסט מצב לידם ---
-  function paintButtons() {
-    const m = getMode();
-    const fl = document.getElementById('calcFirstLastBtn');
-    const pr = document.getElementById('calcPairsBtn');
-    const ind = document.querySelector('[data-rb-mode-indicator]');
-    if (fl) { fl.classList.toggle('active', m === 'FIRST_LAST'); fl.setAttribute('aria-pressed', m === 'FIRST_LAST'); }
-    if (pr) { pr.classList.toggle('active', m === 'SUM_PAIRS');  pr.setAttribute('aria-pressed', m === 'SUM_PAIRS'); }
-    if (ind) ind.textContent = (m === 'FIRST_LAST' ? 'מכניסה ראשונה עד יציאה אחרונה' : '(זוגות) כניסות↔יציאות');
-  }
-
-  // --- מוסיף calc=... לכל בקשה שמייצרת דוח (?report=summary) – עובד גם עם fetch וגם XHR ---
-  (function patchNetwork() {
-    const _fetch = window.fetch;
-    if (typeof _fetch === 'function') {
-      window.fetch = function (input, init) {
-        try {
-          const url = (typeof input === 'string')
-            ? new URL(input, location.href)
-            : (input && input.url) ? new URL(input.url, location.href) : null;
-          if (url && url.searchParams.get('report') === 'summary') {
-            url.searchParams.set('calc', getMode()); // FIRST_LAST / SUM_PAIRS
-            if (typeof input === 'string') input = url.toString();
-            else if (input && input.url) input = new Request(url.toString(), input);
+        // מוסיפים mode רק לקריאות ל-Google Script (script.google.com / script.googleusercontent.com)
+        var isExec = /script\.google(?:usercontent)?\.com$/i.test(url.hostname);
+        if (isExec) {
+          // אם אין mode, נוסיף אותו (pairs/span)
+          if (!url.searchParams.get('mode')) {
+            url.searchParams.set('mode', window.REPORT_HOURS_MODE || 'pairs');
           }
-        } catch (e) {}
-        return _fetch.apply(this, arguments);
-      };
-    }
-    const _open = XMLHttpRequest && XMLHttpRequest.prototype && XMLHttpRequest.prototype.open;
-    if (_open) {
-      XMLHttpRequest.prototype.open = function (method, url) {
-        try {
-          const u = new URL(url, location.href);
-          if (u.searchParams.get('report') === 'summary') {
-            u.searchParams.set('calc', getMode());
-            arguments[1] = u.toString();
-          }
-        } catch (e) {}
-        return _open.apply(this, arguments);
-      };
-    }
+          // בונים בקשה חדשה עם ה-URL המעודכן
+          req = new Request(url.toString(), req);
+        }
+        return origFetch.call(this, req);
+      } catch (err) {
+        return origFetch.call(this, input, init);
+      }
+    };
   })();
 
-  // --- רענון הדוח אחרי החלפת מצב (ללא תלות בשם הפונקציה שלך) ---
-  function refreshReport() {
-    const runBtn =
-      document.getElementById('btn-run') ||
-      document.getElementById('run') ||
-      [...document.querySelectorAll('button')].find(b => /הצג\s*דוח|הצגה|חשב/i.test(b.textContent || ''));
-    if (runBtn) { try { runBtn.click(); return; } catch (e) {} }
-
-    const fns = [window.runReport, window.updateReports, window.updateReportsPage, window.refreshReports, window.renderDetailedReport];
-    for (let i = 0; i < fns.length; i++) if (typeof fns[i] === 'function') { try { fns[i](); return; } catch (e) {} }
+  // --- תווית מצב ליד הצ’יפים + צביעה ---
+  function ensureModeBadge() {
+    var scope = document.getElementById('detailedReportsContent') || document;
+    // מחפש את ה-wrapper של הכפתורים/פילטרים
+    var chipsRow = scope.querySelector('.chips, .toolbar, .filters, .flex, .row') || scope.querySelector('[data-chips]') || scope;
+    var badge = document.getElementById('rbModeBadge');
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.id = 'rbModeBadge';
+      badge.style.cssText = 'margin-inline-start:8px;padding:4px 8px;border-radius:999px;border:1px solid #d0d5dd;background:#f6f7fb;font-size:12px;color:#333;';
+      chipsRow.appendChild(badge);
+    }
+    badge.textContent =
+      (window.REPORT_HOURS_MODE === 'pairs')
+        ? 'מצב: כניסות↔יציאות (זוגות)'
+        : 'מצב: כניסה ראשונה → יציאה אחרונה';
   }
 
-  // --- אתחול ---
-  document.addEventListener('DOMContentLoaded', () => {
-    ensureSwitcher();
-    // אם עוברים ללשונית "דוחות" בדפדוף – נוודא שהסוויצ'ר נוצר
-    document.querySelector('#navReports,[data-page="reports"]')
-      ?.addEventListener('click', () => setTimeout(ensureSwitcher, 50));
-  });
+  function findChipByText(txt) {
+    var scope = document.getElementById('detailedReportsContent') || document;
+    var els = scope.querySelectorAll('button, .chip, .toggle, .btn');
+    for (var i = 0; i < els.length; i++) {
+      var t = (els[i].textContent || '').replace(/\s+/g, ' ').trim();
+      if (t.indexOf(txt) !== -1) return els[i];
+    }
+    return null;
+  }
+
+  function paintChips() {
+    var chipPairs = findChipByText('כניסות↔יציאות'); // "(זוגות) כניסות↔יציאות"
+    var chipSpan  = findChipByText('כניסה ראשונה');  // "כניסה ראשונה עד יציאה אחרונה"
+    if (chipPairs) chipPairs.classList.toggle('active', window.REPORT_HOURS_MODE === 'pairs');
+    if (chipSpan)  chipSpan.classList.toggle('active',  window.REPORT_HOURS_MODE === 'span');
+    ensureModeBadge();
+  }
+
+  function triggerRun() {
+    // לוחץ על "הצג דוח" הקיים שלך כדי לטעון שוב את הטבלה
+    var scope = document.getElementById('detailedReportsContent') || document;
+    var runBtn = Array.from(scope.querySelectorAll('button, .btn'))
+      .find(function (b) { return /הצג דוח/.test(b.textContent || ''); });
+    if (runBtn) runBtn.click();
+  }
+
+  function setMode(mode) {
+    window.REPORT_HOURS_MODE = mode;               // ← כאן המנוע שלך משתמש (pairs/span)
+    try { localStorage.setItem(STORE_KEY, mode); } catch (e) {}
+    paintChips();
+    // מרענן את המסכים/טבלאות (פונקציות קיימות אצלך—נרוץ אם קיימות)
+    try { if (typeof updateDetailedReports === 'function') updateDetailedReports(); } catch (e) {}
+    try { if (typeof renderSelf === 'function') renderSelf(); } catch (e) {}
+    try { if (typeof updateAll === 'function') updateAll(); } catch (e) {}
+    // למקרה שהרענון הוא דרך כפתור
+    triggerRun();
+  }
+
+  // --- חיבור לצ’יפים ---
+  var chipPairs = findChipByText('כניסות↔יציאות');
+  var chipSpan  = findChipByText('כניסה ראשונה');
+  if (chipPairs) chipPairs.addEventListener('click', function () { setMode('pairs'); }, { passive: true });
+  if (chipSpan)  chipSpan.addEventListener('click',  function () { setMode('span');  }, { passive: true });
+
+  // --- השאר טבלה אחת בלבד (אם נשאר ווידג׳ט נוסף) ---
+  var rbw = document.getElementById('rbReportWidget'); if (rbw) rbw.style.display = 'none';
+  var rbt = document.getElementById('rbTable');        if (rbt && rbt.closest('div')) rbt.closest('div').style.display = 'none';
+
+  // צביעה ותווית מצב בהפעלה
+  paintChips();
+
+  // אם זה SPA – לצבוע מחדש כשנכנסים לעמוד הדוחות
+  var _showPage = window.showPage;
+  window.showPage = function (p) {
+    if (_showPage) _showPage(p);
+    if (p === 'detailedReports') setTimeout(paintChips, 60);
+  };
 })();
