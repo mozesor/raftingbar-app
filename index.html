@@ -4218,170 +4218,102 @@ function dayOutTime(day) {
 </script>
 
 
-<!-- RB: wire chips to report mode, add mode badge, and keep only one table -->
-<script>
-(function () {
-  var STORE_KEY = 'rb_calc_mode';
-
-  // keep only original table (hide any RB widget/table if present)
-  var rbw = document.getElementById('rbReportWidget'); if (rbw) rbw.style.display = 'none';
-  var rbt = document.getElementById('rbTable'); if (rbt && rbt.closest('div')) rbt.closest('div').style.display = 'none';
-
-  // global mode
-  try {
-    window.REPORT_HOURS_MODE = localStorage.getItem(STORE_KEY) || window.REPORT_HOURS_MODE || 'pairs';
-  } catch(e) {
-    window.REPORT_HOURS_MODE = window.REPORT_HOURS_MODE || 'pairs';
-  }
-
-  // create small label next to chips
-  function ensureModeBadge(){
-    var scope = document.getElementById('detailedReportsContent') || document;
-    var chipsRow = scope.querySelector('.chips, .toolbar, .filters, .flex, .row') || scope;
-    if (!chipsRow) return;
-    var badge = document.getElementById('rbModeBadge');
-    if (!badge) {
-      badge = document.createElement('span');
-      badge.id = 'rbModeBadge';
-      badge.style.cssText = 'margin-inline-start:8px;padding:4px 8px;border-radius:999px;border:1px solid #d0d5dd;background:#f6f7fb;font-size:12px;color:#333;';
-      chipsRow.appendChild(badge);
-    }
-    badge.textContent = (window.REPORT_HOURS_MODE === 'pairs') ? 'מצב: כניסות↔יציאות (זוגות)' : 'מצב: כניסה ראשונה → יציאה אחרונה';
-  }
-
-  function findChipByText(txt) {
-    var scope = document.getElementById('detailedReportsContent') || document;
-    var els = scope.querySelectorAll('button, .chip, .toggle, .btn');
-    for (var i = 0; i < els.length; i++) {
-      var t = (els[i].textContent || '').replace(/\s+/g, ' ').trim();
-      if (t.indexOf(txt) !== -1) return els[i];
-    }
-    return null;
-  }
-
-  function paintChips() {
-    var chipPairs = findChipByText('כניסות↔יציאות');
-    var chipSpan  = findChipByText('כניסה ראשונה');
-    if (chipPairs) chipPairs.classList.toggle('active', window.REPORT_HOURS_MODE === 'pairs');
-    if (chipSpan)  chipSpan.classList.toggle('active',  window.REPORT_HOURS_MODE === 'span');
-    ensureModeBadge();
-  }
-
-  function setMode(mode) {
-    window.REPORT_HOURS_MODE = mode;
-    try { localStorage.setItem(STORE_KEY, mode); } catch(e){}
-    paintChips();
-    // refresh existing screens/tables (use your functions if they exist)
-    try { if (typeof updateDetailedReports === 'function') updateDetailedReports(); } catch(e){}
-    try { if (typeof renderSelf === 'function') renderSelf(); } catch(e){}
-    try { if (typeof updateAll === 'function') updateAll(); } catch(e){}
-  }
-
-  var chipPairs = findChipByText('כניסות↔יציאות');
-  var chipSpan  = findChipByText('כניסה ראשונה');
-  if (chipPairs) chipPairs.addEventListener('click', function(){ setMode('pairs'); }, {passive:true});
-  if (chipSpan)  chipSpan.addEventListener('click',  function(){ setMode('span');  }, {passive:true});
-
-  paintChips();
-
-  var _showPage = window.showPage;
-  window.showPage = function(p){
-    if (_showPage) _showPage(p);
-    if (p === 'detailedReports') setTimeout(paintChips, 60);
-  };
-})();
-</script>
-
-<!-- RB MODE PATCH: chips control + mode param to Apps Script + badge -->
+<!-- RB FINAL PATCH: one-table + chips-control + mode param + cache-bust -->
 <script>
 (function(){
-  var STORE_KEY = 'rb_calc_mode';               // 'pairs' | 'span'
-  var MODE_MAP = { pairs: 'SUM_PAIRS', span: 'FIRST_LAST' };
+  const LS_KEY = 'rb_calc_mode';                 // 'pairs' | 'span'
+  const MODE_MAP = { pairs: 'SUM_PAIRS', span: 'FIRST_LAST' };
 
-  // 1) ensure we have a mode in localStorage
-  try { if (!localStorage.getItem(STORE_KEY)) localStorage.setItem(STORE_KEY,'pairs'); } catch(e){}
+  // default
+  try { if (!localStorage.getItem(LS_KEY)) localStorage.setItem(LS_KEY, 'pairs'); } catch(e){}
 
-  // 2) wrap fetch so every request to Apps Script gets &mode=...
-  if (!window.__rbFetchPatched) {
-    window.__rbFetchPatched = true;
-    var _fetch = window.fetch;
+  // 1) Always add &mode=... and cache-bust for Apps Script
+  if (!window.__rbFetchPatched3) {
+    window.__rbFetchPatched3 = true;
+    const _fetch = window.fetch;
     window.fetch = function(input, init){
       try{
-        var req = (typeof input === 'string') ? new Request(input, init) : input;
-        var url = new URL(req.url, location.href);
-        // add mode only for Google Script endpoints
+        const req = (typeof input === 'string') ? new Request(input, init) : input;
+        const url = new URL(req.url, location.href);
         if (/script\.google(?:usercontent)?\.com$/i.test(url.hostname) && url.pathname.includes('/macros/')) {
-          var m = 'pairs';
-          try { m = localStorage.getItem(STORE_KEY) || 'pairs'; } catch(e){}
+          const m = (localStorage.getItem(LS_KEY) || 'pairs');
           url.searchParams.set('mode', MODE_MAP[m] || 'SUM_PAIRS');
-          req = new Request(url.toString(), req);
-          return _fetch.call(this, req);
+          url.searchParams.set('_ts', String(Date.now())); // cache-bust
+          const init2 = Object.assign({ cache: 'no-store' }, init || {});
+          const req2  = new Request(url.toString(), init2);
+          return _fetch.call(this, req2);
         }
-      } catch(e) {}
+      }catch(e){}
       return _fetch.call(this, input, init);
     };
   }
 
-  // 3) small badge next to chips + paint active state if the chips have classes
+  // 2) Paint chips + small badge
   function ensureBadge(){
-    var scope = document.getElementById('detailedReportsContent') || document;
-    var container = scope.querySelector('.chips, .toolbar, .filters, .flex, .row') || scope;
-    var badge = document.getElementById('rbModeBadge');
+    const scope = document.getElementById('detailedReportsContent') || document;
+    const host  = scope.querySelector('.chips, .toolbar, .filters, .flex, .row') || scope;
+    let badge   = document.getElementById('rbModeBadge');
     if (!badge) {
       badge = document.createElement('span');
       badge.id = 'rbModeBadge';
       badge.style.cssText = 'margin-inline-start:8px;padding:4px 8px;border-radius:999px;border:1px solid #d0d5dd;background:#f6f7fb;font-size:12px;color:#333;';
-      container.appendChild(badge);
+      host.appendChild(badge);
     }
-    var m = 'pairs'; try { m = localStorage.getItem(STORE_KEY) || 'pairs'; } catch(e){}
+    const m = localStorage.getItem(LS_KEY) || 'pairs';
     badge.textContent = (m==='pairs') ? 'מצב חישוב: כניסות↔יציאות (זוגות)' : 'מצב חישוב: כניסה ראשונה → יציאה אחרונה';
   }
   function paintChips(){
-    var scope = document.getElementById('detailedReportsContent') || document;
-    var chipPairs = Array.from(scope.querySelectorAll('button, .chip, .toggle, .btn'))
-      .find(function(el){ return /כניסות.?↔.?יציאות|זוגות/.test((el.textContent||'').trim()); });
-    var chipSpan = Array.from(scope.querySelectorAll('button, .chip, .toggle, .btn'))
-      .find(function(el){ return /כניסה ראשונה/.test((el.textContent||'').trim()); });
-    var m = 'pairs'; try { m = localStorage.getItem(STORE_KEY) || 'pairs'; } catch(e){}
+    const scope = document.getElementById('detailedReportsContent') || document;
+    const chipPairs = Array.from(scope.querySelectorAll('button, .chip, .toggle, .btn'))
+      .find(el => /כניסות.?↔.?יציאות|זוגות/.test((el.textContent||'').trim()));
+    const chipSpan = Array.from(scope.querySelectorAll('button, .chip, .toggle, .btn'))
+      .find(el => /כניסה ראשונה/.test((el.textContent||'').trim()));
+    const m = localStorage.getItem(LS_KEY) || 'pairs';
     if (chipPairs) chipPairs.classList.toggle('active', m==='pairs');
     if (chipSpan)  chipSpan.classList.toggle('active',  m==='span');
     ensureBadge();
   }
 
-  // 4) switch handlers: set mode, refresh existing UI
-  function setMode(newMode){
-    try { localStorage.setItem(STORE_KEY, newMode); } catch(e){}
-    paintChips();
-    // try your app's refreshers
+  document.addEventListener('click', (ev) => {
+    const el = ev.target.closest('button, .chip, .toggle, .btn'); if (!el) return;
+    const txt = (el.textContent||'').trim();
+    if (/כניסות.?↔.?יציאות|זוגות/.test(txt)) {
+      localStorage.setItem(LS_KEY, 'pairs'); paintChips(); refreshReports();
+    } else if (/כניסה ראשונה/.test(txt)) {
+      localStorage.setItem(LS_KEY, 'span');  paintChips(); refreshReports();
+    }
+  }, true);
+
+  function refreshReports(){
     try { if (typeof updateDetailedReports === 'function') updateDetailedReports(); } catch(e){}
     try { if (typeof renderSelf === 'function') renderSelf(); } catch(e){}
     try { if (typeof updateAll === 'function') updateAll(); } catch(e){}
-    // or click the "הצג דוח" button if exists
-    var scope = document.getElementById('detailedReportsContent') || document;
-    var runBtn = Array.from(scope.querySelectorAll('button, .btn'))
-      .find(function(b){ return /הצג דוח/.test((b.textContent||'')); });
+    const scope = document.getElementById('detailedReportsContent') || document;
+    const runBtn = Array.from(scope.querySelectorAll('button, .btn')).find(b => /הצג דוח/.test(b.textContent||''));
     if (runBtn) runBtn.click();
   }
 
-  // wire clicks (by text), no need to change HTML
-  document.addEventListener('click', function(ev){
-    var el = ev.target.closest('button, .chip, .toggle, .btn'); if (!el) return;
-    var txt = (el.textContent || '').trim();
-    if (/כניסות.?↔.?יציאות|זוגות/.test(txt)) setMode('pairs');
-    else if (/כניסה ראשונה/.test(txt))        setMode('span');
-  }, true);
+  // 3) Keep only one report table (hide duplicates)
+  function keepOnlyOneReportTable(){
+    const scope = document.getElementById('detailedReportsContent') || document;
+    const tables = Array.from(scope.querySelectorAll('table'));
+    const reportTables = tables.filter(t => {
+      const txt = (t.tHead && t.tHead.textContent || t.textContent || '').replace(/\s+/g,' ');
+      return /תאריך/.test(txt) && /כניסה/.test(txt) && /יציאה/.test(txt) && /שעות/.test(txt);
+    });
+    if (reportTables.length > 1){
+      for (let i=1;i<reportTables.length;i++) reportTables[i].style.display='none';
+    }
+  }
 
-  // run on load + when SPA moves to detailedReports
-  document.addEventListener('DOMContentLoaded', paintChips);
-  var _showPage = window.showPage;
-  window.showPage = function(p){ if (_showPage) _showPage(p); if (p==='detailedReports') setTimeout(paintChips, 60); };
+  document.addEventListener('DOMContentLoaded', () => { paintChips(); keepOnlyOneReportTable(); });
+  const _showPage = window.showPage;
+  window.showPage = function(p){ if (_showPage) _showPage(p); if (p==='detailedReports') setTimeout(()=>{ paintChips(); keepOnlyOneReportTable(); }, 60); };
 
-  // keep only one table if any extra widget exists
-  var w = document.getElementById('rbReportWidget'); if (w) w.style.display='none';
-  var t = document.getElementById('rbTable'); if (t && t.closest('div')) t.closest('div').style.display='none';
+  const mo = new MutationObserver(()=>keepOnlyOneReportTable());
+  mo.observe(document.body, { childList:true, subtree:true });
 })();
 </script>
-<!-- /RB MODE PATCH -->
 
 </body>
 </html>
