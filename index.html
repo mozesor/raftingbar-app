@@ -822,6 +822,45 @@
 </div>
 <!-- תוכן הדוחות המפורטים -->
 <div id="detailedReportsContent" style="display: block;">
+
+<!-- RB: דו"ח מה־Apps Script עם מצבי חישוב -->
+<div id="rbReportWidget" class="card" style="margin-top:12px;">
+  <h2>דו״ח Apps Script</h2>
+  <div class="toolbar" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0">
+    <button id="rbBtnFirstLast" class="rbbtn">כניסה ראשונה ↔ יציאה אחרונה</button>
+    <button id="rbBtnPairs" class="rbbtn">כניסות↔יציאות (זוגות)</button>
+    <input id="rbName" class="rbinput" placeholder="שם עובד (רשות)" />
+    <input id="rbFrom" class="rbinput" type="date" />
+    <input id="rbTo" class="rbinput" type="date" />
+    <button id="rbRun" class="rbbtn">הצג דוח</button>
+    <span id="rbStatus" style="color:#667; font-size:12px;"></span>
+  </div>
+
+  <div class="table-wrap" style="overflow:auto;border:1px solid #eee;border-radius:10px">
+    <table id="rbTable" class="data-table" style="min-width:700px">
+      <thead>
+        <tr>
+          <th>תאריך</th>
+          <th>כניסה</th>
+          <th>יציאה</th>
+          <th>שעות</th>
+          <th>אירועים</th>
+          <th>שם</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+      <tfoot>
+        <tr>
+          <td colspan="3">סה״כ שעות</td>
+          <td id="rbTotal">0</td>
+          <td colspan="2"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
 <h2 style="margin: 0;">📊 דוחות מפורטים</h2>
 <button class="btn" onclick="lockDetailedReports()" style="background: #f44336; color: white; padding: 8px 12px; font-size: 14px;">
@@ -4219,103 +4258,97 @@ function dayOutTime(day) {
 
 
 <script>
-/** RB HARD PATCH: calc switcher + force calc param + safe refresh **/
+
+// ===== RB Reports Mode Widget (injected) =====
 (function(){
-  var KEY = 'rb_calc_mode'; // 'FIRST_LAST' or 'SUM_PAIRS'
-  function getMode(){ try{ var m = localStorage.getItem(KEY); return (m==='SUM_PAIRS')?'SUM_PAIRS':'FIRST_LAST'; }catch(e){ return 'FIRST_LAST'; } }
-  function setMode(m){ try{ localStorage.setItem(KEY,m);}catch(e){} paint(); refresh(); }
+  try{
+    const SCRIPT_URL = (typeof EMBEDDED_SETTINGS !== 'undefined' && EMBEDDED_SETTINGS.scriptUrl) ? EMBEDDED_SETTINGS.scriptUrl : '';
+    const STORE_KEY = 'rb_calc_mode';
+    let mode = localStorage.getItem(STORE_KEY) || 'FIRST_LAST';
 
-  function ensureSwitcher(){
-    if (document.getElementById('rb-calc-switcher')) return;
-    var host = document.createElement('div');
-    host.id = 'rb-calc-switcher';
-    host.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0';
-    host.innerHTML = '<span style="opacity:.8">מצב חישוב:</span>\
-      <button type="button" class="rbbtn" id="calcFirstLastBtn">מכניסה ראשונה עד יציאה אחרונה</button>\
-      <button type="button" class="rbbtn" id="calcPairsBtn">(זוגות) כניסות↔יציאות</button>\
-      <span data-rb-mode-indicator style="opacity:.6"></span>';
-    // Try to insert before a "הצג דוח" button if exists
-    var anchor = Array.from(document.querySelectorAll('button,.btn,[role="button"],[onclick]'))
-      .find(b => /הצג\s*דוח|הצגה|חשב/i.test((b.textContent||'')+(b.getAttribute('aria-label')||'')));
-    if (anchor && anchor.parentElement) anchor.parentElement.insertBefore(host, anchor);
-    else document.body.insertBefore(host, document.body.firstChild);
-    wire(); paint();
-  }
+    const $ = id => document.getElementById(id);
+    const btnFirst = $('rbBtnFirstLast'), btnPairs = $('rbBtnPairs'), btnRun = $('rbRun');
+    const nameInp = $('rbName'), fromInp = $('rbFrom'), toInp = $('rbTo');
+    const statusEl = $('rbStatus'), tbody = (function(){ const t=$('rbTable'); return t?t.querySelector('tbody'):null; })();
+    const totalEl = $('rbTotal');
 
-  function wire(){
-    var fl = document.getElementById('calcFirstLastBtn');
-    var pr = document.getElementById('calcPairsBtn');
-    if (fl && !fl.__wired){ fl.__wired=true; fl.addEventListener('click', ()=>setMode('FIRST_LAST')); }
-    if (pr && !pr.__wired){ pr.__wired=true; pr.addEventListener('click', ()=>setMode('SUM_PAIRS')); }
-    // Fallback on text
-    document.addEventListener('click', function(ev){
-      var t = ev.target && ev.target.closest('button,.chip,[role="button"]'); if(!t) return;
-      var txt = (t.textContent||'').replace(/\s+/g,' ');
-      if (/כניסה|ראשונה|יציאה\s*האחרונה|first/i.test(txt)) setMode('FIRST_LAST');
-      if (/זוגות|כניסות|יציאות|pairs/i.test(txt)) setMode('SUM_PAIRS');
-    }, true);
-  }
+    if(!btnFirst || !btnPairs || !btnRun || !tbody){ return; }
 
-  function paint(){
-    var m = getMode();
-    var fl = document.getElementById('calcFirstLastBtn');
-    var pr = document.getElementById('calcPairsBtn');
-    var ind = document.querySelector('[data-rb-mode-indicator]');
-    if (fl){ fl.classList.toggle('active', m==='FIRST_LAST'); fl.setAttribute('aria-pressed', m==='FIRST_LAST'); }
-    if (pr){ pr.classList.toggle('active', m==='SUM_PAIRS');  pr.setAttribute('aria-pressed', m==='SUM_PAIRS'); }
-    if (ind) ind.textContent = (m==='FIRST_LAST' ? 'מכניסה ראשונה עד יציאה אחרונה' : '(זוגות) כניסות↔יציאות');
-  }
-
-  // Patch network: add calc param to summary report calls (fetch + XHR)
-  (function(){
-    var _fetch = window.fetch;
-    if (typeof _fetch === 'function'){
-      window.fetch = function(input, init){
-        try{
-          var url = (typeof input==='string') ? new URL(input, location.href)
-                  : (input && input.url)     ? new URL(input.url, location.href)
-                  : null;
-          if (url && url.searchParams.get('report')==='summary'){
-            var mode = getMode();
-            if (mode==='FIRST_LAST' || mode==='SUM_PAIRS') url.searchParams.set('calc', mode);
-            if (typeof input==='string') input = url.toString();
-            else if (input && input.url) input = new Request(url.toString(), input);
-          }
-        }catch(e){}
-        return _fetch.apply(this, arguments);
-      };
+    function paint(){
+      btnFirst.classList.toggle('active', mode==='FIRST_LAST');
+      btnPairs.classList.toggle('active', mode==='SUM_PAIRS');
     }
-    var _open = XMLHttpRequest && XMLHttpRequest.prototype && XMLHttpRequest.prototype.open;
-    if (_open){
-      XMLHttpRequest.prototype.open = function(method, url){
-        try{
-          var u = new URL(url, location.href);
-          if (u.searchParams.get('report')==='summary'){
-            var mode = getMode();
-            if (mode==='FIRST_LAST' || mode==='SUM_PAIRS') u.searchParams.set('calc', mode);
-            arguments[1] = u.toString();
-          }
-        }catch(e){}
-        return _open.apply(this, arguments);
-      };
+
+    (function setDefaultDates(){
+      const now = new Date(), y = now.getFullYear(), m = now.getMonth();
+      const first = new Date(y, m, 1).toISOString().slice(0,10);
+      const last  = new Date(y, m+1, 0).toISOString().slice(0,10);
+      if(!fromInp.value) fromInp.value = first;
+      if(!toInp.value)   toInp.value   = last;
+    })();
+
+    btnFirst.addEventListener('click', () => { mode = 'FIRST_LAST'; localStorage.setItem(STORE_KEY, mode); paint(); run(); });
+    btnPairs.addEventListener('click', () => { mode = 'SUM_PAIRS';   localStorage.setItem(STORE_KEY, mode); paint(); run(); });
+    btnRun.addEventListener('click', run);
+
+    const origShowPage = window.showPage;
+    window.showPage = function(p){
+      if(origShowPage) origShowPage(p);
+      if(p==='detailedReports'){ paint(); setTimeout(run, 100); }
+    };
+
+    async function run(){
+      try{
+        statusEl.textContent = 'טוען…';
+        const qs = new URLSearchParams({ report:'summary', mode });
+        if(fromInp.value) qs.set('from', fromInp.value);
+        if(toInp.value)   qs.set('to', toInp.value);
+        const nm = (nameInp.value||'').trim(); if(nm) qs.set('name', nm);
+
+        const url = SCRIPT_URL + '?' + qs.toString();
+        const res = await fetch(url, { method:'GET' });
+        const data = await res.json();
+
+        if(!data.ok) throw new Error(data.error || 'שגיאה בדו״ח');
+        render(data.rows||[], data.totalHours||0);
+        statusEl.textContent = 'מצב: ' + (mode==='SUM_PAIRS'?'זוגות':'כניסה→יציאה אחרונה') + ' · ' + (data.rows?data.rows.length:0) + ' ימים';
+      }catch(err){
+        statusEl.textContent = 'שגיאה: ' + String(err);
+        render([], 0);
+      }
     }
-  })();
 
-  function refresh(){
-    var runBtn = document.getElementById('btn-run') ||
-                 document.getElementById('run') ||
-                 Array.from(document.querySelectorAll('button')).find(b => /הצג\s*דוח|הצגה|חשב/i.test(b.textContent||''));
-    if (runBtn){ try{ runBtn.click(); return; }catch(e){} }
-    var fns = [window.runReport, window.updateReports, window.updateReportsPage, window.refreshReports, window.renderDetailedReport];
-    for (var i=0;i<fns.length;i++) if (typeof fns[i]==='function'){ try{ fns[i](); return; }catch(e){} }
-  }
+    function render(rows, total){
+      tbody.innerHTML = '';
+      totalEl.textContent = (Number(total)||0).toFixed(2);
+      if(!rows || !rows.length){
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 6; td.textContent = 'אין נתונים בטווח הנבחר'; td.style.color='#777';
+        tr.appendChild(td); tbody.appendChild(tr);
+        return;
+      }
+      rows.forEach(r=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td>'+esc(r.date||'')+'</td>'+
+                       '<td>'+esc(r.in||'')+'</td>'+
+                       '<td>'+esc(r.out||'')+'</td>'+
+                       '<td>'+Number(r.hours||0).toFixed(2)+'</td>'+
+                       '<td>'+esc(String(r.events||0))+'</td>'+
+                       '<td>'+esc(r.name||'')+'</td>';
+        tbody.appendChild(tr);
+      });
+    }
+    function esc(s){ return String(s).replace(/[&<>"'`]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'}[c])); }
 
-  document.addEventListener('DOMContentLoaded', function(){
-    ensureSwitcher();
-    var nav = document.querySelector('#navReports,[data-page=\"reports\"]');
-    if (nav) nav.addEventListener('click', ()=>setTimeout(ensureSwitcher,50));
-  });
+    // אם העמוד כבר פתוח על מפורט – להריץ
+    const pageNowEl = document.querySelector('[data-page].active, .page.active');
+    if(pageNowEl && (pageNowEl.id==='detailedReportsPage' || pageNowEl.id==='detailedReportsContent')){
+      paint(); setTimeout(run, 100);
+    }
+  }catch(e){ /* ignore */ }
 })();
+
 </script>
 </body>
 </html>
