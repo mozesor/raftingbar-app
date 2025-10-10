@@ -4216,6 +4216,116 @@ function dayOutTime(day) {
 // --- END robust calc block ---
 
 </script>
+<script>
+/* RB ULTRA PATCH: הזרקת mode גם ל-fetch וגם ל-XMLHttpRequest + רענון דוח */
+(function () {
+  const LS_KEY   = 'rb_calc_mode';                 // 'pairs' | 'span'
+  const MODE_MAP = { pairs: 'SUM_PAIRS', span: 'FIRST_LAST' };
+
+  // ברירת מחדל
+  try { if (!localStorage.getItem(LS_KEY)) localStorage.setItem(LS_KEY, 'pairs'); } catch(e){}
+
+  function addParamsToUrl(u) {
+    try {
+      const url = new URL(u, location.href);
+      // Apps Script בלבד
+      if ((/script\.google(?:usercontent)?\.com$/i).test(url.hostname) && url.pathname.includes('/macros/')) {
+        const m = (localStorage.getItem(LS_KEY) || 'pairs');
+        if (!url.searchParams.has('mode')) url.searchParams.set('mode', MODE_MAP[m] || 'SUM_PAIRS');
+        url.searchParams.set('_ts', Date.now().toString());            // cache-bust
+        console.log('🔎 RB inject ->', url.toString());
+        return url.toString();
+      }
+    } catch (e) {}
+    return u;
+  }
+
+  /* === 1) fetch wrapper === */
+  if (!window.__rbFetchPatchedXHR) {
+    window.__rbFetchPatchedXHR = true;
+    const _fetch = window.fetch;
+    window.fetch = function(input, init) {
+      try {
+        const req = (typeof input === 'string') ? new Request(addParamsToUrl(input), init)
+                                                : new Request(addParamsToUrl(input.url), input);
+        // enforce no-store
+        const init2 = Object.assign({ cache: 'no-store' }, init || {});
+        return _fetch.call(this, req, init2);
+      } catch(e) {
+        return _fetch.call(this, input, init);
+      }
+    };
+  }
+
+  /* === 2) XMLHttpRequest wrapper === */
+  (function patchXHR(){
+    if (XMLHttpRequest.prototype.__rbOpenPatched) return;
+    const _open = XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
+      try { url = addParamsToUrl(url); } catch(e){}
+      return _open.apply(this, arguments.length === 2 ? [method, url] : [method, url, async, user, password]);
+    };
+    XMLHttpRequest.prototype.__rbOpenPatched = true;
+  })();
+
+  /* === 3) החלפת מצב מהצ'יפים + הרצת הדוח === */
+  function clickRun() {
+    const scope = document.getElementById('detailedReportsContent') || document;
+    // כפתור "הצג דוח"
+    const runBtn = Array.from(scope.querySelectorAll('button, .btn'))
+      .find(b => /הצג\s*דוח|הצג\s*דו"?ח/i.test((b.textContent || '')));
+    if (runBtn) { runBtn.click(); return; }
+    // פולבקים
+    try { if (typeof updateDetailedReports === 'function') { updateDetailedReports(); return; } } catch(e){}
+    try { if (typeof updateReports          === 'function') { updateReports();          return; } } catch(e){}
+  }
+
+  function setMode(newMode){
+    try { localStorage.setItem(LS_KEY, newMode); } catch(e){}
+    paintActive();
+    setTimeout(clickRun, 10);
+  }
+
+  document.addEventListener('click', function(ev){
+    const el = ev.target.closest('button, .chip, .toggle, .btn');
+    if (!el) return;
+    const txt = (el.textContent || '').trim();
+    if (/כניסות.?↔.?יציאות|זוגות/.test(txt))      setMode('pairs');
+    else if (/כניסה\s*ראשונה/.test(txt))          setMode('span');
+  }, true);
+
+  /* === 4) צביעת הכפתור הפעיל + תווית מצב === */
+  function paintActive(){
+    const scope = document.getElementById('detailedReportsContent') || document;
+    const chipPairs = Array.from(scope.querySelectorAll('button, .chip, .toggle, .btn'))
+      .find(el => /כניסות.?↔.?יציאות|זוגות/.test((el.textContent||'').trim()));
+    const chipSpan  = Array.from(scope.querySelectorAll('button, .chip, .toggle, .btn'))
+      .find(el => /כניסה\s*ראשונה/.test((el.textContent||'').trim()));
+    const m = localStorage.getItem(LS_KEY) || 'pairs';
+    if (chipPairs) chipPairs.classList.toggle('active', m === 'pairs');
+    if (chipSpan)  chipSpan.classList.toggle('active',  m === 'span');
+
+    let badge = document.getElementById('rbModeBadge');
+    if (!badge) {
+      const host = scope.querySelector('.chips, .toolbar, .filters, .flex, .row') || scope;
+      badge = document.createElement('span');
+      badge.id = 'rbModeBadge';
+      badge.style.cssText = 'margin-inline-start:8px;padding:4px 8px;border-radius:999px;border:1px solid #d0d5dd;background:#f6f7fb;font-size:12px;color:#333;';
+      if (host) host.appendChild(badge);
+    }
+    if (badge) badge.textContent = (m === 'pairs')
+      ? 'מצב חישוב: כניסות↔יציאות (זוגות)'
+      : 'מצב חישוב: כניסה ראשונה → יציאה אחרונה';
+  }
+
+  document.addEventListener('DOMContentLoaded', paintActive);
+})();
+</script>
+
+<style>
+  /* דגשה קלה לכפתור הפעיל (אם אין לך css כזה) */
+  .chip.active, .btn.active { outline: 2px solid #2563eb; }
+</style>
 
 </body>
 </html>
