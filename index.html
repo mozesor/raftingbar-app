@@ -4315,26 +4315,51 @@ function dayOutTime(day) {
 })();
 </script>
 <script>
-/* RB: force full refresh when switching calc mode */
+/* RB: switch mode + reload + return to Reports page after reload */
 (function () {
-  const LS_KEY = 'rb_calc_mode';       // 'pairs' | 'span'
+  const LS_MODE = 'rb_calc_mode';     // 'pairs' | 'span'
+  const LS_BACK = 'rb_return_to';     // 'reports' flag
 
+  // 1) לחיצה על הצ'יפים: שומרים מצב + דגל חזרה + ריענון
   document.addEventListener('click', function (ev) {
     const el = ev.target.closest('button, .chip, .toggle, .btn');
     if (!el) return;
     const txt = (el.textContent || '').trim();
 
     if (/כניסות.?↔.?יציאות|זוגות/.test(txt)) {
-      try { localStorage.setItem(LS_KEY, 'pairs'); } catch (e) {}
-      location.reload();               // ⬅⬅ ריענון מלא
-    }
-    else if (/כניסה ראשונה/.test(txt)) {
-      try { localStorage.setItem(LS_KEY, 'span'); } catch (e) {}
-      location.reload();               // ⬅⬅ ריענון מלא
+      try { localStorage.setItem(LS_MODE, 'pairs'); } catch (e) {}
+      try { localStorage.setItem(LS_BACK, 'reports'); } catch (e) {}
+      location.reload();
+    } else if (/כניסה ראשונה/.test(txt)) {
+      try { localStorage.setItem(LS_MODE, 'span'); } catch (e) {}
+      try { localStorage.setItem(LS_BACK, 'reports'); } catch (e) {}
+      location.reload();
     }
   }, true);
+
+  // 2) אחרי שהעמוד נטען מחדש – קופצים חזרה לדוחות
+  document.addEventListener('DOMContentLoaded', function () {
+    let back = null;
+    try { back = localStorage.getItem(LS_BACK); } catch (e) {}
+    if (back === 'reports') {
+      try { localStorage.removeItem(LS_BACK); } catch (e) {}
+
+      // אם לאפליקציה יש ניווט פנימי:
+      if (typeof window.showPage === 'function') {
+        // שים לב: אם שם הדף אצלך שונה, שנה ל-string הנכון (למשל 'reports' / 'detailedReports')
+        window.showPage('detailedReports');
+      } else {
+        // פולבק: לוחץ על כפתור/טאב "דוחות"
+        const btn =
+          Array.from(document.querySelectorAll('button, a, .btn, .tab, [role="button"]'))
+            .find(x => /דוחות|דו"חות|Reports/i.test((x.textContent || '').trim()));
+        if (btn) btn.click();
+      }
+    }
+  });
 })();
 </script>
+
 
 </body>
 </html>
