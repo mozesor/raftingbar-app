@@ -1,69 +1,107 @@
-/* Rafting Bar – Front patch
-   - חשיפה של שני כפתורי מצב חישוב
-   - עדכון Settings ב-GAS ואח"כ רענון הדו"ח
-   איך להשתמש:
-   1) שימי <script src="./rb-patch.js"></script> ממש לפני </body>.
-   2) הגדירי את window.RB_GAS_EXEC_URL לכתובת ה-exec שלך (ללא סלאשים בסוף).
-*/
+/* rb-patch.js — Mode toggle + fetch injection (default FIRST_LAST) */
+(function () {
+  var FIRST = 'FIRST_LAST';
+  var PAIRS = 'SUM_PAIRS';
+  var STORAGE_KEY = 'RB_CALC_MODE';
 
-(function() {
-  const GAS = (window.RB_GAS_EXEC_URL || '').replace(/\/+$/,'');
-  if (!GAS) {
-    console.warn('[RB] RB_GAS_EXEC_URL חסר. דלגנו על הזרקת הכפתורים.');
-    return;
+  function setMode(mode) {
+    localStorage.setItem(STORAGE_KEY, mode);
+    paintMode(mode);
+    console.log('[RB] Mode:', mode === FIRST ? 'מכניסה ראשונה עד יציאה אחרונה' : 'כניסות⇄יציאות (זוגות)');
   }
+  function getMode() { return localStorage.getItem(STORAGE_KEY) || FIRST; }
 
-  // יצירת מחסנית כפתורים
-  const bar = document.createElement('div');
-  bar.dir = 'rtl';
-  bar.style.cssText = 'display:flex;gap:8px;justify-content:center;margin:12px 0;flex-wrap:wrap';
-
-  const btnFirstLast = mkBtn('מכניסה ראשונה עד יציאה אחרונה');
-  const btnPairs     = mkBtn('כניסות⇄יציאות (זוגות)');
-
-  bar.appendChild(btnFirstLast);
-  bar.appendChild(btnPairs);
-
-  // השחלה לפני אזור הכותרת/פעולות (אם אין, לפני הדו"ח)
-  const anchor = document.querySelector('.header, .actions, h1, h2, h3, [data-report-anchor]') || document.body;
-  anchor.parentNode.insertBefore(bar, anchor.nextSibling);
-
-  btnFirstLast.addEventListener('click', ()=>applyPolicy('FIRST_LAST'));
-  btnPairs.addEventListener('click',     ()=>applyPolicy('SUM_PAIRS'));
-
-  function mkBtn(label) {
-    const b = document.createElement('button');
-    b.textContent = label;
-    b.className = 'btn';
-    b.style.cssText = 'background:#1976d2;color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:14px;cursor:pointer';
-    return b;
-  }
-
-  async function applyPolicy(policy) {
-    try {
-      btnFirstLast.disabled = btnPairs.disabled = true;
-      // עדכון הסביבה
-      const url = GAS + '?fn=settings&policy=' + encodeURIComponent(policy);
-      const resp = await fetch(url, { method: 'GET', mode:'cors' });
-      const data = await resp.json().catch(()=>({}));
-      console.log('[RB] settings ->', data);
-
-      // רענון דו"ח – לנסות לכפתור "הצג דוח", ואם אין – רענון כללי
-      const showBtn = document.querySelector('button, .btn, .chip, .toggle, span');
-      // חפש משהו שכתוב עליו "הצג דוח"
-      let clicked = false;
-      document.querySelectorAll('button, .btn, .chip, .toggle, span').forEach(el=>{
-        const t = (el.textContent||'').trim();
-        if (/^הצג דוח$/.test(t) && !clicked) {
-          el.click();
-          clicked = true;
-        }
-      });
-      if (!clicked) location.reload();
-    } catch (err) {
-      console.error('[RB] settings error', err);
-    } finally {
-      btnFirstLast.disabled = btnPairs.disabled = false;
+  function findButton(regexes) {
+    var nodes = Array.from(document.querySelectorAll('button, .btn, .chip, span, div'));
+    for (var i=0;i<nodes.length;i++) {
+      var txt = (nodes[i].textContent || '').replace(/\s+/g,'').trim();
+      for (var j=0;j<regexes.length;j++) {
+        if (regexes[j].test(txt)) return nodes[i];
+      }
     }
+    return null;
+  }
+
+  function paintMode(mode) {
+    try {
+      var btnPairs = findButton([/כניס.*יציא.*זוג/]);
+      var btnFirst = findButton([/מכניס.*ראשונ.*עד.*יציא.*אחרונ/]);
+      [btnPairs, btnFirst].forEach(function(b){
+        if (!b) return;
+        b.classList.remove('rb-active-mode');
+        b.style.outline = '';
+      });
+      var target = (mode === PAIRS ? btnPairs : btnFirst);
+      if (target) {
+        target.classList.add('rb-active-mode');
+        target.style.outline = '2px solid #1976d2';
+      }
+    } catch(e) { /* noop */ }
+  }
+
+  function pushSettings(policy) {
+    try {
+      var base = (window.RB_GAS_EXEC_URL || '').replace(/\/+$/,'');
+      if (!base) { console.warn('[RB] GAS EXEC URL missing'); return; }
+      var u = base + '?fn=settings&policy=' + encodeURIComponent(policy) + '&ts=' + Date.now();
+      fetch(u).then(function(r){return r.json();}).then(function(j){
+        console.log('[RB] settings ->', j);
+      }).catch(function(err){ console.warn('[RB] settings error', err); });
+    } catch(e) {}
+  }
+
+  function refreshReport() {
+    var clicked = false;
+    Array.from(document.querySelectorAll('button, .btn, .chip, span')).forEach(function(el){
+      var t = (el.textContent||'').trim();
+      if (!clicked && /^הצג דוח$/.test(t)) { el.click(); clicked = true; }
+    });
+    if (!clicked) { if (document.visibilityState === 'visible') location.reload(); }
+  }
+
+  var _fetch = window.fetch.bind(window);
+  window.fetch = function(input, init) {
+    try {
+      var url = (typeof input === 'string') ? input : (input && input.url) ? input.url : '';
+      if (url && url.indexOf('/exec') !== -1 && url.indexOf('report=summary') !== -1) {
+        var u = new URL(url, location.origin);
+        u.searchParams.set('mode', getMode());
+        u.searchParams.set('ts', Date.now());
+        input = (typeof input === 'string') ? u.toString() : new Request(u.toString(), input);
+        console.log('[RB] summary fetch -> mode=' + getMode());
+      }
+    } catch(e) {}
+    return _fetch(input, init);
+  };
+
+  function wire() {
+    var btnPairs = findButton([/כניס.*יציא.*זוג/]);
+    var btnFirst = findButton([/מכניס.*ראשונ.*עד.*יציא.*אחרונ/]);
+    if (btnPairs && !btnPairs._rb_wired) {
+      btnPairs._rb_wired = true;
+      btnPairs.addEventListener('click', function(){
+        setMode(PAIRS);
+        pushSettings(PAIRS);
+        refreshReport();
+      });
+    }
+    if (btnFirst && !btnFirst._rb_wired) {
+      btnFirst._rb_wired = true;
+      btnFirst.addEventListener('click', function(){
+        setMode(FIRST);
+        pushSettings(FIRST);
+        refreshReport();
+      });
+    }
+    paintMode(getMode());
+  }
+
+  var mo = new MutationObserver(function(){ wire(); });
+  mo.observe(document.documentElement || document.body, { childList: true, subtree: true });
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function(){ setMode(getMode()); wire(); });
+  } else {
+    setMode(getMode()); wire();
   }
 })();

@@ -2423,6 +2423,11 @@ function updateCurrentTime() {
             initApp();
         }
     </script>
+
+  <!-- GAS exec URL config (must load before rb-patch.js) -->
+  <script src="./rb-config.js"></script>
+  <!-- Report mode controller + fetch patch (default FIRST_LAST) -->
+  <script src="./rb-patch.js"></script>
 <script>if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('sw.js', { scope: './' }).catch(function(e){ console.log('SW register failed', e); });
@@ -4400,8 +4405,6 @@ function dayOutTime(day) {
 </script>
 
   <!-- טעינת תיקון הכפתורים -->
-<script src="./rb-config.js"></script>
-<script src="./rb-patch.js"></script>
   <!-- רישום Service Worker לביטול קאש -->
   <script>
     if ('serviceWorker' in navigator) {
