@@ -30,15 +30,18 @@
     if (m === FIRST && btnFirst) btnFirst.classList.add('active','bg-blue-600');
   }
 
-  // עוזר למציאת אלמנט לפי טקסט (RTL)
-  function findByText(texts) {
-    const candidates = Array.from(document.querySelectorAll('button, .chip, .toggle, .btn, span'));
-    for (const t of texts) {
-      const el = candidates.find(e => (e.textContent || '').trim().includes(t));
-      if (el) return el;
-    }
-    return null;
+function findByText(texts) {
+  const candidates = Array.from(document.querySelectorAll('button, .chip, .toggle, .btn, span, div'));
+  for (const t of texts) {
+    const el = candidates.find(e => {
+      const txt = (e.textContent || e.innerText || '').replace(/\s+/g, ' ').trim();
+      return txt.includes(t);
+    });
+    if (el) return el;
   }
+  return null;
+}
+
 
   // ****** 3) מאזינים לכפתורי המצבים ******
   function wireButtons() {
