@@ -4326,6 +4326,78 @@ function dayOutTime(day) {
   /* דגשה קלה לכפתור הפעיל (אם אין לך css כזה) */
   .chip.active, .btn.active { outline: 2px solid #2563eb; }
 </style>
+<script>
+/**
+ * RB: הכפתורים מעדכנים את ה־Policy בגיליון Settings ואז מריצים "הצג דוח"
+ * מחליף את כל הפאצ'ים הקודמים.
+ */
+(function () {
+  // 🔧 שים כאן את כתובת ה־Apps Script שלך (exec)
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbx_UMxeN_-dYeiR4xQa4HzT9ogZPv8BeYkRuUg0BOeEobOQZJVvj7gZU-2U_5LrxEtK/exec';
+
+  // אם יש בחירת עובד/שם — עדכן כאן איך מוציאים אותו מה־DOM (או השאר ריק אם לא צריך)
+  function getSelectedName() {
+    // דוגמה: קורא מה־select של העובדים אם קיים
+    const sel = document.querySelector('select, [data-employee-select]');
+    if (sel && sel.value) return sel.value.trim();
+    return ''; // אין שם ספציפי
+  }
+
+  // קריאה שמעדכנת את ה־Policy ל־Settings דרך ה־Apps Script (כניסה↔יציאה או ראשון→אחרון)
+  async function setPolicy(policy) {
+    const params = new URLSearchParams();
+    params.set('fn', 'settings');
+    const name = getSelectedName();
+    if (name) params.set('name', name);
+    params.set('policy', policy); // 'SUM_PAIRS' או 'FIRST_LAST'
+
+    const url = `${GAS_URL}?${params.toString()}&_ts=${Date.now()}`;
+    const res = await fetch(url, { method: 'GET', cache: 'no-store' });
+    const text = await res.text();
+    try { return JSON.parse(text); } catch { return { ok: false, raw: text }; }
+  }
+
+  // לוחץ על כפתור "הצג דוח" או מפעיל את פונקציית הרענון אם ישנה
+  function runReport() {
+    const scope = document.getElementById('detailedReportsContent') || document;
+    const btn = Array.from(scope.querySelectorAll('button, .btn'))
+      .find(b => /הצג\s*דוח|הצג\s*דו"?ח/i.test((b.textContent || '')));
+    if (btn) { btn.click(); return; }
+    try { if (typeof updateDetailedReports === 'function') updateDetailedReports(); } catch(e){}
+    try { if (typeof updateReports          === 'function') updateReports();          } catch(e){}
+  }
+
+  async function onModeClick(mode) {
+    // תמיכה בשני המצבים
+    const policy = (mode === 'pairs') ? 'SUM_PAIRS' : 'FIRST_LAST';
+    try {
+      const r = await setPolicy(policy);
+      if (r && (r.ok || r.success)) {
+        // עדכון הצליח → מריצים דוח
+        runReport();
+      } else {
+        console.warn('Settings update failed', r);
+        runReport(); // גם אם נכשל — ננסה להריץ כדי לראות מה קורה
+      }
+    } catch (e) {
+      console.error('Settings request error', e);
+      runReport();
+    }
+  }
+
+  // מאזינים לכפתורי המצבים לפי הטקסט שלהם
+  document.addEventListener('click', (ev) => {
+    const el = ev.target.closest('button, .chip, .toggle, .btn');
+    if (!el) return;
+    const txt = (el.textContent || '').trim();
+    if (/כניסות.?↔.?יציאות|זוגות/.test(txt)) {
+      onModeClick('pairs'); // SUM_PAIRS
+    } else if (/כניסה\s*ראשונה|ראשונה עד יציאה אחרונה/.test(txt)) {
+      onModeClick('span');  // FIRST_LAST
+    }
+  }, true);
+})();
+</script>
 
 </body>
 </html>
