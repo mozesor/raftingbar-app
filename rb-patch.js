@@ -1,114 +1,88 @@
-/* rb-patch.js — wire mode buttons + force ?mode=... on summary requests  */
+console.log('[RB Patch] Loaded ✅');
 
-(function () {
-  // ****** 1) הגדרות ******
-  // כתובת ה-WebApp שלך (Exec) — זו שמופיעה בחלון "ניהול הפריסות"
-  const EXEC = 'https://script.google.com/macros/s/AKfycbx_UMxeN_-dYeiR4xQa4HzT9ogZPv8BeYkRuUg0BOeEobOQZJVvj7gZU-2U_5LrxEtK/exec';
+const FIRST = 'FIRST_LAST';
+const PAIRS = 'SUM_PAIRS';
+const STORAGE_KEY = 'RB_CALC_MODE';
 
-  // מפתח לשמירת המצב בדפדפן
-  const LS_KEY = 'rb_mode';
-  const FIRST = 'FIRST_LAST';
-  const PAIRS = 'SUM_PAIRS';
-
-  // mode ברירת־מחדל
-  function getMode() {
-    return (localStorage.getItem(LS_KEY) || FIRST);
-  }
-  function setMode(m) {
-    localStorage.setItem(LS_KEY, m);
-    paintMode(m);
-  }
-
-  // ****** 2) צביעה ויזואלית לכפתורים ******
-  function paintMode(m) {
-    // מוצא לפי הטקסטים הקיימים אצלך בדף
-    const btnPairs = findByText(['כניסות↔יציאות (זוגות)', 'כניסות-יציאות (זוגות)']);
-    const btnFirst = findByText(['מכניסה ראשונה עד יציאה אחרונה']);
-
-    [btnPairs, btnFirst].forEach(b => b && b.classList.remove('active','bg-blue-600'));
-    if (m === PAIRS && btnPairs) btnPairs.classList.add('active','bg-blue-600');
-    if (m === FIRST && btnFirst) btnFirst.classList.add('active','bg-blue-600');
-  }
-
-function findByText(texts) {
-  const candidates = Array.from(document.querySelectorAll('button, .chip, .toggle, .btn, span, div'));
-  for (const t of texts) {
-    const el = candidates.find(e => {
-      const txt = (e.textContent || e.innerText || '').replace(/\s+/g, ' ').trim();
-      return txt.includes(t);
-    });
-    if (el) return el;
-  }
-  return null;
+/** שמירת מצב בחישוב */
+function setMode(mode) {
+  localStorage.setItem(STORAGE_KEY, mode);
+  console.log('[RB] Mode saved:', mode);
 }
 
+/** טעינת מצב נוכחי */
+function getMode() {
+  return localStorage.getItem(STORAGE_KEY) || FIRST;
+}
 
-  // ****** 3) מאזינים לכפתורי המצבים ******
-  function wireButtons() {
-    const btnPairs = findByText(['כניסות↔יציאות (זוגות)', 'כניסות-יציאות (זוגות)']);
-    const btnFirst = findByText(['מכניסה ראשונה עד יציאה אחרונה']);
+/** צביעת כפתור נבחר */
+function paintMode(mode) {
+  const btnPairs = findButton(/כניס.*יציא.*זוג/);
+  const btnFirst = findButton(/מכניס.*ראשונ.*עד.*אחרונ/);
+  if (btnPairs) btnPairs.classList.toggle('active', mode === PAIRS);
+  if (btnFirst) btnFirst.classList.toggle('active', mode === FIRST);
+}
 
-    if (btnPairs) btnPairs.addEventListener('click', () => {
-      setMode(PAIRS);
-      pushSettingToScript(PAIRS);   // אופציונלי – מעדכן גם ב־Apps Script
-      refreshReport();
-    });
+/** חיפוש אלמנט לפי טקסט (regex) */
+function findButton(regex) {
+  return Array.from(document.querySelectorAll('button, .chip, .btn, span, div'))
+    .find(el => regex.test((el.textContent || '').replace(/\s+/g, '')));
+}
 
-    if (btnFirst) btnFirst.addEventListener('click', () => {
-      setMode(FIRST);
-      pushSettingToScript(FIRST);   // אופציונלי – מעדכן גם ב־Apps Script
-      refreshReport();
-    });
+/** חיבור אירועים לכפתורים */
+function wireButtons() {
+  const btnPairs = findButton(/כניס.*יציא.*זוג/);
+  const btnFirst = findButton(/מכניס.*ראשונ.*עד.*אחרונ/);
 
-    // צביעה ראשונית
-    paintMode(getMode());
-  }
-
-  // ****** 4) שולח עדכון מצב אל Apps Script (אפשר להשאיר, גם אם לא חובה להצגה) ******
-  function pushSettingToScript(policy) {
-    const u = new URL(EXEC);
-    u.searchParams.set('fn', 'settings');
-    u.searchParams.set('policy', policy);
-    u.searchParams.set('ts', Date.now());
-    // לא חוסם את ה-UI; תוצאה רק לקונסול
-    fetch(u.toString()).then(r => r.json()).then(j => {
-      console.log('[RB] settings ->', j);
-    }).catch(err => console.warn('[RB] settings failed', err));
-  }
-
-  // ****** 5) מרענן דו"ח: אם יש כפתור "הצג דוח" – נלחץ עליו; אחרת לא צריך (כי הפאטץ’ על fetch ידאג) ******
-  function refreshReport() {
-    const btnShow = Array.from(document.querySelectorAll('button, .btn'))
-      .find(b => (b.textContent || '').trim().includes('הצג דוח'));
-    if (btnShow) btnShow.click();
-  }
-
-  // ****** 6) עיטוף fetch — מוסיף &mode=<selected> לכל summary ******
-  const _fetch = window.fetch.bind(window);
-  window.fetch = function (input, init) {
-    try {
-      let url = typeof input === 'string' ? input : input && input.url ? input.url : '';
-
-      // נאתר קריאות לדו"ח
-      if (url.includes('/exec') && url.includes('report=summary')) {
-        const u = new URL(url, location.origin);
-        // הוסף/עדכן mode לפי הבחירה
-        u.searchParams.set('mode', getMode());
-        // Cache buster
-        u.searchParams.set('ts', Date.now());
-        url = u.toString();
-        input = (typeof input === 'string') ? url : new Request(url, input);
-      }
-    } catch (e) {
-      console.warn('[RB] fetch patch skipped', e);
-    }
-    return _fetch(input, init);
+  if (btnPairs) btnPairs.onclick = () => {
+    setMode(PAIRS);
+    pushSettingToScript(PAIRS);
+    paintMode(PAIRS);
+    refreshReport();
   };
+  if (btnFirst) btnFirst.onclick = () => {
+    setMode(FIRST);
+    pushSettingToScript(FIRST);
+    paintMode(FIRST);
+    refreshReport();
+  };
+}
 
-  // ****** 7) init אחרי שהדף מוכן ******
-  document.addEventListener('DOMContentLoaded', wireButtons);
-  // לעתים הדף כבר “מוכן”
-  if (document.readyState === 'interactive' || document.readyState === 'complete') {
-    wireButtons();
+/** שליחת עדכון ל־Google Apps Script */
+function pushSettingToScript(policy) {
+  const url = `https://script.google.com/macros/s/AKfycbx_UMxeN_-dYeiR4xQa4HzT9ogZPv8BeYkRuUg0BOeEobOQZJVvj7gZU-2U_5LrxEtK/exec?fn=settings&policy=${policy}`;
+  fetch(url)
+    .then(r => r.json())
+    .then(j => console.log('[RB] settings ->', j))
+    .catch(e => console.warn('[RB] settings error', e));
+}
+
+/** רענון דו"ח */
+function refreshReport() {
+  console.log('[RB] refreshing report...');
+  const btn = document.querySelector('button, .btn, .chip');
+  if (btn) btn.click();
+}
+
+/** שינוי fetch כדי להוסיף mode */
+const originalFetch = window.fetch;
+window.fetch = function (...args) {
+  const [url, opts] = args;
+  if (typeof url === 'string' && url.includes('report=summary')) {
+    const mode = getMode();
+    const newUrl = url.includes('mode=') ? url : `${url}&mode=${mode}`;
+    console.log('[RB patch] Injected mode=', mode);
+    return originalFetch.call(this, newUrl, opts);
   }
-})();
+  return originalFetch.apply(this, args);
+};
+
+/** צפייה בשינויים בדף (לכפתורים דינמיים) */
+const observer = new MutationObserver(() => wireButtons());
+observer.observe(document.body, { childList: true, subtree: true });
+
+window.addEventListener('load', () => {
+  wireButtons();
+  paintMode(getMode());
+  console.log('[RB patch] Ready!');
+});
