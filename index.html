@@ -4314,6 +4314,27 @@ function dayOutTime(day) {
   mo.observe(document.body, { childList:true, subtree:true });
 })();
 </script>
+<script>
+/* RB: force full refresh when switching calc mode */
+(function () {
+  const LS_KEY = 'rb_calc_mode';       // 'pairs' | 'span'
+
+  document.addEventListener('click', function (ev) {
+    const el = ev.target.closest('button, .chip, .toggle, .btn');
+    if (!el) return;
+    const txt = (el.textContent || '').trim();
+
+    if (/כניסות.?↔.?יציאות|זוגות/.test(txt)) {
+      try { localStorage.setItem(LS_KEY, 'pairs'); } catch (e) {}
+      location.reload();               // ⬅⬅ ריענון מלא
+    }
+    else if (/כניסה ראשונה/.test(txt)) {
+      try { localStorage.setItem(LS_KEY, 'span'); } catch (e) {}
+      location.reload();               // ⬅⬅ ריענון מלא
+    }
+  }, true);
+})();
+</script>
 
 </body>
 </html>
