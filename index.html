@@ -822,6 +822,45 @@
 </div>
 <!-- תוכן הדוחות המפורטים -->
 <div id="detailedReportsContent" style="display: block;">
+
+<!-- RB: דו"ח מה־Apps Script עם מצבי חישוב -->
+<div id="rbReportWidget" class="card" style="margin-top:12px;">
+  <h2>דו״ח Apps Script</h2>
+  <div class="toolbar" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0">
+    <button id="rbBtnFirstLast" class="rbbtn">כניסה ראשונה ↔ יציאה אחרונה</button>
+    <button id="rbBtnPairs" class="rbbtn">כניסות↔יציאות (זוגות)</button>
+    <input id="rbName" class="rbinput" placeholder="שם עובד (רשות)" />
+    <input id="rbFrom" class="rbinput" type="date" />
+    <input id="rbTo" class="rbinput" type="date" />
+    <button id="rbRun" class="rbbtn">הצג דוח</button>
+    <span id="rbStatus" style="color:#667; font-size:12px;"></span>
+  </div>
+
+  <div class="table-wrap" style="overflow:auto;border:1px solid #eee;border-radius:10px">
+    <table id="rbTable" class="data-table" style="min-width:700px">
+      <thead>
+        <tr>
+          <th>תאריך</th>
+          <th>כניסה</th>
+          <th>יציאה</th>
+          <th>שעות</th>
+          <th>אירועים</th>
+          <th>שם</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+      <tfoot>
+        <tr>
+          <td colspan="3">סה״כ שעות</td>
+          <td id="rbTotal">0</td>
+          <td colspan="2"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
 <h2 style="margin: 0;">📊 דוחות מפורטים</h2>
 <button class="btn" onclick="lockDetailedReports()" style="background: #f44336; color: white; padding: 8px 12px; font-size: 14px;">
@@ -4218,148 +4257,98 @@ function dayOutTime(day) {
 </script>
 
 
-<!-- RB FINAL PATCH: one-table + chips-control + mode param + cache-bust -->
 <script>
+
+// ===== RB Reports Mode Widget (injected) =====
 (function(){
-  const LS_KEY = 'rb_calc_mode';                 // 'pairs' | 'span'
-  const MODE_MAP = { pairs: 'SUM_PAIRS', span: 'FIRST_LAST' };
+  try{
+    const SCRIPT_URL = (typeof EMBEDDED_SETTINGS !== 'undefined' && EMBEDDED_SETTINGS.scriptUrl) ? EMBEDDED_SETTINGS.scriptUrl : '';
+    const STORE_KEY = 'rb_calc_mode';
+    let mode = localStorage.getItem(STORE_KEY) || 'FIRST_LAST';
 
-  // default
-  try { if (!localStorage.getItem(LS_KEY)) localStorage.setItem(LS_KEY, 'pairs'); } catch(e){}
+    const $ = id => document.getElementById(id);
+    const btnFirst = $('rbBtnFirstLast'), btnPairs = $('rbBtnPairs'), btnRun = $('rbRun');
+    const nameInp = $('rbName'), fromInp = $('rbFrom'), toInp = $('rbTo');
+    const statusEl = $('rbStatus'), tbody = (function(){ const t=$('rbTable'); return t?t.querySelector('tbody'):null; })();
+    const totalEl = $('rbTotal');
 
-  // 1) Always add &mode=... and cache-bust for Apps Script
-  if (!window.__rbFetchPatched3) {
-    window.__rbFetchPatched3 = true;
-    const _fetch = window.fetch;
-    window.fetch = function(input, init){
-      try{
-        const req = (typeof input === 'string') ? new Request(input, init) : input;
-        const url = new URL(req.url, location.href);
-        if (/script\.google(?:usercontent)?\.com$/i.test(url.hostname) && url.pathname.includes('/macros/')) {
-          const m = (localStorage.getItem(LS_KEY) || 'pairs');
-          url.searchParams.set('mode', MODE_MAP[m] || 'SUM_PAIRS');
-          url.searchParams.set('_ts', String(Date.now())); // cache-bust
-          const init2 = Object.assign({ cache: 'no-store' }, init || {});
-          const req2  = new Request(url.toString(), init2);
-          return _fetch.call(this, req2);
-        }
-      }catch(e){}
-      return _fetch.call(this, input, init);
+    if(!btnFirst || !btnPairs || !btnRun || !tbody){ return; }
+
+    function paint(){
+      btnFirst.classList.toggle('active', mode==='FIRST_LAST');
+      btnPairs.classList.toggle('active', mode==='SUM_PAIRS');
+    }
+
+    (function setDefaultDates(){
+      const now = new Date(), y = now.getFullYear(), m = now.getMonth();
+      const first = new Date(y, m, 1).toISOString().slice(0,10);
+      const last  = new Date(y, m+1, 0).toISOString().slice(0,10);
+      if(!fromInp.value) fromInp.value = first;
+      if(!toInp.value)   toInp.value   = last;
+    })();
+
+    btnFirst.addEventListener('click', () => { mode = 'FIRST_LAST'; localStorage.setItem(STORE_KEY, mode); paint(); run(); });
+    btnPairs.addEventListener('click', () => { mode = 'SUM_PAIRS';   localStorage.setItem(STORE_KEY, mode); paint(); run(); });
+    btnRun.addEventListener('click', run);
+
+    const origShowPage = window.showPage;
+    window.showPage = function(p){
+      if(origShowPage) origShowPage(p);
+      if(p==='detailedReports'){ paint(); setTimeout(run, 100); }
     };
-  }
 
-  // 2) Paint chips + small badge
-  function ensureBadge(){
-    const scope = document.getElementById('detailedReportsContent') || document;
-    const host  = scope.querySelector('.chips, .toolbar, .filters, .flex, .row') || scope;
-    let badge   = document.getElementById('rbModeBadge');
-    if (!badge) {
-      badge = document.createElement('span');
-      badge.id = 'rbModeBadge';
-      badge.style.cssText = 'margin-inline-start:8px;padding:4px 8px;border-radius:999px;border:1px solid #d0d5dd;background:#f6f7fb;font-size:12px;color:#333;';
-      host.appendChild(badge);
-    }
-    const m = localStorage.getItem(LS_KEY) || 'pairs';
-    badge.textContent = (m==='pairs') ? 'מצב חישוב: כניסות↔יציאות (זוגות)' : 'מצב חישוב: כניסה ראשונה → יציאה אחרונה';
-  }
-  function paintChips(){
-    const scope = document.getElementById('detailedReportsContent') || document;
-    const chipPairs = Array.from(scope.querySelectorAll('button, .chip, .toggle, .btn'))
-      .find(el => /כניסות.?↔.?יציאות|זוגות/.test((el.textContent||'').trim()));
-    const chipSpan = Array.from(scope.querySelectorAll('button, .chip, .toggle, .btn'))
-      .find(el => /כניסה ראשונה/.test((el.textContent||'').trim()));
-    const m = localStorage.getItem(LS_KEY) || 'pairs';
-    if (chipPairs) chipPairs.classList.toggle('active', m==='pairs');
-    if (chipSpan)  chipSpan.classList.toggle('active',  m==='span');
-    ensureBadge();
-  }
+    async function run(){
+      try{
+        statusEl.textContent = 'טוען…';
+        const qs = new URLSearchParams({ report:'summary', mode });
+        if(fromInp.value) qs.set('from', fromInp.value);
+        if(toInp.value)   qs.set('to', toInp.value);
+        const nm = (nameInp.value||'').trim(); if(nm) qs.set('name', nm);
 
-  document.addEventListener('click', (ev) => {
-    const el = ev.target.closest('button, .chip, .toggle, .btn'); if (!el) return;
-    const txt = (el.textContent||'').trim();
-    if (/כניסות.?↔.?יציאות|זוגות/.test(txt)) {
-      localStorage.setItem(LS_KEY, 'pairs'); paintChips(); refreshReports();
-    } else if (/כניסה ראשונה/.test(txt)) {
-      localStorage.setItem(LS_KEY, 'span');  paintChips(); refreshReports();
-    }
-  }, true);
+        const url = SCRIPT_URL + '?' + qs.toString();
+        const res = await fetch(url, { method:'GET' });
+        const data = await res.json();
 
-  function refreshReports(){
-    try { if (typeof updateDetailedReports === 'function') updateDetailedReports(); } catch(e){}
-    try { if (typeof renderSelf === 'function') renderSelf(); } catch(e){}
-    try { if (typeof updateAll === 'function') updateAll(); } catch(e){}
-    const scope = document.getElementById('detailedReportsContent') || document;
-    const runBtn = Array.from(scope.querySelectorAll('button, .btn')).find(b => /הצג דוח/.test(b.textContent||''));
-    if (runBtn) runBtn.click();
-  }
-
-  // 3) Keep only one report table (hide duplicates)
-  function keepOnlyOneReportTable(){
-    const scope = document.getElementById('detailedReportsContent') || document;
-    const tables = Array.from(scope.querySelectorAll('table'));
-    const reportTables = tables.filter(t => {
-      const txt = (t.tHead && t.tHead.textContent || t.textContent || '').replace(/\s+/g,' ');
-      return /תאריך/.test(txt) && /כניסה/.test(txt) && /יציאה/.test(txt) && /שעות/.test(txt);
-    });
-    if (reportTables.length > 1){
-      for (let i=1;i<reportTables.length;i++) reportTables[i].style.display='none';
-    }
-  }
-
-  document.addEventListener('DOMContentLoaded', () => { paintChips(); keepOnlyOneReportTable(); });
-  const _showPage = window.showPage;
-  window.showPage = function(p){ if (_showPage) _showPage(p); if (p==='detailedReports') setTimeout(()=>{ paintChips(); keepOnlyOneReportTable(); }, 60); };
-
-  const mo = new MutationObserver(()=>keepOnlyOneReportTable());
-  mo.observe(document.body, { childList:true, subtree:true });
-})();
-</script>
-<script>
-/* RB: switch mode + reload + return to Reports page after reload */
-(function () {
-  const LS_MODE = 'rb_calc_mode';     // 'pairs' | 'span'
-  const LS_BACK = 'rb_return_to';     // 'reports' flag
-
-  // 1) לחיצה על הצ'יפים: שומרים מצב + דגל חזרה + ריענון
-  document.addEventListener('click', function (ev) {
-    const el = ev.target.closest('button, .chip, .toggle, .btn');
-    if (!el) return;
-    const txt = (el.textContent || '').trim();
-
-    if (/כניסות.?↔.?יציאות|זוגות/.test(txt)) {
-      try { localStorage.setItem(LS_MODE, 'pairs'); } catch (e) {}
-      try { localStorage.setItem(LS_BACK, 'reports'); } catch (e) {}
-      location.reload();
-    } else if (/כניסה ראשונה/.test(txt)) {
-      try { localStorage.setItem(LS_MODE, 'span'); } catch (e) {}
-      try { localStorage.setItem(LS_BACK, 'reports'); } catch (e) {}
-      location.reload();
-    }
-  }, true);
-
-  // 2) אחרי שהעמוד נטען מחדש – קופצים חזרה לדוחות
-  document.addEventListener('DOMContentLoaded', function () {
-    let back = null;
-    try { back = localStorage.getItem(LS_BACK); } catch (e) {}
-    if (back === 'reports') {
-      try { localStorage.removeItem(LS_BACK); } catch (e) {}
-
-      // אם לאפליקציה יש ניווט פנימי:
-      if (typeof window.showPage === 'function') {
-        // שים לב: אם שם הדף אצלך שונה, שנה ל-string הנכון (למשל 'reports' / 'detailedReports')
-        window.showPage('detailedReports');
-      } else {
-        // פולבק: לוחץ על כפתור/טאב "דוחות"
-        const btn =
-          Array.from(document.querySelectorAll('button, a, .btn, .tab, [role="button"]'))
-            .find(x => /דוחות|דו"חות|Reports/i.test((x.textContent || '').trim()));
-        if (btn) btn.click();
+        if(!data.ok) throw new Error(data.error || 'שגיאה בדו״ח');
+        render(data.rows||[], data.totalHours||0);
+        statusEl.textContent = 'מצב: ' + (mode==='SUM_PAIRS'?'זוגות':'כניסה→יציאה אחרונה') + ' · ' + (data.rows?data.rows.length:0) + ' ימים';
+      }catch(err){
+        statusEl.textContent = 'שגיאה: ' + String(err);
+        render([], 0);
       }
     }
-  });
+
+    function render(rows, total){
+      tbody.innerHTML = '';
+      totalEl.textContent = (Number(total)||0).toFixed(2);
+      if(!rows || !rows.length){
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 6; td.textContent = 'אין נתונים בטווח הנבחר'; td.style.color='#777';
+        tr.appendChild(td); tbody.appendChild(tr);
+        return;
+      }
+      rows.forEach(r=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td>'+esc(r.date||'')+'</td>'+
+                       '<td>'+esc(r.in||'')+'</td>'+
+                       '<td>'+esc(r.out||'')+'</td>'+
+                       '<td>'+Number(r.hours||0).toFixed(2)+'</td>'+
+                       '<td>'+esc(String(r.events||0))+'</td>'+
+                       '<td>'+esc(r.name||'')+'</td>';
+        tbody.appendChild(tr);
+      });
+    }
+    function esc(s){ return String(s).replace(/[&<>"'`]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'}[c])); }
+
+    // אם העמוד כבר פתוח על מפורט – להריץ
+    const pageNowEl = document.querySelector('[data-page].active, .page.active');
+    if(pageNowEl && (pageNowEl.id==='detailedReportsPage' || pageNowEl.id==='detailedReportsContent')){
+      paint(); setTimeout(run, 100);
+    }
+  }catch(e){ /* ignore */ }
 })();
+
 </script>
-
-
 </body>
 </html>
