@@ -4219,5 +4219,41 @@ function dayOutTime(day) {
 
 
 <script src="rb-patch.js?v=2025-10-11"></script>
+<script>
+/* Force FIRST-IN / LAST-OUT for the whole app */
+(function(){
+  function _getFirstIn(day){
+    if (!day || !day.logs || !day.logs.length) return null;
+    var arr = day.logs.slice().sort(function(a,b){ return String(a.ts).localeCompare(String(b.ts)); });
+    for (var i=0;i<arr.length;i++){ if (arr[i].action === 'checkin') return new Date(arr[i].ts); }
+    return day.checkIn ? new Date(day.checkIn) : null;
+  }
+  function _getLastOut(day){
+    if (!day) return null;
+    var last = null;
+    if (day.logs && day.logs.length){
+      var arr = day.logs.slice().sort(function(a,b){ return String(a.ts).localeCompare(String(b.ts)); });
+      for (var i=0;i<arr.length;i++){ if (arr[i].action === 'checkout') last = new Date(arr[i].ts); }
+    }
+    if (!last && day.checkOut) last = new Date(day.checkOut);
+    return last;
+  }
+  function _hhmm(d){ if(!d) return '-'; var h=String(d.getHours()).padStart(2,'0'); var m=String(d.getMinutes()).padStart(2,'0'); return h+':'+m; }
+
+  // דריסה עדינה של הפונקציות הגלובליות
+  window.dayInTime = function(day){ return _hhmm(_getFirstIn(day)); };
+  window.dayOutTime = function(day){ return _hhmm(_getLastOut(day)); };
+  window.dayHours = function(day){
+    var first = _getFirstIn(day), last = _getLastOut(day);
+    if (!first || !last || last < first) return 0;
+    var h = (last - first) / (1000*60*60);
+    return Math.round(h * 100) / 100;
+  };
+
+  // רענון UI אחרי הדריסה
+  try { if (typeof updateAll === 'function') updateAll(); } catch(e){}
+})();
+</script>
+
 </body>
 </html>
