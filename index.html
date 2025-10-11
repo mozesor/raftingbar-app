@@ -4277,6 +4277,74 @@ function dayOutTime(day) {
   });
 })();
 </script>
+<script>
+/* ==== RaftingBar: Force-append mode=FIRST_LAST|SUM_PAIRS to ALL GAS calls ==== */
+(function(){
+  const KEY = 'rb_calc_mode'; // 'pairs' | 'span'
+  function uiMode(){ return (localStorage.getItem(KEY)||'pairs')==='span' ? 'FIRST_LAST' : 'SUM_PAIRS'; }
+
+  // 1) עטיפת fetch – תופסת string URL ו-Request, גם GET וגם POST
+  const _fetch = window.fetch;
+  window.fetch = function(input, init){
+    try{
+      const mode = uiMode();
+      // הפוך ל-URL+גוף שאפשר לערוך
+      let urlStr = typeof input === 'string' ? input
+               : (input && input.url)       ? input.url : null;
+
+      if (urlStr && /script\.google\.com\/macros\/s\/.+\/exec/.test(urlStr)) {
+        // הוסף mode לשורת ה-URL אם חסר
+        if (!/[?&]mode=/.test(urlStr)) {
+          const sep = urlStr.includes('?') ? '&' : '?';
+          urlStr = urlStr + sep + 'mode=' + encodeURIComponent(mode);
+        }
+
+        // אם זו בקשת POST עם body מסוג URLSearchParams / טקסט-טופס – הוסף גם לגוף
+        if (init && init.method && init.method.toUpperCase()==='POST' && init.body) {
+          if (typeof init.body === 'string' && init.body.includes('=')) {
+            if (!/(\?|&)mode=/.test(init.body)) init.body += '&mode=' + encodeURIComponent(mode);
+          } else if (init.body instanceof URLSearchParams) {
+            if (!init.body.has('mode')) init.body.append('mode', mode);
+          }
+        }
+
+        // בנה מחדש את ה-Request במידת הצורך
+        if (typeof input !== 'string') {
+          input = new Request(urlStr, init || input);
+        } else {
+          input = urlStr;
+        }
+      }
+    }catch(e){ /* שקט */ }
+    return _fetch.call(this, input, init);
+  };
+
+  // 2) עטיפת XMLHttpRequest – למקרה שהעמוד משתמש בזה
+  const _open = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function(method, url){
+    try{
+      if (typeof url === 'string' && /script\.google\.com\/macros\/s\/.+\/exec/.test(url)) {
+        const mode = uiMode();
+        if (!/[?&]mode=/.test(url)) {
+          url += (url.includes('?') ? '&' : '?') + 'mode=' + encodeURIComponent(mode);
+        }
+      }
+    }catch(e){ /* שקט */ }
+    return _open.apply(this, arguments);
+  };
+
+  // 3) שמור RB_CURRENT_MODE לשימוש פנימי אם צריך
+  function syncExpose(){ window.RB_CURRENT_MODE = uiMode(); }
+  syncExpose();
+  document.addEventListener('click', (ev)=>{
+    const t = ev.target;
+    if (!t) return;
+    const txt = (t.textContent||'').trim();
+    if (/זוגות/.test(txt))  localStorage.setItem(KEY,'pairs'),  syncExpose();
+    if (/מכניסה ראשונה|יציאה אחרונה/.test(txt)) localStorage.setItem(KEY,'span'), syncExpose();
+  }, true);
+})();
+</script>
 
 </body>
 </html>
