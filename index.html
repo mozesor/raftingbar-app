@@ -4254,6 +4254,170 @@ function dayOutTime(day) {
   try { if (typeof updateAll === 'function') updateAll(); } catch(e){}
 })();
 </script>
+<script>
+/* Force display: FIRST-IN / LAST-OUT — non-destructive (no API changes) */
+(function(){
+  // ---------- helpers ----------
+  const toMs = t => { try{ return t? new Date(t).getTime(): null; }catch(e){ return null; } };
+  const fmtHHMM = ms => {
+    if(ms==null) return '—';
+    const d = new Date(ms), hh = String(d.getHours()).padStart(2,'0'), mm = String(d.getMinutes()).padStart(2,'0');
+    return hh+':'+mm;
+  };
+  const durToHours = (ms) => Math.round((ms/36e5)*100)/100;
+
+  // per employee -> per yyyy-mm-dd
+  const STORE = window.__RB_FIRST_LAST__ = window.__RB_FIRST_LAST__ || new Map();
+  function setFirstLast(name, ymd, fi, lo){
+    name = (name||'').trim(); ymd = (ymd||'').slice(0,10);
+    if(!name || !ymd) return;
+    if(!STORE.has(name)) STORE.set(name, new Map());
+    const m = STORE.get(name);
+    const cur = m.get(ymd) || {fi:null, lo:null};
+    if(fi!=null) cur.fi = (cur.fi==null || fi<cur.fi) ? fi : cur.fi;
+    if(lo!=null) cur.lo = (cur.lo==null || lo>cur.lo) ? lo : cur.lo;
+    m.set(ymd, cur);
+  }
+  function getFirstLast(name, ymd){
+    const m = STORE.get((name||'').trim());
+    return m ? (m.get((ymd||'').slice(0,10)) || null) : null;
+  }
+
+  // ---------- harvest data from JSON responses ----------
+  const RE_ENDPOINT = /(script\.google\.com\/macros\/s\/.+\/exec|sheets\.googleapis\.com\/v4\/spreadsheets|docs\.google\.com\/spreadsheets\/.+\/gviz)/i;
+
+  const _fetch = window.fetch;
+  window.fetch = function(input, init){
+    const p = _fetch.apply(this, arguments);
+    p.then(async resp=>{
+      try{
+        const url = (typeof input==='string') ? input : (input && input.url) || '';
+        if(!RE_ENDPOINT.test(url)) return;
+
+        let data = null;
+        const clone = resp.clone();
+        try { data = await clone.json(); }
+        catch(_){
+          const txt = await resp.clone().text();
+          const cleaned = txt.replace(/^\)\]\}'\n?/, '');
+          try { data = JSON.parse(cleaned); } catch(__){ return; }
+        }
+
+        // 1) Apps Script style (entries/rows)
+        if(Array.isArray(data?.entries)){
+          for(const e of data.entries){
+            const name = e.name || e.employee || '';
+            const ts = e.timestamp || e.time || e.ts;
+            const act = String(e.action||'').toLowerCase();
+            const ymd = e.date || (ts ? new Date(ts).toISOString().slice(0,10) : '');
+            if(!ymd || !name) continue;
+            if(/in|checkin|כניסה/.test(act)) setFirstLast(name, ymd, toMs(ts), null);
+            if(/out|checkout|יציאה/.test(act)) setFirstLast(name, ymd, null, toMs(ts));
+          }
+        } else if (Array.isArray(data?.rows)){
+          for(const r of data.rows){
+            const name = r.employee || r.name || '';
+            const ymd = r.date || '';
+            if(Array.isArray(r.intervals)){
+              for(const iv of r.intervals){
+                if(iv.in)  setFirstLast(name, ymd, toMs(iv.in), null);
+                if(iv.out) setFirstLast(name, ymd, null, toMs(iv.out));
+              }
+            }else{
+              if(r.in)  setFirstLast(name, ymd, toMs(r.in), null);
+              if(r.out) setFirstLast(name, ymd, null, toMs(r.out));
+            }
+          }
+        } else if (data?.values || (Array.isArray(data?.valueRanges) && data.valueRanges[0]?.values)){
+          // 2) Google Sheets API values[]
+          const vals = data.values || data.valueRanges[0].values || [];
+          if(vals.length){
+            const header = vals[0].map(x=> String(x||'').trim().toLowerCase());
+            const idx = {
+              name: header.findIndex(h=> /(name|שם)/.test(h)),
+              action: header.findIndex(h=> /(action|פעולה|type)/.test(h)),
+              ts: header.findIndex(h=> /(timestamp|time|שעת|time\s*stamp)/.test(h)),
+              date: header.findIndex(h=> /^date$|תאריך/.test(h)),
+              in: header.findIndex(h=> /^in$|כניסה/.test(h)),
+              out: header.findIndex(h=> /^out$|יציאה/.test(h)),
+            };
+            for(let i=1;i<vals.length;i++){
+              const row = vals[i]||[];
+              const name = idx.name>=0 ? row[idx.name] : '';
+              let ymd = idx.date>=0 ? row[idx.date] : '';
+              if(idx.in>=0 || idx.out>=0){
+                const vin = idx.in>=0 ? row[idx.in] : '';
+                const vout= idx.out>=0 ? row[idx.out] : '';
+                const fi = vin ? toMs(vin) : null;
+                const lo = vout? toMs(vout): null;
+                if(!ymd) ymd = (vin||vout||'').slice(0,10);
+                setFirstLast(name, ymd, fi, lo);
+                continue;
+              }
+              const ts = idx.ts>=0 ? row[idx.ts] : '';
+              const act = idx.action>=0 ? String(row[idx.action]||'').toLowerCase() : '';
+              if(!ymd && ts) ymd = new Date(ts).toISOString().slice(0,10);
+              if(/in|checkin|כניסה/.test(act)) setFirstLast(name, ymd, toMs(ts), null);
+              if(/out|checkout|יציאה/.test(act)) setFirstLast(name, ymd, null, toMs(ts));
+            }
+          }
+        }
+      }catch(e){ /* ignore */ }
+    });
+    return p;
+  };
+
+  // ---------- replace table cells after render ----------
+  const observer = new MutationObserver(()=>applyFirstLastToTable());
+  observer.observe(document.documentElement, {childList:true, subtree:true});
+
+  function applyFirstLastToTable(){
+    const tables = Array.from(document.querySelectorAll('table')).filter(t=>{
+      const txt = t.textContent || '';
+      return /תאריך/.test(txt) && /כניסה/.test(txt) && /יציאה/.test(txt) && /שעות/.test(txt);
+    });
+    if(!tables.length) return;
+
+    tables.forEach(t=>{
+      const thead = t.tHead || t.querySelector('thead');
+      const body  = t.tBodies[0] || t.querySelector('tbody');
+      if(!body) return;
+
+      let idxDate=-1, idxIn=-1, idxOut=-1, idxHours=-1;
+      if(thead){
+        const ths = Array.from(thead.querySelectorAll('th')).map(th=> (th.textContent||'').trim());
+        ths.forEach((h,i)=>{
+          if(/תאריך/.test(h)) idxDate=i;
+          if(/כניסה/.test(h)) idxIn=i;
+          if(/יציאה/.test(h)) idxOut=i;
+          if(/שעות/.test(h))  idxHours=i;
+        });
+      }
+      if(idxDate<0 || idxIn<0 || idxOut<0 || idxHours<0) return;
+
+      Array.from(body.querySelectorAll('tr')).forEach(tr=>{
+        const tds = tr.children;
+        if(!tds || tds.length<=Math.max(idxDate, idxIn, idxOut, idxHours)) return;
+        const dateText = (tds[idxDate].textContent||'').trim();
+        if(!dateText) return;
+
+        const empEl = document.querySelector('[aria-label="בחר עובד"], [data-employee-name], .employee-name');
+        const emp = (empEl && (empEl.value || empEl.getAttribute('data-employee-name') || empEl.textContent)) || 'עובד';
+
+        // אם הכותרת היא DD/MM – ממפה ל־YYYY-MM-DD (שנה לא קריטית לסינון)
+        const ymd = dateText.replace(/^(\d{2})\/(\d{2})/, (_,d,m)=>`2025-${m}-${d}`).slice(0,10);
+        const rec = getFirstLast(emp, ymd) || getFirstLast(emp, dateText) || null;
+        if(!rec) return;
+
+        tds[idxIn].textContent   = fmtHHMM(rec.fi);
+        tds[idxOut].textContent  = fmtHHMM(rec.lo);
+        const dur = (rec.fi!=null && rec.lo!=null && rec.lo>rec.fi) ? (rec.lo-rec.fi) : 0;
+        tds[idxHours].textContent= String(durToHours(dur));
+      });
+    });
+  }
+})();
+</script>
 
 </body>
 </html>
