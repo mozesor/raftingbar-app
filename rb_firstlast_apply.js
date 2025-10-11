@@ -1,9 +1,9 @@
 
-/*! Rafting Bar — Apply FIRST_LAST to existing report table (drop-in)
+/*! Rafting Bar — Apply FIRST_LAST to existing report table
  *  Build: 2025-10-11
- *  Usage: Add this line AFTER your existing scripts (near </body>):
- *     <script src="rb_firstlast_apply.js?v=2025-10-11"></script>
- *  This will hook into the "הצג דוח" button and rewrite the table cells.
+ *  This script finds your main report table (columns: תאריך / כניסה / יציאה / שעות),
+ *  fetches FIRST_LAST rows from your Apps Script for the shown month (and selected employee),
+ *  and rewrites the table cells accordingly.
  */
 (function(){
   const GAS_URL = "https://script.google.com/macros/s/AKfycbx_UMxeN_-dYeiR4xQa4HzT9ogZPv8BeYkRuUg0BOeEobOQZJVvj7gZU-2U_5LrxEtK/exec";
@@ -12,20 +12,17 @@
   function warn(){ try{ console.warn.apply(console, ["[FIRST_LAST]"].concat([].slice.call(arguments))); }catch(_){} }
 
   function guessEmployee(){
-    // Try selects that likely represent "בחר עובד"
-    let sel = document.querySelector('select#employee, select[name*="employee" i], select[id*="employee" i], select[name*="עובד"], select[id*="עובד"]');
-    if (sel) return (sel.value || (sel.selectedOptions && sel.selectedOptions[0] && sel.selectedOptions[0].textContent) || '').trim();
-    // Try any select near text "בחר עובד" or "עובד"
+    let sel = document.querySelector('select#employee, select[aria-label="בחר עובד"], select[name*="employee" i], select[id*="employee" i]');
+    if (sel) return (sel.value || (sel.selectedOptions && sel.selectedOptions[0] && sel.selectedOptions[0].textContent) || "").trim();
     const selects = Array.from(document.querySelectorAll('select'));
     for (const s of selects){
-      const box = s.closest('div') || s.parentElement;
-      const txt = (box && box.textContent || '').trim();
-      if (/בחר.?עובד|עובד:?/i.test(txt)) {
-        return (s.value || (s.selectedOptions && s.selectedOptions[0] && s.selectedOptions[0].textContent) || '').trim();
+      const box = s.closest('div,section,form') || s.parentElement;
+      const txt = (box && box.textContent || "").trim();
+      if (/בחר.?עובד|עובד:?/i.test(txt)){
+        return (s.value || (s.selectedOptions && s.selectedOptions[0] && s.selectedOptions[0].textContent) || "").trim();
       }
     }
-    // Fallback: empty (all employees)
-    return '';
+    return "";
   }
 
   function findReportTable(){
@@ -33,7 +30,7 @@
     for (const t of tables){
       const ths = Array.from(t.querySelectorAll('thead th'));
       if (!ths.length) continue;
-      const labels = ths.map(th => (th.textContent||'').trim());
+      const labels = ths.map(th => (th.textContent||"").trim());
       const idxDate  = labels.findIndex(h => /תאריך/.test(h));
       const idxIn    = labels.findIndex(h => /כניסה/.test(h));
       const idxOut   = labels.findIndex(h => /יציאה/.test(h));
@@ -46,36 +43,29 @@
   }
 
   function guessYear(){
-    const m = (document.body.innerText||'').match(/\b(20\d{2})\b/);
+    const m = (document.body.innerText||"").match(/\b(20\d{2})\b/);
     return m ? m[1] : String(new Date().getFullYear());
   }
 
-  function parseYmdFromCell(dateText){
-    const s = (dateText||'').trim();
-    // Case 1: DD/MM
+  function parseYmdFromCell(s){
+    s = (s||"").trim();
+    // DD/MM
     let m = s.match(/^(\d{1,2})\/(\d{1,2})$/);
-    if (m){
-      const d = ('0'+m[1]).slice(-2), mo=('0'+m[2]).slice(-2);
-      return `${guessYear()}-${mo}-${d}`;
-    }
-    // Case 2: YYYY-MM-DD
+    if (m){ const d=('0'+m[1]).slice(-2), mo=('0'+m[2]).slice(-2); return `${guessYear()}-${mo}-${d}`; }
+    // YYYY-MM-DD
     m = s.match(/^\d{4}-\d{2}-\d{2}$/);
     if (m) return s.slice(0,10);
-    // Case 3: DD.MM or DD.MM.YYYY
+    // DD.MM or DD.MM.YYYY
     m = s.match(/^(\d{1,2})\.(\d{1,2})(?:\.(\d{4}))?$/);
-    if (m){
-      const d=('0'+m[1]).slice(-2), mo=('0'+m[2]).slice(-2);
-      const y=m[3] || guessYear();
-      return `${y}-${mo}-${d}`;
-    }
+    if (m){ const d=('0'+m[1]).slice(-2), mo=('0'+m[2]).slice(-2), y=m[3]||guessYear(); return `${y}-${mo}-${d}`; }
     return null;
   }
 
   function fmtHHMM(iso){
-    if (!iso) return '';
+    if (!iso) return "";
     const d = new Date(iso);
     const pad = n => String(n).padStart(2,'0');
-    return pad(d.getHours())+':'+pad(d.getMinutes());
+    return pad(d.getHours())+":"+pad(d.getMinutes());
   }
 
   async function fetchMonthRows(month, employee){
@@ -98,20 +88,18 @@
     const rows = Array.from(table.querySelectorAll('tbody tr'));
     if (!rows.length){ warn('אין שורות בטבלה'); return; }
 
-    // אסוף את כל התאריכים המוצגים כדי לגזור את החודש
+    // Get month from first parsed date
     const ymds = [];
     for (const tr of rows){
-      const dateText = (tr.children[idxDate] && tr.children[idxDate].textContent || '').trim();
+      const dateText = (tr.children[idxDate] && tr.children[idxDate].textContent || "").trim();
       const ymd = parseYmdFromCell(dateText);
       if (ymd) ymds.push(ymd);
     }
     if (!ymds.length){ warn('לא הצלחתי לפרש תאריכים מהטבלה'); return; }
-
     const month = ymds[0].slice(0,7);
     const employee = guessEmployee();
-    log('month:', month, 'employee:', employee||'(all)');
+    log('month:', month, 'employee:', employee || '(all)');
 
-    // שלוף דוח מהשרת
     let serverRows = [];
     try{
       serverRows = await fetchMonthRows(month, employee);
@@ -120,44 +108,32 @@
       return;
     }
 
-    // מיפוי לפי תאריך
     const byDate = Object.create(null);
     for (const r of serverRows){ byDate[r.date] = r; }
 
-    // כתיבה חזרה לטבלה
-    let sumHours = 0;
     for (const tr of rows){
-      const dateText = (tr.children[idxDate] && tr.children[idxDate].textContent || '').trim();
+      const dateText = (tr.children[idxDate] && tr.children[idxDate].textContent || "").trim();
       const ymd = parseYmdFromCell(dateText);
       if (!ymd) continue;
       const r = byDate[ymd];
       if (!r) continue;
 
-      const fi = r.intervals && r.intervals[0] && r.intervals[0].in  || '';
-      const lo = r.intervals && r.intervals[0] && r.intervals[0].out || '';
+      const fi = r.intervals && r.intervals[0] && r.intervals[0].in  || "";
+      const lo = r.intervals && r.intervals[0] && r.intervals[0].out || "";
       const h  = (r.totalMs||0)/3600000;
 
       if (fi) tr.children[idxIn].textContent  = fmtHHMM(fi);
       if (lo) tr.children[idxOut].textContent = fmtHHMM(lo);
       tr.children[idxHours].textContent = h.toFixed(2);
-      sumHours += h;
-    }
-
-    // עדכון "סה״כ שעות" אם יש טקסט כזה ליד הטבלה
-    const totalsContainers = Array.from(document.querySelectorAll('*')).filter(el => /סה.?כ שעות/.test(el.textContent||''));
-    if (totalsContainers.length){
-      const el = totalsContainers[0];
-      // החלפת המספר האחרון בטקסט בסכום חדש
-      el.innerHTML = el.innerHTML.replace(/(\d+(?:\.\d+)?)(?!.*\d)/, sumHours.toFixed(2));
     }
 
     log('הוחל FIRST_LAST על הטבלה בהצלחה');
   }
 
-  // הפעלה ראשונית + אחרי לחיצה על "הצג דוח"
+  // Run after initial render and after clicking "הצג דוח"
   setTimeout(apply, 800);
   document.addEventListener('click', (e)=>{
-    const t = (e.target && e.target.textContent || '').trim();
-    if (t === 'הצג דוח') setTimeout(apply, 800);
+    const t = (e.target && e.target.textContent || "").trim();
+    if (t === "הצג דוח") setTimeout(apply, 800);
   });
 })();
