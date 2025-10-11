@@ -4219,129 +4219,108 @@ function dayOutTime(day) {
 
 
 <script>
-/* ==== RB Reports: Calc Mode Enabler (reports-only, no UI changes) ==== */
+/* ==== RB Reports: client-side recompute of FIRST_LAST / SUM_PAIRS ==== */
 (function(){
-  function onReady(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
-  onReady(function(){
-    // Try to locate the two mode buttons and the "show report" button by id/data/text (Hebrew)
-    var scope = document; // if you have a specific container for reports, you can narrow here
-    var pairsBtn = scope.querySelector('#rbModePairs,[data-calc-mode="pairs"]') 
-                || Array.from(scope.querySelectorAll('button, a')).find(function(b){ return /זוגות/.test((b.textContent||'').trim()); });
-    var spanBtn  = scope.querySelector('#rbModeSpan,[data-calc-mode="span"]') 
-                || Array.from(scope.querySelectorAll('button, a')).find(function(b){ return /(מכניסה ראשונה|יציאה אחרונה)/.test((b.textContent||'').trim()); });
-    var runBtn   = scope.querySelector('#rbRunReport')
-                || Array.from(scope.querySelectorAll('button')).find(function(b){ return /(הצג דו|דו.?ח)/.test((b.textContent||'').trim()); });
+  const KEY='rb_calc_mode'; // 'pairs' | 'span'
+  const isSpan = ()=> (localStorage.getItem(KEY)||'pairs')==='span';
+  const GAS_HINT = /(script\.google\.com\/macros\/s\/.+\/exec|A:?[?]|\/exec\?|[^\/]macros)/i; // broad match
 
-    // If we didn't find the trio, do nothing (i.e., non-reports pages)
-    if(!pairsBtn || !spanBtn || !runBtn){ return; }
-
-    var KEY = 'rb_calc_mode'; // 'pairs' | 'span'
-    function getMode(){ return localStorage.getItem(KEY) || 'pairs'; }
-    function setMode(m){ localStorage.setItem(KEY, m); paint(); }
-    function paint(){
-      var m = getMode();
-      pairsBtn.classList.toggle('active', m==='pairs');
-      spanBtn.classList.toggle('active',  m==='span');
-      // expose for existing code (if it wants to read)
-      window.RB_CURRENT_MODE = (m==='span') ? 'FIRST_LAST' : 'SUM_PAIRS';
+  // compute helpers
+  function groupBy(arr, keyFn){
+    const m=new Map(); for(const x of arr){ const k=keyFn(x); if(!m.has(k)) m.set(k,[]); m.get(k).push(x);} return m;
+  }
+  function toMs(t){ try{ return t? new Date(t).getTime(): null; }catch(e){ return null; } }
+  function computeFromPairs(pairs, spanMode){
+    // pairs: [{name,date,in,out}]  OR rows of events to pair up
+    const by = groupBy(pairs, r=> (r.name||r.employee||'').trim()+'|'+(r.date||'').slice(0,10));
+    const out=[];
+    for(const [k,list] of by){
+      const [name,date]=k.split('|');
+      const norm = list.map(r=>({ti: toMs(r.in) || toMs(r.tin) || toMs(r.inTime) || null,
+                                 to: toMs(r.out)|| toMs(r.tout)|| toMs(r.outTime)|| null}))
+                       .filter(x=>x.ti||x.to).sort((a,b)=>(a.ti||0)-(b.ti||0));
+      let total=0, iv=[];
+      if(spanMode){
+        const fi = norm.find(x=>x.ti!=null)?.ti ?? null;
+        const lo = [...norm].reverse().find(x=>x.to!=null)?.to ?? null;
+        if(fi!=null && lo!=null && lo>fi){ total=lo-fi; iv=[{in:new Date(fi).toISOString(), out:new Date(lo).toISOString()}]; }
+      }else{
+        for(const x of norm){ if(x.ti!=null && x.to!=null && x.to>x.ti){ total+=x.to-x.ti; iv.push({in:new Date(x.ti).toISOString(),out:new Date(x.to).toISOString()}); } }
+      }
+      out.push({employee:name, date, totalMs:total, intervals:iv});
     }
+    out.sort((a,b)=> a.date<b.date? -1 : a.date>b.date? 1 : 0);
+    return out;
+  }
 
-    // init
-    if(!localStorage.getItem(KEY)) localStorage.setItem(KEY,'pairs');
-    paint();
-
-    // clicks
-    pairsBtn.addEventListener('click', function(){ setMode('pairs'); });
-    spanBtn .addEventListener('click', function(){ setMode('span');  });
-
-    // Lightweight fetch wrapper: only on this page; only requests that contain 'report=summary'
-    // and do not already have 'mode='; only when url is a string.
-    var _fetch = window.fetch;
-    window.fetch = function(url, opts){
-      try{
-        var asStr = (typeof url === 'string') ? url : null;
-        if(asStr && /report=summary/.test(asStr) && !/[\?&]mode=/.test(asStr)){
-          var mode = window.RB_CURRENT_MODE || ((getMode()==='span')?'FIRST_LAST':'SUM_PAIRS');
-          var sep = asStr.indexOf('?')>=0 ? '&' : '?';
-          url = asStr + sep + 'mode=' + encodeURIComponent(mode);
-        }
-      }catch(e){ /* silent */ }
-      return _fetch.apply(this, arguments);
-    };
-
-    // also tag the run button so legacy code can read the mode synchronously
-    runBtn.addEventListener('click', function(){
-      window.RB_CURRENT_MODE = ((getMode()==='span') ? 'FIRST_LAST' : 'SUM_PAIRS');
-    }, {capture:true});
-
-  });
-})();
-</script>
-<script>
-/* ==== RaftingBar: Force-append mode=FIRST_LAST|SUM_PAIRS to ALL GAS calls ==== */
-(function(){
-  const KEY = 'rb_calc_mode'; // 'pairs' | 'span'
-  function uiMode(){ return (localStorage.getItem(KEY)||'pairs')==='span' ? 'FIRST_LAST' : 'SUM_PAIRS'; }
-
-  // 1) עטיפת fetch – תופסת string URL ו-Request, גם GET וגם POST
+  // Wrap fetch: if response JSON contains entries or raw pairs, recompute according to current mode.
   const _fetch = window.fetch;
   window.fetch = function(input, init){
-    try{
-      const mode = uiMode();
-      // הפוך ל-URL+גוף שאפשר לערוך
-      let urlStr = typeof input === 'string' ? input
-               : (input && input.url)       ? input.url : null;
+    return _fetch.apply(this, arguments).then(async resp=>{
+      try{
+        const url = (typeof input==='string') ? input : (input && input.url) || '';
+        if(!GAS_HINT.test(url)) return resp; // not our data
+        const ct = resp.headers.get('content-type')||'';
+        if(!/application\/json/.test(ct)) return resp;
 
-      if (urlStr && /script\.google\.com\/macros\/s\/.+\/exec/.test(urlStr)) {
-        // הוסף mode לשורת ה-URL אם חסר
-        if (!/[?&]mode=/.test(urlStr)) {
-          const sep = urlStr.includes('?') ? '&' : '?';
-          urlStr = urlStr + sep + 'mode=' + encodeURIComponent(mode);
+        // clone & parse
+        const clone = resp.clone();
+        const data = await clone.json();
+
+        const spanMode = isSpan(); // true => FIRST_LAST
+
+        // 1) If server already gave a summary 'rows' and also 'entries', recompute from entries
+        if(Array.isArray(data.entries) && data.entries.length){
+          const pairs = data.entries.map(e=>{
+            // normalize events into pairs if needed
+            if(e.in || e.out){
+              return {name: e.name||e.employee, date: e.date, in: e.in, out: e.out};
+            }
+            // events style: action + timestamp
+            const ts = e.timestamp || e.time || e.ts;
+            const d  = e.date || (ts ? (new Date(ts)).toISOString().slice(0,10) : '');
+            return {name: e.name||e.employee, date: d, in: e.action==='IN' ? ts : null, out: e.action==='OUT' ? ts : null};
+          });
+          const recomputed = computeFromPairs(pairs, spanMode);
+          data.rows = recomputed;
+          const blob = new Blob([JSON.stringify(data)], {type:'application/json'});
+          return new Response(blob, {status: resp.status, statusText: resp.statusText, headers: resp.headers});
         }
 
-        // אם זו בקשת POST עם body מסוג URLSearchParams / טקסט-טופס – הוסף גם לגוף
-        if (init && init.method && init.method.toUpperCase()==='POST' && init.body) {
-          if (typeof init.body === 'string' && init.body.includes('=')) {
-            if (!/(\?|&)mode=/.test(init.body)) init.body += '&mode=' + encodeURIComponent(mode);
-          } else if (init.body instanceof URLSearchParams) {
-            if (!init.body.has('mode')) init.body.append('mode', mode);
+        // 2) If we have rows with pairs per-day already (in/out arrays), recompute totals only
+        if(Array.isArray(data.rows) && data.rows.length){
+          const rows = data.rows;
+          if(rows[0] && (rows[0].intervals || rows[0].in || rows[0].out)){
+            const pairs = [];
+            for(const r of rows){
+              if(Array.isArray(r.intervals) && r.intervals.length){
+                for(const iv of r.intervals){
+                  pairs.push({name: r.employee||r.name, date: r.date, in: iv.in, out: iv.out});
+                }
+              }else if(r.in || r.out){
+                pairs.push({name: r.employee||r.name, date: r.date, in: r.in, out: r.out});
+              }
+            }
+            const recomputed = computeFromPairs(pairs, spanMode);
+            data.rows = recomputed;
+            const blob = new Blob([JSON.stringify(data)], {type:'application/json'});
+            return new Response(blob, {status: resp.status, statusText: resp.statusText, headers: resp.headers});
           }
         }
 
-        // בנה מחדש את ה-Request במידת הצורך
-        if (typeof input !== 'string') {
-          input = new Request(urlStr, init || input);
-        } else {
-          input = urlStr;
-        }
+        return resp; // nothing to do
+      }catch(e){
+        // if anything goes wrong, fall back to original response
+        return resp;
       }
-    }catch(e){ /* שקט */ }
-    return _fetch.call(this, input, init);
+    });
   };
 
-  // 2) עטיפת XMLHttpRequest – למקרה שהעמוד משתמש בזה
-  const _open = XMLHttpRequest.prototype.open;
-  XMLHttpRequest.prototype.open = function(method, url){
-    try{
-      if (typeof url === 'string' && /script\.google\.com\/macros\/s\/.+\/exec/.test(url)) {
-        const mode = uiMode();
-        if (!/[?&]mode=/.test(url)) {
-          url += (url.includes('?') ? '&' : '?') + 'mode=' + encodeURIComponent(mode);
-        }
-      }
-    }catch(e){ /* שקט */ }
-    return _open.apply(this, arguments);
-  };
-
-  // 3) שמור RB_CURRENT_MODE לשימוש פנימי אם צריך
-  function syncExpose(){ window.RB_CURRENT_MODE = uiMode(); }
-  syncExpose();
-  document.addEventListener('click', (ev)=>{
-    const t = ev.target;
-    if (!t) return;
-    const txt = (t.textContent||'').trim();
-    if (/זוגות/.test(txt))  localStorage.setItem(KEY,'pairs'),  syncExpose();
-    if (/מכניסה ראשונה|יציאה אחרונה/.test(txt)) localStorage.setItem(KEY,'span'), syncExpose();
+  // Save selection from your existing buttons (by text)
+  document.addEventListener('click', ev=>{
+    const t=(ev.target && ev.target.textContent || '').trim();
+    if(/זוגות/.test(t)) localStorage.setItem(KEY,'pairs');
+    if(/מכניסה ראשונה|יציאה אחרונה/.test(t)) localStorage.setItem(KEY,'span');
   }, true);
 })();
 </script>
