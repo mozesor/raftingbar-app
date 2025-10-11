@@ -4420,6 +4420,65 @@ function dayOutTime(day) {
   }
 })();
 </script>
+<script>
+/* Fallback by date-only: ensures FIRST-IN/LAST-OUT even if employee name doesn't match */
+(function(){
+  function byDate(ymd){
+    const STORE = window.__RB_FIRST_LAST__;
+    if(!STORE) return null;
+    let fi=null, lo=null;
+    for (const m of STORE.values()){
+      const r = m.get(ymd);
+      if(!r) continue;
+      if (r.fi!=null) fi = (fi==null || r.fi < fi) ? r.fi : fi;
+      if (r.lo!=null) lo = (lo==null || r.lo > lo) ? r.lo : lo;
+    }
+    return (fi!=null || lo!=null) ? {fi,lo} : null;
+  }
+  const fmtHHMM = ms => (ms==null? '—' : (d=>String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'))(new Date(ms)));
+  const toHours = (fi,lo) => (fi!=null && lo!=null && lo>fi) ? Math.round(((lo-fi)/36e5)*100)/100 : 0;
+
+  function run(){
+    const tables = Array.from(document.querySelectorAll('table')).filter(t=>{
+      const txt = t.textContent || '';
+      return /תאריך/.test(txt) && /כניסה/.test(txt) && /יציאה/.test(txt) && /שעות/.test(txt);
+    });
+    if(!tables.length) return;
+
+    tables.forEach(t=>{
+      const head = t.tHead || t.querySelector('thead');
+      const body = t.tBodies[0] || t.querySelector('tbody');
+      if(!body) return;
+
+      const ths = Array.from(head ? head.querySelectorAll('th') : []);
+      const labels = ths.map(th => (th.textContent||'').trim());
+      const idxDate  = labels.findIndex(h=>/תאריך/.test(h));
+      const idxIn    = labels.findIndex(h=>/כניסה/.test(h));
+      const idxOut   = labels.findIndex(h=>/יציאה/.test(h));
+      const idxHours = labels.findIndex(h=>/שעות/.test(h));
+      if(idxDate<0 || idxIn<0 || idxOut<0 || idxHours<0) return;
+
+      Array.from(body.querySelectorAll('tr')).forEach(tr=>{
+        const cells = tr.children;
+        const dateText = (cells[idxDate]?.textContent||'').trim();
+        if(!dateText) return;
+        // ממיר DD/MM ל־YYYY-MM-DD (השנה לא קריטית, רק לפתיחת המפתח)
+        const ymd = dateText.replace(/^(\d{2})\/(\d{2})/, (_,d,m)=>`2025-${m}-${d}`).slice(0,10);
+
+        const rec = byDate(ymd);
+        if(!rec) return;
+        cells[idxIn].textContent   = fmtHHMM(rec.fi);
+        cells[idxOut].textContent  = fmtHHMM(rec.lo);
+        cells[idxHours].textContent= String(toHours(rec.fi, rec.lo));
+      });
+    });
+  }
+
+  // להריץ אחרי ציור וגם אחרי לחיצות (הצג דוח/ניווט)
+  setTimeout(run, 500);
+  document.addEventListener('click', ()=> setTimeout(run, 500), true);
+})();
+</script>
 
 </body>
 </html>
