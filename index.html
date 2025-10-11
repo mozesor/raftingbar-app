@@ -898,7 +898,7 @@
                             📋 דוח מפורט מלא
                         </button>
 </div>
-<div class="card" id="eventsInlineSection" style="margin-top:16px;"><h2>🗂️ אירועים לפי תאריכים ועובד</h2><div style="color:#555; margin-bottom:8px; font-size:14px;">התצוגה מכבדת את טווח התאריכים והסינון לעובד (אם נבחר).</div><div class="events-table-wrap" style="max-height:340px; overflow:auto; background:#fff; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.06);"><table class="data-table" id="eventsInlineTable" style="width:100%; border-collapse:separate; border-spacing:0;"></table></div></div></div>
+</div></div>
 </div>
 </div>
 <!-- עמוד ניהול -->
@@ -926,7 +926,6 @@
 <div>ניהול</div>
 </button>
 </div>
-<script src="firstlast_shim.js"></script>       
 <script>
         // הגדרות קבועות
         const EMBEDDED_SETTINGS = {
@@ -985,7 +984,7 @@
 
         
 // --- Hours calc mode & helpers ---
-var REPORT_HOURS_MODE = (function(){ try{ var m = localStorage.getItem('rb_calc_mode'); return (m==='span'||m==='pairs')?m:'pairs'; }catch(e){ return 'pairs'; }})();
+var REPORT_HOURS_MODE = (function(){ try{ var m = localStorage.getItem('rb_calc_mode'); return (m==='span'||m==='pairs')?m:'span'; }catch(e){ return 'pairs'; }})();
 
 function _ensureLogs(day){
   if (!day) return null;
@@ -4078,7 +4077,7 @@ if (document.readyState === 'loading'){
 <script>
 (function(){
   function saveMode(m){ try{ localStorage.setItem('rb_calc_mode', m); } catch(e){} }
-  function getMode(){ try{ const m = localStorage.getItem('rb_calc_mode'); return (m==='span'||m==='pairs')?m:'pairs'; } catch(e){ return 'pairs'; } }
+  function getMode(){ try{ const m = localStorage.getItem('rb_calc_mode'); return (m==='span'||m==='pairs')?m:'span'; } catch(e){ return 'pairs'; } }
   function triggerRecalc(){
     // נסה את שתי השכבות שהטמעתי קודם
     if (window.recalcAfterStable) try{ window.recalcAfterStable(); }catch(e){}
@@ -4216,6 +4215,66 @@ function dayOutTime(day) {
 }
 // --- END robust calc block ---
 
+</script>
+
+
+<script>
+(function(){
+  function _toMs(ts){
+    if(!ts) return null;
+    if (ts instanceof Date) return ts.getTime();
+    var d = new Date(ts); return isNaN(d.getTime())?null:d.getTime();
+  }
+  function _toHM(ts){
+    if(!ts) return '—';
+    var d = (ts instanceof Date) ? ts : new Date(ts);
+    if (isNaN(d.getTime())) return '—';
+    return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  }
+  function _minTs(a,b){ if(a==null) return b; if(b==null) return a; return Math.min(a,b); }
+  function _maxTs(a,b){ if(a==null) return a; if(b==null) return b; return Math.max(a,b); }
+
+  window.dayIn = function(day){
+    if(!day) return null;
+    var fi = _toMs(day.checkIn);
+    if (day.logs && day.logs.length){
+      for (var i=0;i<day.logs.length;i++){
+        var ev = day.logs[i];
+        if (ev && (ev.action==='checkin' || ev.action==='IN')){
+          fi = _minTs(fi, _toMs(ev.ts || ev.timestamp));
+        }
+      }
+    }
+    return fi;
+  };
+
+  window.dayOut = function(day){
+    if(!day) return null;
+    var lo = _toMs(day.checkOut);
+    if (day.logs && day.logs.length){
+      for (var i=0;i<day.logs.length;i++){
+        var ev = day.logs[i];
+        if (ev && (ev.action==='checkout' || ev.action==='OUT')){
+          lo = _maxTs(lo, _toMs(ev.ts || ev.timestamp));
+        }
+      }
+    }
+    return lo;
+  };
+
+  window.dayInTime = function(day){ var fi = dayIn(day); return _toHM(fi); };
+  window.dayOutTime = function(day){ var lo = dayOut(day); return _toHM(lo); };
+
+  window.dayHours = function(day){
+    if(!day) return 0;
+    var fi = dayIn(day), lo = dayOut(day);
+    if (fi!=null && lo!=null && lo>fi){
+      var hours = (lo - fi) / 36e5;
+      return Math.round(hours*100)/100;
+    }
+    return 0;
+  };
+})();
 </script>
 
 </body>
