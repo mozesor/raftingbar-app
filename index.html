@@ -4627,5 +4627,131 @@ function dayOutTime(day) {
 })();
 </script>
 
+
+<!-- RB FIRST/LAST robust updater (appended) -->
+<script>
+(function () {
+  const API_URL = 'https://script.google.com/macros/s/AKfycbx_UMxeN_-dYeiR4xQa4HzT9ogZPv8BeYkRuUg0BOeEobOQZJVvj7gZU-2U_5LrxEtK/exec';
+  try { localStorage.setItem('rb_calc_mode','span'); } catch(e) {}
+
+  const pad = n => String(n).padStart(2,'0');
+  const hhmm = iso => {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return isNaN(d) ? '—' : `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+  const hoursFromMs = ms => (ms>0 ? (Math.round(ms/36e3)/100).toFixed(2).replace(/\.00$/,'') : '0');
+
+  function findMainTable() {
+    const tables = Array.from(document.querySelectorAll('table'));
+    for (const t of tables) {
+      let headers = Array.from(t.querySelectorAll('thead th')).map(th => (th.textContent||'').trim());
+      let skipFirstRow = false;
+      if (!headers.length) {
+        const firstRow = t.tBodies && t.tBodies[0] ? t.tBodies[0].querySelector('tr') : t.querySelector('tbody tr');
+        if (firstRow) {
+          headers = Array.from(firstRow.children).map(td => (td.textContent||'').trim());
+          skipFirstRow = true;
+        }
+      }
+      const idxDate  = headers.findIndex(h => /תאריך|Date/i.test(h));
+      const idxIn    = headers.findIndex(h => /כניסה|Check ?in|IN/i.test(h));
+      const idxOut   = headers.findIndex(h => /יציאה|Check ?out|OUT/i.test(h));
+      const idxHours = headers.findIndex(h => /שעות|Hours/i.test(h));
+      if (idxDate>-1 && idxIn>-1 && idxOut>-1 && idxHours>-1) {
+        const body = t.tBodies && t.tBodies[0] ? t.tBodies[0] : t.querySelector('tbody');
+        if (body) return { body, idxDate, idxIn, idxOut, idxHours, skipFirstRow };
+      }
+    }
+    return null;
+  }
+
+  function getEmployee() {
+    const sel = document.querySelector('select[aria-label="בחר עובד"], [aria-label="בחר עובד"] select');
+    if (sel && sel.value) return sel.value.trim();
+    const n1 = document.querySelector('[data-employee-name]');
+    if (n1) return (n1.getAttribute('data-employee-name') || n1.textContent || '').trim();
+    const n2 = document.querySelector('.employee-name');
+    return n2 ? (n2.textContent||'').trim() : '';
+  }
+
+  function detectYear() {
+    const m = document.body.innerText.match(/\b(20\d{2})\b/);
+    return m ? m[1] : String(new Date().getFullYear());
+  }
+  const ymdFromDM = (dm, y) => {
+    const parts = (dm||'').split('/').map(s=>s.trim());
+    if (parts.length<2) return '';
+    const d = parts[0], m = parts[1];
+    return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  };
+
+  async function __RB_FL_applyNow() {
+    const t = findMainTable();
+    if (!t) return;
+    const { body, idxDate, idxIn, idxOut, idxHours, skipFirstRow } = t;
+
+    const trsAll = Array.from(body.querySelectorAll('tr'));
+    const trs = skipFirstRow ? trsAll.slice(1) : trsAll;
+
+    const year  = detectYear();
+    const dms   = trs.map(tr => (tr.children[idxDate]?.textContent||'').trim()).filter(Boolean);
+    if (!dms.length) return;
+
+    const start = ymdFromDM(dms[0], year);
+    const end   = ymdFromDM(dms[dms.length-1], year);
+    const emp   = getEmployee();
+
+    try {
+      const res = await fetch(`${API_URL}?report=summary&mode=FIRST_LAST&start=${start}&end=${end}&employee=${encodeURIComponent(emp)}`, { cache:'no-store' });
+      const data = await res.json();
+      if (!data || !data.ok) return;
+
+      const byDate = new Map((data.rows||[]).map(r => [r.date, r]));
+
+      trs.forEach(tr => {
+        const dm  = (tr.children[idxDate]?.textContent||'').trim();
+        if (!dm) return;
+        const ymd = ymdFromDM(dm, year);
+        const r   = byDate.get(ymd);
+
+        if (r && r.intervals && r.intervals.length) {
+          const itv = r.intervals[0];
+          tr.children[idxIn].textContent    = hhmm(itv.in);
+          tr.children[idxOut].textContent   = hhmm(itv.out);
+          tr.children[idxHours].textContent = hoursFromMs(r.totalMs);
+        } else {
+          tr.children[idxIn].textContent    = '—';
+          tr.children[idxOut].textContent   = '—';
+          tr.children[idxHours].textContent = '0';
+        }
+      });
+    } catch (e) {}
+  }
+
+  window.__RB_FL_applyNow = __RB_FL_applyNow;
+  const schedule = () => setTimeout(__RB_FL_applyNow, 450);
+
+  document.addEventListener('click', ev => {
+    const btn = ev.target.closest('button,[role="button"],[data-mode]');
+    if (!btn) return;
+    const txt = (btn.textContent || '').replace(/\s+/g,' ').trim();
+    const dm  = (btn.getAttribute('data-mode') || '').toLowerCase();
+    if (/הצג דוח/.test(txt) || /כניסה ראשונה/.test(txt) || /זוגות/.test(txt) || dm==='span' || dm==='pairs') {
+      schedule();
+    }
+  });
+
+  document.addEventListener('change', ev => {
+    if (ev.target && ev.target.tagName === 'SELECT') schedule();
+  });
+
+  window.addEventListener('load', () => setTimeout(__RB_FL_applyNow, 900));
+
+  const obs = new MutationObserver(() => schedule());
+  obs.observe(document.body, { childList: true, subtree: true });
+})();
+</script>
+
 </body>
 </html>
