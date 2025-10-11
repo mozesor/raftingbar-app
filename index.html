@@ -4753,5 +4753,51 @@ function dayOutTime(day) {
 })();
 </script>
 
+
+<!-- Force FIRST_LAST at the network layer -->
+<script>
+(function(){
+  try { localStorage.setItem('rb_calc_mode','span'); } catch(e) {}
+
+  function forceMode(url) {
+    try {
+      const u = new URL(url, location.href);
+      // Only touch Apps Script endpoints
+      if (!/script\.google(usercontent|apis)?\.com/.test(u.hostname)) return url;
+      if (!u.searchParams.get('report') || u.searchParams.get('report')!=='summary') return url;
+      // Always force FIRST_LAST
+      u.searchParams.set('mode','FIRST_LAST');
+      return u.toString();
+    } catch (e) { return url; }
+  }
+
+  // fetch patch
+  const _fetch = window.fetch;
+  if (_fetch) {
+    window.fetch = function(input, init) {
+      try {
+        if (typeof input === 'string') {
+          input = forceMode(input);
+        } else if (input && input.url) {
+          const forced = forceMode(input.url);
+          if (forced !== input.url) {
+            // rebuild Request
+            input = new Request(forced, input);
+          }
+        }
+      } catch(e){}
+      return _fetch.apply(this, arguments);
+    };
+  }
+
+  // XHR patch
+  const _open = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function(method, url) {
+    try { url = forceMode(url); } catch(e){}
+    return _open.apply(this, [method, url, ...Array.prototype.slice.call(arguments, 2)]);
+  };
+})();
+</script>
+
 </body>
 </html>
