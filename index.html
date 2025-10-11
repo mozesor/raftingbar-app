@@ -4217,191 +4217,66 @@ function dayOutTime(day) {
 
 </script>
 
-<style>
-/* === RB Reports Widget (self-contained) === */
-#rb-reports { direction: rtl; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; color:#e5e7eb }
-#rb-reports .rb-card{background:rgba(17,24,39,.72);backdrop-filter: blur(8px);border:1px solid rgba(255,255,255,.06);padding:12px;border-radius:14px;margin:10px 0}
-#rb-reports .rb-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-#rb-reports label{font-size:13px;color:#cbd5e1;margin-inline-start:6px}
-#rb-reports input,#rb-reports select,#rb-reports button{background:#111827;border:1px solid #334155;color:#e5e7eb;padding:8px 10px;border-radius:10px;outline:none}
-#rb-reports .rb-primary{background:linear-gradient(135deg,#22d3ee,#60a5fa);color:#0b1220;border:0;font-weight:700;cursor:pointer}
-#rb-reports .rb-modebtn{cursor:pointer;border-radius:999px;padding:6px 10px;border:1px solid #334155;background:rgba(2,6,23,.6);color:#cbd5e1;font-weight:600}
-#rb-reports .rb-modebtn.active{background:linear-gradient(135deg,#22d3ee,#60a5fa);color:#0a0f1a;border:0}
-#rb-reports table{width:100%;border-collapse:collapse}
-#rb-reports th,#rb-reports td{border-bottom:1px solid #1f2937;padding:8px;text-align:right;font-size:13px}
-#rb-reports th{color:#93c5fd}
-#rb-reports .rb-chip{background:#0b1220;border:1px solid #334155;border-radius:999px;padding:6px 10px;color:#cbd5e1;display:inline-block;margin:4px 6px 0 0}
-#rb-reports .rb-err{background:#1f2937;border:1px solid #b91c1c;color:#fecaca;padding:10px;border-radius:12px}
-</style>
-
-<div id="rb-reports" class="rb-mounted">
-  <div class="rb-card">
-    <div class="rb-row">
-      <span style="opacity:.8">מצב חישוב:</span>
-      <button id="rbwPairs" class="rb-modebtn">(זוגות) כניסות↔יציאות</button>
-      <button id="rbwSpan"  class="rb-modebtn">מכניסה ראשונה עד יציאה אחרונה</button>
-      <span style="margin-inline-start:auto;opacity:.6">נשמר אוטומטית</span>
-    </div>
-  </div>
-  <div class="rb-card">
-    <div class="rb-row" style="margin-bottom:8px">
-      <div><label>שם העובד</label><br/><input id="rbwEmp" placeholder="כמו בגליון"></div>
-      <div><label>טווח</label><br/>
-        <select id="rbwPer">
-          <option value="day">היום</option>
-          <option value="week">שבוע זה</option>
-          <option value="month" selected>החודש</option>
-          <option value="custom">מותאם</option>
-        </select>
-      </div>
-      <div id="rbwCust" style="display:none"><label>מתאריך–עד תאריך</label><br/>
-        <input type="date" id="rbwStart"> — <input type="date" id="rbwEnd">
-      </div>
-      <button class="rb-primary" id="rbwRun">הצג דוח</button>
-    </div>
-    <div id="rbwOut"></div>
-  </div>
-</div>
-
 
 <script>
+/* ==== RB Reports: Calc Mode Enabler (reports-only, no UI changes) ==== */
 (function(){
-  const ROOT = document.getElementById('rb-reports');
-  if(!ROOT) return;
-  const sel = id => document.getElementById(id);
-  const Out = sel('rbwOut'), Emp = sel('rbwEmp'), Per = sel('rbwPer'), Cust = sel('rbwCust');
-  const S = {mode:'rb_calc_mode', emp:'rb_employee', per:'rb_period', s:'rb_start', e:'rb_end'};
-  const SCRIPT_URL = window.RB_SCRIPT_URL || localStorage.getItem('rb_script_url') || 'PASTE_YOUR_WEBAPP_URL';
+  function onReady(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
+  onReady(function(){
+    // Try to locate the two mode buttons and the "show report" button by id/data/text (Hebrew)
+    var scope = document; // if you have a specific container for reports, you can narrow here
+    var pairsBtn = scope.querySelector('#rbModePairs,[data-calc-mode="pairs"]') 
+                || Array.from(scope.querySelectorAll('button, a')).find(function(b){ return /זוגות/.test((b.textContent||'').trim()); });
+    var spanBtn  = scope.querySelector('#rbModeSpan,[data-calc-mode="span"]') 
+                || Array.from(scope.querySelectorAll('button, a')).find(function(b){ return /(מכניסה ראשונה|יציאה אחרונה)/.test((b.textContent||'').trim()); });
+    var runBtn   = scope.querySelector('#rbRunReport')
+                || Array.from(scope.querySelectorAll('button')).find(function(b){ return /(הצג דו|דו.?ח)/.test((b.textContent||'').trim()); });
 
-  // tz helpers
-  const tz = (new Date()).getTimezoneOffset()*60000;
-  const ymd = d=> new Date(d - tz).toISOString().slice(0,10);
-  function today(){ return ymd(Date.now()); }
-  function weekBounds(){ const d=new Date(Date.now()-tz), w=(d.getUTCDay()+6)%7;
-    const s=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()-w));
-    const e=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()-w+6));
-    return {start: ymd(s), end: ymd(e)}; }
-  function monthBounds(){ const d=new Date(Date.now()-tz), y=d.getUTCFullYear(), m=d.getUTCMonth();
-    const s=new Date(Date.UTC(y,m,1)), e=new Date(Date.UTC(y,m+1,0));
-    return {start: ymd(s), end: ymd(e)}; }
+    // If we didn't find the trio, do nothing (i.e., non-reports pages)
+    if(!pairsBtn || !spanBtn || !runBtn){ return; }
 
-  // state
-  function mode(){ return localStorage.getItem(S.mode) || 'pairs'; }
-  function setMode(m){ localStorage.setItem(S.mode, m); paintMode(); }
-  function paintMode(){
-    sel('rbwPairs').classList.toggle('active', mode()==='pairs');
-    sel('rbwSpan').classList.toggle('active',  mode()==='span');
-  }
-
-  // init from storage
-  Emp.value = localStorage.getItem(S.emp)||'';
-  Per.value = localStorage.getItem(S.per)||'month';
-  if(Per.value==='custom'){ Cust.style.display='inline-block';
-    sel('rbwStart').value = localStorage.getItem(S.s)||'';
-    sel('rbwEnd').value   = localStorage.getItem(S.e)||'';
-  }
-  paintMode();
-
-  // events
-  sel('rbwPairs').onclick=()=>{ setMode('pairs'); if(Out.dataset.had==='1') run(); };
-  sel('rbwSpan').onclick =()=>{ setMode('span');  if(Out.dataset.had==='1') run(); };
-  Per.onchange = ()=>{
-    localStorage.setItem(S.per, Per.value);
-    if(Per.value==='custom'){ Cust.style.display='inline-block'; const {start,end}=weekBounds();
-      sel('rbwStart').value=start; sel('rbwEnd').value=end;
-    } else { Cust.style.display='none'; }
-  };
-  sel('rbwRun').onclick = run;
-
-  async function callServer(params){
-    const u=new URL(SCRIPT_URL); u.searchParams.set('report','summary');
-    Object.entries(params).forEach(([k,v])=> v!=null && v!=='' && u.searchParams.set(k,String(v)));
-    const r=await fetch(u.toString()); if(!r.ok) throw new Error('שגיאת שרת: '+r.status); return r.json();
-  }
-  function filterLocal(entries, emp, s,e){
-    return entries.filter(r=>{
-      const name=(r.name||r.employee||'').trim(); const d=(r.date||'').slice(0,10);
-      return (!emp||name===emp) && d>=s && d<=e;
-    });
-  }
-  function groupByDay(rows){
-    const map=new Map();
-    for(const r of rows){
-      const k=`${(r.name||r.employee||'').trim()}|${(r.date||'').slice(0,10)}`;
-      if(!map.has(k)) map.set(k,[]); map.get(k).push(r);
+    var KEY = 'rb_calc_mode'; // 'pairs' | 'span'
+    function getMode(){ return localStorage.getItem(KEY) || 'pairs'; }
+    function setMode(m){ localStorage.setItem(KEY, m); paint(); }
+    function paint(){
+      var m = getMode();
+      pairsBtn.classList.toggle('active', m==='pairs');
+      spanBtn.classList.toggle('active',  m==='span');
+      // expose for existing code (if it wants to read)
+      window.RB_CURRENT_MODE = (m==='span') ? 'FIRST_LAST' : 'SUM_PAIRS';
     }
-    return map;
-  }
-  function compute(list, m){
-    const norm=list.map(r=>({ti:r.in?new Date(r.in).getTime():null,to:r.out?new Date(r.out).getTime():null}))
-                   .filter(x=>x.ti||x.to).sort((a,b)=>(a.ti||0)-(b.ti||0));
-    if(m==='span'){
-      const fi = norm.find(x=>x.ti!=null)?.ti ?? null;
-      const lo = [...norm].reverse().find(x=>x.to!=null)?.to ?? null;
-      if(fi!=null && lo!=null && lo>fi) return {t:lo-fi, iv:[{in:fi,out:lo}]};
-      return {t:0,iv:[]};
-    }else{
-      let t=0, iv=[]; for(const x of norm){ if(x.ti!=null && x.to!=null && x.to>x.ti){ t+=x.to-x.ti; iv.push({in:x.ti,out:x.to}); } }
-      return {t,iv};
-    }
-  }
-  function fmt(ms){ const s=Math.round(ms/1000), h=Math.floor(s/3600), m=Math.floor((s%3600)/60), ss=s%60;
-    return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0'); }
-  function render(days, grand){
-    let html = `<div class="rb-chip">סה״כ: <b>${fmt(grand)}</b></div>`;
-    html += `<table><thead><tr><th>תאריך</th><th>שם</th><th>סה״כ</th><th>פירוט</th></tr></thead><tbody>`;
-    for(const r of days){
-      const det=(r.intervals||[]).map(iv=>{
-        const tin=new Date(iv.in), tout=new Date(iv.out);
-        return tin.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})+'–'+
-               tout.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})+
-               ' ('+fmt(tout-tin)+')';
-      }).join('<br/>');
-      html += `<tr><td>${r.date}</td><td>${r.employee||'—'}</td><td>${fmt(r.totalMs||0)}</td><td>${det||'—'}</td></tr>`;
-    }
-    html += `</tbody></table>`;
-    Out.innerHTML = html; Out.dataset.had='1';
-  }
 
-  async function run(){
-    try{
-      const mUi = mode(); const modeParam = (mUi==='pairs') ? 'SUM_PAIRS' : 'FIRST_LAST';
-      const emp = (Emp.value||'').trim(); localStorage.setItem(S.emp, emp);
-      let s,e;
-      const per = Per.value;
-      if(per==='day'){ s=today(); e=today(); }
-      else if(per==='week'){ ({start:s,end:e}=weekBounds()); }
-      else if(per==='month'){ ({start:s,end:e}=monthBounds()); }
-      else { s=sel('rbwStart').value||today(); e=sel('rbwEnd').value||today();
-             localStorage.setItem(S.s,s); localStorage.setItem(S.e,e); }
-      const params={ mode: modeParam, employee: emp, start:s, end:e };
-      let data = await callServer(params);
-      let display=[];
-      if (Array.isArray(data?.rows) && data.rows.length){ display = data.rows; }
-      else if(Array.isArray(data?.entries)){
-        const rows = filterLocal(data.entries, emp, s, e);
-        const map = groupByDay(rows);
-        for(const [key,list] of map){
-          const [name, dYmd] = key.split('|');
-          const c = compute(list, (modeParam==='FIRST_LAST')?'span':'pairs');
-          display.push({
-            employee:name, date:dYmd, totalMs:c.t, intervals: c.iv.map(iv=>({in:new Date(iv.in).toISOString(), out:new Date(iv.out).toISOString()}))
-          });
+    // init
+    if(!localStorage.getItem(KEY)) localStorage.setItem(KEY,'pairs');
+    paint();
+
+    // clicks
+    pairsBtn.addEventListener('click', function(){ setMode('pairs'); });
+    spanBtn .addEventListener('click', function(){ setMode('span');  });
+
+    // Lightweight fetch wrapper: only on this page; only requests that contain 'report=summary'
+    // and do not already have 'mode='; only when url is a string.
+    var _fetch = window.fetch;
+    window.fetch = function(url, opts){
+      try{
+        var asStr = (typeof url === 'string') ? url : null;
+        if(asStr && /report=summary/.test(asStr) && !/[\?&]mode=/.test(asStr)){
+          var mode = window.RB_CURRENT_MODE || ((getMode()==='span')?'FIRST_LAST':'SUM_PAIRS');
+          var sep = asStr.indexOf('?')>=0 ? '&' : '?';
+          url = asStr + sep + 'mode=' + encodeURIComponent(mode);
         }
-        display.sort((a,b)=> a.date<b.date? -1 : a.date>b.date? 1 : 0);
-      } else {
-        throw new Error('לא התקבלו נתונים מהשרת (בדוק כתובת והרשאות Web App).');
-      }
-      const grand = display.reduce((s,r)=>s+(r.totalMs||0),0);
-      render(display, grand);
-    }catch(err){
-      Out.innerHTML = `<div class="rb-err">⚠️ ${err.message}</div>`;
-      console.error(err);
-    }
-  }
+      }catch(e){ /* silent */ }
+      return _fetch.apply(this, arguments);
+    };
+
+    // also tag the run button so legacy code can read the mode synchronously
+    runBtn.addEventListener('click', function(){
+      window.RB_CURRENT_MODE = ((getMode()==='span') ? 'FIRST_LAST' : 'SUM_PAIRS');
+    }, {capture:true});
+
+  });
 })();
 </script>
-
 
 </body>
 </html>
